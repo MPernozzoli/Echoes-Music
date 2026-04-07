@@ -1,4 +1,4 @@
-import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.2';
+import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import { decryptApiKey, importAes256GcmKeyFromEnv } from '../_shared/byo_crypto.ts';
 import {
   ByoOpenAiError,

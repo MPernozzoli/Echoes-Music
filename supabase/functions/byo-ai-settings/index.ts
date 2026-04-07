@@ -1,4 +1,4 @@
-import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { decryptApiKey, encryptApiKey, importAes256GcmKeyFromEnv, maskApiKey } from "../_shared/byo_crypto.ts";
 import {
   mapByoCodeToDbStatus,
