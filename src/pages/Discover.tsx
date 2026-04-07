@@ -4,6 +4,10 @@ import AppLayout from "@/components/AppLayout";
 import PromptInput from "@/components/PromptInput";
 import PromptSuggestions from "@/components/PromptSuggestions";
 import FullPlayer from "@/components/FullPlayer";
+import {
+  DiscoverDockPanelActions,
+  type DockPopoverId,
+} from "@/components/DiscoverDockPanelActions";
 import TrackQueue from "@/components/TrackQueue";
 import EmotionalProfileCard from "@/components/EmotionalProfile";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
@@ -69,6 +73,7 @@ const Discover = () => {
   const [resultIdMap, setResultIdMap] = useState<Record<string, string>>({});
   const [showQueue, setShowQueue] = useState(false);
   const [showEmotionalProfile, setShowEmotionalProfile] = useState(false);
+  const [dockPopover, setDockPopover] = useState<DockPopoverId | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const isMobile = useIsMobile();
@@ -87,7 +92,7 @@ const Discover = () => {
     insertAfterCurrent,
   } = usePlaybackQueue();
 
-  const { toggleFavorite, isFavorite, descriptionLanguage, recordListen } = useApp();
+  const { toggleFavorite, isFavorite, descriptionLanguage, recordListen, listenHistory } = useApp();
   const {
     conversations,
     activeConversationId,
@@ -124,6 +129,7 @@ const Discover = () => {
       setIsLoading(true);
       setShowQueue(false);
       setShowEmotionalProfile(false);
+      setDockPopover(null);
       setDbSearchId(null);
       setResultIdMap({});
 
@@ -495,7 +501,7 @@ const Discover = () => {
         className={cn(
           "max-w-6xl mx-auto px-4 md:px-6 py-6 flex flex-col md:flex-row gap-6 min-h-[calc(100vh-3.5rem)]",
           "pb-24 md:pb-8",
-          showDockPlayer && "md:pb-32"
+          showDockPlayer && "md:pb-40"
         )}
       >
         <aside className="hidden md:flex w-56 shrink-0 flex-col border-r border-border/60 pr-4">{sidebar}</aside>
@@ -640,61 +646,65 @@ const Discover = () => {
 
               {currentResult && !isLoading && (
                 <div className="mt-auto border-t border-border/40 pt-6 space-y-6 shrink-0">
-                  {showEmotionalProfile && tagSong && currentResult && (
-                    <div className="w-full max-w-lg mx-auto animate-fade-in relative">
-                      <button
-                        type="button"
-                        onClick={() => setShowEmotionalProfile(false)}
-                        className="absolute top-3 right-3 p-1 rounded-full hover:bg-muted transition-colors z-10"
-                      >
-                        <X className="w-4 h-4 text-muted-foreground" />
-                      </button>
-                      <EmotionalProfileCard profile={currentResult.emotionalProfile} />
-                      <div className="glass-card rounded-2xl p-4 mt-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-xs font-body text-primary font-medium px-3 py-1 rounded-full bg-primary/10">
-                            {tagSong.relevanceScore}% match
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {tagSong.emotionalTags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="text-xs px-2.5 py-0.5 rounded-full bg-emotional-tag/15 text-emotional-tag-foreground/80 font-body"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {queue.length > 1 && (
-                    <div className="w-full max-w-lg mx-auto">
-                      <button
-                        type="button"
-                        onClick={() => setShowQueue(!showQueue)}
-                        className="flex items-center gap-2 mx-auto px-4 py-2 rounded-xl border border-border text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/20 transition-all"
-                      >
-                        <ListMusic className="w-4 h-4" />
-                        <span>
-                          {showQueue ? "Nascondi" : "Mostra"} coda ({queue.length} brani)
-                        </span>
-                        {showQueue ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                      </button>
-                      {showQueue && (
-                        <div className="mt-4 glass-card rounded-2xl p-4 animate-fade-in">
-                          <TrackQueue
-                            songs={queue}
-                            currentIndex={currentIndex}
-                            onSelect={setCurrentIndex}
-                            isFavorite={isFavorite}
-                            onToggleFavorite={handleToggleFavorite}
-                          />
+                  {!showDockPlayer && (
+                    <>
+                      {showEmotionalProfile && tagSong && currentResult && (
+                        <div className="w-full max-w-lg mx-auto animate-fade-in relative">
+                          <button
+                            type="button"
+                            onClick={() => setShowEmotionalProfile(false)}
+                            className="absolute top-3 right-3 p-1 rounded-full hover:bg-muted transition-colors z-10"
+                          >
+                            <X className="w-4 h-4 text-muted-foreground" />
+                          </button>
+                          <EmotionalProfileCard profile={currentResult.emotionalProfile} />
+                          <div className="glass-card rounded-2xl p-4 mt-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-xs font-body text-primary font-medium px-3 py-1 rounded-full bg-primary/10">
+                                {tagSong.relevanceScore}% match
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {tagSong.emotionalTags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="text-xs px-2.5 py-0.5 rounded-full bg-emotional-tag/15 text-emotional-tag-foreground/80 font-body"
+                                >
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
                         </div>
                       )}
-                    </div>
+
+                      {queue.length > 1 && (
+                        <div className="w-full max-w-lg mx-auto">
+                          <button
+                            type="button"
+                            onClick={() => setShowQueue(!showQueue)}
+                            className="flex items-center gap-2 mx-auto px-4 py-2 rounded-xl border border-border text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/20 transition-all"
+                          >
+                            <ListMusic className="w-4 h-4" />
+                            <span>
+                              {showQueue ? "Nascondi" : "Mostra"} coda ({queue.length} brani)
+                            </span>
+                            {showQueue ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </button>
+                          {showQueue && (
+                            <div className="mt-4 glass-card rounded-2xl p-4 animate-fade-in">
+                              <TrackQueue
+                                songs={queue}
+                                currentIndex={currentIndex}
+                                onSelect={setCurrentIndex}
+                                isFavorite={isFavorite}
+                                onToggleFavorite={handleToggleFavorite}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {dbSearchId && (
@@ -787,8 +797,8 @@ const Discover = () => {
     </AppLayout>
 
     {showDockPlayer && (
-      <div className="hidden md:flex fixed bottom-0 left-0 right-0 z-40 flex-col border-t border-border bg-background/95 backdrop-blur-md shadow-[0_-8px_32px_-8px_rgba(0,0,0,0.12)]">
-        <div className="max-w-6xl w-full mx-auto px-4 md:px-6 py-3">
+      <div className="hidden md:flex fixed bottom-0 left-0 right-0 z-40 flex-col border-t border-zinc-800/90 bg-[#121212]/98 backdrop-blur-xl shadow-[0_-12px_40px_-12px_rgba(0,0,0,0.45)]">
+        <div className="max-w-6xl w-full mx-auto px-3 md:px-6 pt-2 pb-2">
           <FullPlayer
             variant="dock"
             songs={queue}
@@ -796,10 +806,23 @@ const Discover = () => {
             onChangeIndex={setCurrentIndex}
             isFavorite={isFavorite}
             onToggleFavorite={handleToggleFavorite}
-            onShowDetails={() => setShowEmotionalProfile(!showEmotionalProfile)}
             autoplay={pendingAutoplay}
             onAutoplayConsumed={() => setPendingAutoplay(false)}
             onPlaybackStateChange={handlePlayerPlaybackChange}
+            dockPanelActions={
+              <DiscoverDockPanelActions
+                dockPopover={dockPopover}
+                setDockPopover={setDockPopover}
+                currentResult={currentResult}
+                tagSong={tagSong}
+                queue={queue}
+                currentIndex={currentIndex}
+                setCurrentIndex={setCurrentIndex}
+                isFavorite={isFavorite}
+                onToggleFavorite={handleToggleFavorite}
+                listenHistory={listenHistory}
+              />
+            }
           />
         </div>
       </div>

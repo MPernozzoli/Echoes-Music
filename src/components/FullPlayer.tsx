@@ -1,13 +1,13 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import { cn } from "@/lib/utils";
+import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
 import { Play, Pause, SkipBack, SkipForward, Heart, Volume2, VolumeX, Info } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import type { Song } from "@/data/mockData";
 import { useAppleMusic } from "@/context/AppleMusicContext";
 import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
 import { AppleMusicEmbed } from "@/components/AppleMusicEmbed";
-import { AppleMusicKitPlayer } from "@/components/AppleMusicKitPlayer";
+import { AppleMusicKitPlayer, type AppleMusicKitPlayerHandle } from "@/components/AppleMusicKitPlayer";
 import { StreamingLibraryActions } from "@/components/StreamingLibraryActions";
+import { PlayerDockChrome, type DockRepeatMode } from "@/components/PlayerDockChrome";
 
 interface FullPlayerProps {
   songs: Song[];
@@ -22,6 +22,10 @@ interface FullPlayerProps {
   /** desktop: barra compatta in basso */
   variant?: "default" | "dock";
   onPlaybackStateChange?: (playing: boolean) => void;
+  /** Barra dock: apre il pannello coda */
+  onOpenQueue?: () => void;
+  /** Barra dock: sostituisce mic/coda con azioni custom (es. Popover) */
+  dockPanelActions?: ReactNode;
 }
 
 function formatTime(seconds: number): string {
@@ -42,6 +46,8 @@ const FullPlayer = ({
   onAutoplayConsumed,
   variant = "default",
   onPlaybackStateChange,
+  onOpenQueue,
+  dockPanelActions,
 }: FullPlayerProps) => {
   const song = songs[currentIndex];
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -76,9 +82,23 @@ const FullPlayer = ({
   const useAppleKitPlayer =
     useApplePlayback && appleMusic.isAuthorized && appleMusic.isAvailable;
 
+  const kitPlayerRef = useRef<AppleMusicKitPlayerHandle>(null);
+  const [kitTelemetry, setKitTelemetry] = useState({ current: 0, duration: 0, isPlaying: false });
+  const [dockShuffle, setDockShuffle] = useState(false);
+  const [dockRepeat, setDockRepeat] = useState<DockRepeatMode>("off");
+
+  useEffect(() => {
+    setKitTelemetry({ current: 0, duration: 0, isPlaying: false });
+  }, [song?.id]);
+
   useEffect(() => {
     if (!useAppleKitPlayer) setKitAutoplayNonce(0);
   }, [useAppleKitPlayer]);
+
+  useEffect(() => {
+    if (!isDock || !useAppleKitPlayer) return;
+    kitPlayerRef.current?.setVolume(isMuted ? 0 : volume / 100);
+  }, [volume, isMuted, isDock, useAppleKitPlayer, song?.id]);
 
   const handleKitTrackEnded = useCallback(() => {
     const i = indexRef.current;
@@ -235,129 +255,179 @@ const FullPlayer = ({
   const fav = isFavorite(song.id);
   const yearSuffix = song.releaseYear != null ? ` · ${song.releaseYear}` : "";
 
+  const embedOnlyDock =
+    isDock &&
+    ((!useApplePlayback && useEmbed && Boolean(spotifyTrackId)) ||
+      (useApplePlayback && Boolean(appleMusicId) && !(appleMusic.isAuthorized && appleMusic.isAvailable)));
+
+  const openExternalStream = () => {
+    if (spotifyTrackId) {
+      window.open(`https://open.spotify.com/track/${spotifyTrackId}`, "_blank", "noopener,noreferrer");
+    } else if (appleMusicId) {
+      window.open(`https://music.apple.com/us/song/${appleMusicId}`, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  const cycleDockRepeat = () => {
+    setDockRepeat((r) => (r === "off" ? "all" : r === "all" ? "one" : "off"));
+  };
+
+  const onDockSeek = (seconds: number) => {
+    if (useAppleKitPlayer) kitPlayerRef.current?.seek(seconds);
+    else if (audioRef.current && audioReady) {
+      audioRef.current.currentTime = seconds;
+      setCurrentTime(seconds);
+    }
+  };
+
+  const onDockPlayPause = () => {
+    if (embedOnlyDock) {
+      openExternalStream();
+      return;
+    }
+    if (useAppleKitPlayer) void kitPlayerRef.current?.togglePlay();
+    else void togglePlay();
+  };
+
+  const dockSeekDisabled =
+    embedOnlyDock ||
+    (useAppleKitPlayer ? kitTelemetry.duration <= 0 : !audioReady || duration <= 0);
+
+  const dockPlayDisabled = !embedOnlyDock && !useAppleKitPlayer && !audioReady;
+
+  if (isDock) {
+    return (
+      <>
+        {useAppleKitPlayer && (
+          <AppleMusicKitPlayer
+            ref={kitPlayerRef}
+            chromeMode="none"
+            trackId={appleMusicId!}
+            trackKey={song.id}
+            onTelemetry={setKitTelemetry}
+            onPlaybackStateChange={onPlaybackStateChange}
+            onTrackEnded={handleKitTrackEnded}
+            queueAutoplayNonce={kitAutoplayNonce}
+            onQueueAutoplayConsumed={onKitQueueAutoplayConsumed}
+          />
+        )}
+        <div className="w-full">
+          <PlayerDockChrome
+            artworkUrl={song.artwork}
+            title={song.title}
+            subtitle={`${song.artist} · ${song.album}${yearSuffix}`}
+            artworkOverlapClassName="w-[5.75rem] h-[5.75rem] md:w-[6.75rem] md:h-[6.75rem] -translate-y-8 md:-translate-y-9"
+            isFavorite={fav}
+            onToggleFavorite={() => onToggleFavorite(song.id)}
+            shuffleOn={dockShuffle}
+            onShuffleToggle={() => setDockShuffle((s) => !s)}
+            repeatMode={dockRepeat}
+            onRepeatCycle={cycleDockRepeat}
+            onPrev={handlePrev}
+            onNext={handleNext}
+            prevDisabled={currentIndex === 0}
+            nextDisabled={currentIndex === songs.length - 1}
+            isPlaying={useAppleKitPlayer ? kitTelemetry.isPlaying : isPlaying}
+            onPlayPause={onDockPlayPause}
+            playDisabled={dockPlayDisabled}
+            currentTime={useAppleKitPlayer ? kitTelemetry.current : currentTime}
+            duration={useAppleKitPlayer ? kitTelemetry.duration : duration}
+            onSeek={onDockSeek}
+            seekDisabled={dockSeekDisabled}
+            volume={volume}
+            isMuted={isMuted}
+            onVolumeChange={(v) => {
+              setVolume(v);
+              setIsMuted(false);
+              if (useAppleKitPlayer) kitPlayerRef.current?.setVolume(v / 100);
+            }}
+            onMuteToggle={() => {
+              setIsMuted((m) => {
+                const next = !m;
+                if (useAppleKitPlayer) kitPlayerRef.current?.setVolume(next ? 0 : volume / 100);
+                return next;
+              });
+            }}
+            dockPanelActions={dockPanelActions}
+            onDetails={dockPanelActions ? undefined : onShowDetails}
+            onOpenQueue={dockPanelActions ? undefined : onOpenQueue}
+          />
+          <StreamingLibraryActions
+            spotifyTrackId={spotifyTrackId}
+            appleMusicTrackId={appleMusicId}
+            className="px-3 pt-2 pb-1 border-t border-zinc-800/80 justify-center"
+            compact
+          />
+        </div>
+      </>
+    );
+  }
+
   return (
-    <div
-      className={cn(
-        isDock
-          ? "w-full flex flex-col gap-2"
-          : "flex flex-col items-center w-full max-w-lg mx-auto animate-fade-up"
-      )}
-    >
-      {!isDock && (
-        <div className="relative w-64 h-64 md:w-72 md:h-72 rounded-2xl overflow-hidden shadow-2xl mb-6 group">
-          <img
-            src={song.artwork}
-            alt={`${song.title} by ${song.artist}`}
-            className="w-full h-full object-cover"
-            width={288}
-            height={288}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent" />
-        </div>
-      )}
+    <div className="flex flex-col items-center w-full max-w-lg mx-auto animate-fade-up">
+      <div className="relative w-64 h-64 md:w-72 md:h-72 rounded-2xl overflow-hidden shadow-2xl mb-6 group">
+        <img
+          src={song.artwork}
+          alt={`${song.title} by ${song.artist}`}
+          className="w-full h-full object-cover"
+          width={288}
+          height={288}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent" />
+      </div>
 
-      {isDock && (
-        <div className="flex items-center gap-3 w-full min-w-0">
-          <img
-            src={song.artwork}
-            alt=""
-            className="w-14 h-14 rounded-lg object-cover shrink-0 bg-muted"
-            width={56}
-            height={56}
-          />
-          <div className="flex-1 min-w-0">
-            <h2 className="font-display text-sm font-bold text-foreground truncate">{song.title}</h2>
-            <p className="text-muted-foreground font-body text-xs truncate">
-              {song.artist} · {song.album}
-              {yearSuffix}
-            </p>
-          </div>
-          <div className="flex items-center gap-0.5 shrink-0">
-            {onShowDetails && (
-              <button
-                type="button"
-                onClick={onShowDetails}
-                className="p-2 rounded-full hover:bg-muted transition-colors"
-                title="Dettagli"
-              >
-                <Info className="w-4 h-4 text-muted-foreground" />
-              </button>
-            )}
+      <div className="w-full flex items-center justify-between px-2 mb-1">
+        <div className="min-w-0 flex-1">
+          <h2 className="font-display text-xl md:text-2xl font-bold text-foreground truncate">{song.title}</h2>
+          <p className="text-muted-foreground font-body text-sm truncate">
+            {song.artist} · {song.album}
+            {yearSuffix}
+          </p>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          {onShowDetails && (
             <button
               type="button"
-              onClick={() => onToggleFavorite(song.id)}
+              onClick={onShowDetails}
               className="p-2 rounded-full hover:bg-muted transition-colors"
+              title="Song details"
             >
-              <Heart className={`w-4 h-4 transition-colors ${fav ? "fill-primary text-primary" : "text-muted-foreground"}`} />
+              <Info className="w-5 h-5 text-muted-foreground" />
             </button>
-          </div>
-        </div>
-      )}
-
-      {!isDock && (
-        <div className="w-full flex items-center justify-between px-2 mb-1">
-          <div className="min-w-0 flex-1">
-            <h2 className="font-display text-xl md:text-2xl font-bold text-foreground truncate">
-              {song.title}
-            </h2>
-            <p className="text-muted-foreground font-body text-sm truncate">
-              {song.artist} · {song.album}
-              {yearSuffix}
-            </p>
-          </div>
-          <div className="flex items-center gap-1 shrink-0">
-            {onShowDetails && (
-              <button
-                type="button"
-                onClick={onShowDetails}
-                className="p-2 rounded-full hover:bg-muted transition-colors"
-                title="Song details"
-              >
-                <Info className="w-5 h-5 text-muted-foreground" />
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => onToggleFavorite(song.id)}
-              className="p-2 rounded-full hover:bg-muted transition-colors"
-            >
-              <Heart className={`w-5 h-5 transition-colors ${fav ? "fill-primary text-primary" : "text-muted-foreground"}`} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {!isDock && (
-        <p className="text-sm text-muted-foreground font-body line-clamp-2 px-2 mb-4 w-full">
-          {song.explanation}
-        </p>
-      )}
-      {isDock && (
-        <p className="text-xs text-muted-foreground font-body line-clamp-2 w-full -mt-1">
-          {song.explanation}
-        </p>
-      )}
-
-      {/* Apple Music: MusicKit se connesso in app (stessi token), altrimenti embed Apple */}
-      {useApplePlayback && appleMusicId && (
-        <div className={cn("w-full px-2 mb-4 space-y-3", isDock && "mb-2 px-0")}>
-          {appleMusic.isAuthorized && appleMusic.isAvailable ? (
-            <AppleMusicKitPlayer
-              trackId={appleMusicId}
-              trackKey={song.id}
-              title={song.title}
-              artist={song.artist}
-              compact={isDock}
-              onPlaybackStateChange={onPlaybackStateChange}
-              onTrackEnded={handleKitTrackEnded}
-              queueAutoplayNonce={kitAutoplayNonce}
-              onQueueAutoplayConsumed={onKitQueueAutoplayConsumed}
-            />
-          ) : (
-            <AppleMusicEmbed trackId={appleMusicId} trackTitle={song.title} height={isDock ? 120 : 152} />
           )}
-          <div className={cn("flex items-center justify-center gap-6", isDock && "gap-4")}>
+          <button
+            type="button"
+            onClick={() => onToggleFavorite(song.id)}
+            className="p-2 rounded-full hover:bg-muted transition-colors"
+          >
+            <Heart className={`w-5 h-5 transition-colors ${fav ? "fill-primary text-primary" : "text-muted-foreground"}`} />
+          </button>
+        </div>
+      </div>
+
+      <p className="text-sm text-muted-foreground font-body line-clamp-2 px-2 mb-4 w-full">{song.explanation}</p>
+
+      {useAppleKitPlayer && (
+        <AppleMusicKitPlayer
+          chromeMode="default"
+          trackId={appleMusicId!}
+          trackKey={song.id}
+          title={song.title}
+          artist={song.artist}
+          onPlaybackStateChange={onPlaybackStateChange}
+          onTrackEnded={handleKitTrackEnded}
+          queueAutoplayNonce={kitAutoplayNonce}
+          onQueueAutoplayConsumed={onKitQueueAutoplayConsumed}
+        />
+      )}
+
+      {/* Apple Music solo embed (MusicKit è il blocco sopra) */}
+      {useApplePlayback && appleMusicId && !useAppleKitPlayer && (
+        <div className="w-full px-2 mb-4 space-y-3">
+          <AppleMusicEmbed trackId={appleMusicId} trackTitle={song.title} height={152} />
+          <div className="flex items-center justify-center gap-6">
             <button
+              type="button"
               onClick={handlePrev}
               disabled={currentIndex === 0}
               className="p-2 rounded-full text-foreground hover:bg-muted transition-colors disabled:opacity-30"
@@ -365,6 +435,7 @@ const FullPlayer = ({
               <SkipBack className="w-5 h-5" />
             </button>
             <button
+              type="button"
               onClick={handleNext}
               disabled={currentIndex === songs.length - 1}
               className="p-2 rounded-full text-foreground hover:bg-muted transition-colors disabled:opacity-30"
@@ -378,7 +449,7 @@ const FullPlayer = ({
       {/* Native audio controls */}
       {!useApplePlayback && !useEmbed && (
         <>
-          <div className={cn("w-full px-2 mb-2", isDock && "px-0 mb-1")}>
+          <div className="w-full px-2 mb-2">
             <Slider
               value={[currentTime]}
               min={0}
@@ -389,39 +460,28 @@ const FullPlayer = ({
               disabled={!audioReady}
             />
             <div className="flex justify-between mt-1">
-              <span className="text-[10px] font-body text-muted-foreground tabular-nums">
-                {formatTime(currentTime)}
-              </span>
-              <span className="text-[10px] font-body text-muted-foreground tabular-nums">
-                {formatTime(duration)}
-              </span>
+              <span className="text-[10px] font-body text-muted-foreground tabular-nums">{formatTime(currentTime)}</span>
+              <span className="text-[10px] font-body text-muted-foreground tabular-nums">{formatTime(duration)}</span>
             </div>
           </div>
 
-          <div className={cn("flex items-center gap-6 mb-4", isDock && "gap-4 mb-0 justify-center")}>
+          <div className="flex items-center gap-6 mb-4">
             <button
               type="button"
               onClick={handlePrev}
               disabled={currentIndex === 0}
               className="p-2 rounded-full text-foreground hover:bg-muted transition-colors disabled:opacity-30"
             >
-              <SkipBack className={cn(isDock ? "w-4 h-4" : "w-5 h-5")} />
+              <SkipBack className="w-5 h-5" />
             </button>
 
             <button
               type="button"
               onClick={togglePlay}
               disabled={!audioReady}
-              className={cn(
-                "rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:scale-105 active:scale-95 transition-transform disabled:opacity-50",
-                isDock ? "w-11 h-11" : "w-14 h-14"
-              )}
+              className="w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:scale-105 active:scale-95 transition-transform disabled:opacity-50"
             >
-              {isPlaying ? (
-                <Pause className={cn(isDock ? "w-5 h-5" : "w-6 h-6")} />
-              ) : (
-                <Play className={cn(isDock ? "w-5 h-5 ml-0.5" : "w-6 h-6 ml-0.5")} />
-              )}
+              {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
             </button>
 
             <button
@@ -430,32 +490,30 @@ const FullPlayer = ({
               disabled={currentIndex === songs.length - 1}
               className="p-2 rounded-full text-foreground hover:bg-muted transition-colors disabled:opacity-30"
             >
-              <SkipForward className={cn(isDock ? "w-4 h-4" : "w-5 h-5")} />
+              <SkipForward className="w-5 h-5" />
             </button>
           </div>
 
-          {!isDock && (
-            <div className="flex items-center gap-2 w-32">
-              <button
-                type="button"
-                onClick={() => setIsMuted(!isMuted)}
-                className="p-1 rounded-full text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-              </button>
-              <Slider
-                value={[isMuted ? 0 : volume]}
-                min={0}
-                max={100}
-                step={1}
-                onValueChange={(v) => {
-                  setVolume(v[0]);
-                  setIsMuted(false);
-                }}
-                className="flex-1"
-              />
-            </div>
-          )}
+          <div className="flex items-center gap-2 w-32">
+            <button
+              type="button"
+              onClick={() => setIsMuted(!isMuted)}
+              className="p-1 rounded-full text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+            </button>
+            <Slider
+              value={[isMuted ? 0 : volume]}
+              min={0}
+              max={100}
+              step={1}
+              onValueChange={(v) => {
+                setVolume(v[0]);
+                setIsMuted(false);
+              }}
+              className="flex-1"
+            />
+          </div>
         </>
       )}
 
@@ -501,12 +559,7 @@ const FullPlayer = ({
         </div>
       )}
 
-      <StreamingLibraryActions
-        spotifyTrackId={spotifyTrackId}
-        appleMusicTrackId={appleMusicId}
-        className={cn("w-full px-2 mt-2", isDock && "px-0")}
-        compact={isDock}
-      />
+      <StreamingLibraryActions spotifyTrackId={spotifyTrackId} appleMusicTrackId={appleMusicId} className="w-full px-2 mt-2" />
     </div>
   );
 };
