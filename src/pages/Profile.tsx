@@ -4,12 +4,14 @@ import { User, Music, Palette, LogOut, ExternalLink, Shield, Check, Loader2, X }
 import { getUserSettings, setAllowAnonymizedData } from "@/services/tracking";
 import { getSpotifyAuthUrl, disconnectSpotify } from "@/services/spotify";
 import { useSpotify } from "@/context/SpotifyContext";
+import { useAppleMusic } from "@/context/AppleMusicContext";
 
 const Profile = () => {
   const [allowData, setAllowData] = useState(true);
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [connectingSpotify, setConnectingSpotify] = useState(false);
   const { isConnected: spotifyConnected, displayName: spotifyName, isPremium, loading: spotifyLoading, setDisconnected } = useSpotify();
+  const { isAvailable: appleMusicAvailable, isAuthorized: appleMusicAuthorized, loading: appleMusicLoading, authorize: authorizeApple, unauthorize: unauthorizeApple } = useAppleMusic();
 
   useEffect(() => {
     getUserSettings().then((s) => {
@@ -98,14 +100,53 @@ const Profile = () => {
                 disabled={connectingSpotify}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-border text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all disabled:opacity-50"
               >
-                {connectingSpotify ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <ExternalLink className="w-3 h-3" />
-                )}
+                {connectingSpotify ? <Loader2 className="w-3 h-3 animate-spin" /> : <ExternalLink className="w-3 h-3" />}
                 Connect
               </button>
             )}
+          </div>
+        </div>
+
+        {/* Apple Music */}
+        <div className="glass-card rounded-2xl p-6 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[hsl(350,80%,55%)]/10 flex items-center justify-center">
+                <Music className="w-5 h-5 text-[hsl(350,80%,55%)]" />
+              </div>
+              <div>
+                <h3 className="font-body text-sm font-medium text-foreground">Apple Music</h3>
+                {appleMusicLoading ? (
+                  <p className="text-xs text-muted-foreground font-body">Loading MusicKit…</p>
+                ) : !appleMusicAvailable ? (
+                  <p className="text-xs text-muted-foreground font-body">MusicKit not available</p>
+                ) : appleMusicAuthorized ? (
+                  <p className="text-xs text-[hsl(350,80%,55%)] font-body flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    Connected — Full playback enabled
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground font-body">Connect for full playback</p>
+                )}
+              </div>
+            </div>
+            {appleMusicAuthorized ? (
+              <button
+                onClick={unauthorizeApple}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-destructive/30 text-sm font-body text-destructive/70 hover:text-destructive hover:border-destructive/50 transition-all"
+              >
+                <X className="w-3 h-3" />
+                Disconnect
+              </button>
+            ) : appleMusicAvailable ? (
+              <button
+                onClick={authorizeApple}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-border text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all"
+              >
+                <ExternalLink className="w-3 h-3" />
+                Connect
+              </button>
+            ) : null}
           </div>
         </div>
 
@@ -142,15 +183,9 @@ const Profile = () => {
             <button
               onClick={handleToggle}
               disabled={loadingSettings}
-              className={`relative w-11 h-6 rounded-full transition-colors ${
-                allowData ? "bg-primary" : "bg-muted"
-              }`}
+              className={`relative w-11 h-6 rounded-full transition-colors ${allowData ? "bg-primary" : "bg-muted"}`}
             >
-              <span
-                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-primary-foreground transition-transform ${
-                  allowData ? "translate-x-5" : "translate-x-0"
-                }`}
-              />
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-primary-foreground transition-transform ${allowData ? "translate-x-5" : "translate-x-0"}`} />
             </button>
           </div>
         </div>
