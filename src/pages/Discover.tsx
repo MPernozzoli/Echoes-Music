@@ -7,11 +7,12 @@ import SongCard from "@/components/SongCard";
 import EmotionalProfileCard from "@/components/EmotionalProfile";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
 import SearchFeedback from "@/components/SearchFeedback";
-import { examplePrompts, mockSearchResults, mockSongs } from "@/data/mockData";
+import { examplePrompts } from "@/data/mockData";
 import type { SearchResult } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 import { trackSearch, trackResults, trackInteraction, maybeCreateTrainingEvent } from "@/services/tracking";
 import { Lightbulb, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 
 const Discover = () => {
   const [searchParams] = useSearchParams();
@@ -27,16 +28,39 @@ const Discover = () => {
     setIsLoading(true);
     setHasSearched(true);
 
-    // Simulate AI processing
-    setTimeout(async () => {
-      const matchIndex = Math.floor(Math.random() * mockSearchResults.length);
+    try {
+      const PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+      const res = await fetch(`https://${PROJECT_ID}.supabase.co/functions/v1/music-search`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': ANON_KEY,
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Search failed' }));
+        if (res.status === 429) toast.error("Troppi richieste. Riprova tra poco.");
+        else if (res.status === 402) toast.error("Crediti AI esauriti.");
+        else toast.error(err.error || "Ricerca fallita");
+        setIsLoading(false);
+        return;
+      }
+
+      const data = await res.json();
+
       const result: SearchResult = {
-        ...mockSearchResults[matchIndex],
         id: `sr-${Date.now()}`,
         prompt,
         timestamp: new Date().toISOString(),
-        songs: [...mockSongs].sort(() => Math.random() - 0.5).slice(0, 4 + Math.floor(Math.random() * 3)),
+        emotionalProfile: data.emotionalProfile,
+        songs: data.songs,
+        adjacentInterpretations: data.adjacentInterpretations || [],
       };
+
       setCurrentResult(result);
       addToHistory(result);
       setIsLoading(false);
@@ -53,7 +77,11 @@ const Discover = () => {
         const map = await trackResults(searchId, result.songs);
         setResultIdMap(map);
       }
-    }, 2000);
+    } catch (err) {
+      console.error('Search error:', err);
+      toast.error("Errore durante la ricerca");
+      setIsLoading(false);
+    }
   };
 
   const handleToggleFavorite = (songId: string) => {

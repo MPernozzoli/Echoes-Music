@@ -8,6 +8,10 @@ export interface Song {
   explanation: string;
   relevanceScore: number;
   spotifyUrl?: string;
+  provider?: 'spotify' | 'apple_music' | 'mock';
+  spotifyUri?: string;
+  appleMusicId?: string;
+  previewUrl?: string;
 }
 
 export interface SearchResult {
