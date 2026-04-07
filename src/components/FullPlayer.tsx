@@ -366,7 +366,7 @@ const FullPlayer = ({
             artworkUrl={song.artwork}
             title={song.title}
             subtitle={`${song.artist} · ${song.album}${yearSuffix}`}
-            artworkOverlapClassName="w-[5.75rem] h-[5.75rem] md:w-[6.75rem] md:h-[6.75rem] -translate-y-8 md:-translate-y-9"
+            artworkOverlapClassName="w-16 h-16 sm:w-[4.75rem] sm:h-[4.75rem] md:w-[5.5rem] md:h-[5.5rem] -translate-y-6 sm:-translate-y-7 md:-translate-y-8"
             isFavorite={fav}
             onToggleFavorite={() => onToggleFavorite(song.id)}
             trackExtraActions={

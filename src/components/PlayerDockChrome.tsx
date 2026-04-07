@@ -125,44 +125,44 @@ export function PlayerDockChrome({
   return (
     <div className="relative w-full text-zinc-100">
       {/* Spazio per la copertina che esce dalla barra */}
-      <div className="h-5 md:h-6 shrink-0" aria-hidden />
+      <div className="h-4 sm:h-5 md:h-6 shrink-0" aria-hidden />
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(200px,30%)_1fr_minmax(200px,30%)] gap-x-4 gap-y-3 items-end px-2 sm:px-4 pb-3 pt-1">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(220px,32%)_1fr_minmax(200px,28%)] gap-x-6 gap-y-3 items-end px-3 sm:px-4 pb-3 pt-1">
         {/* Sinistra: copertina + testo + azioni */}
-        <div className="relative flex items-end gap-3 min-w-0 min-h-[3.25rem] pl-[4.75rem] sm:pl-[5.25rem] md:pl-28">
+        <div className="relative flex flex-col justify-end min-w-0 min-h-[3.5rem] pl-[4.25rem] sm:pl-[5rem] md:pl-[7rem]">
           <div
             className={cn(
-              "absolute left-0 bottom-0 rounded-md overflow-hidden shadow-2xl ring-1 ring-white/10 bg-zinc-900",
+              "absolute left-0 bottom-0 rounded-lg overflow-hidden shadow-2xl ring-1 ring-white/10 bg-zinc-900",
               artworkOverlapClassName
             )}
           >
             <img src={artworkUrl} alt="" className="w-full h-full object-cover" width={96} height={96} />
           </div>
-          <div className="min-w-0 flex-1 pb-0.5">
-            <p className="text-sm font-semibold truncate hover:underline cursor-default text-white">{title}</p>
-            <p className="text-xs text-zinc-400 truncate">{subtitle}</p>
+          <div className="min-w-0 pb-0.5">
+            <p className="text-[15px] sm:text-base font-semibold truncate hover:underline cursor-default text-white leading-snug">{title}</p>
+            <p className="text-xs text-zinc-400 truncate mt-0.5">{subtitle}</p>
           </div>
-          <div className="flex items-center gap-0.5 shrink-0 pb-1">
+          <div className="flex items-center gap-1 mt-1.5 -ml-0.5">
             {trackExtraActions}
             {libraryButton ?? (
               <button
                 type="button"
                 onClick={onToggleFavorite}
                 className={cn(
-                  "p-2 rounded-full border border-zinc-600 text-zinc-300 hover:border-zinc-400 hover:text-white transition-colors",
+                  "p-1.5 rounded-full border border-zinc-600/80 text-zinc-400 hover:border-zinc-400 hover:text-white transition-colors",
                   isFavorite && "text-primary border-primary/50"
                 )}
                 title={isFavorite ? t("player.removeFromFavorites") : t("player.addToFavorites")}
               >
-                <Heart className={cn("w-4 h-4", isFavorite && "fill-primary text-primary")} />
+                <Heart className={cn("w-3.5 h-3.5", isFavorite && "fill-primary text-primary")} />
               </button>
             )}
           </div>
         </div>
 
         {/* Centro: shuffle, prev, play, next, repeat + barra */}
-        <div className="flex flex-col items-center gap-2 justify-end min-w-0 order-first lg:order-none">
-          <div className="flex items-center justify-center gap-1 sm:gap-2">
+        <div className="flex flex-col items-center gap-1.5 justify-end min-w-0 order-first lg:order-none">
+          <div className="flex items-center justify-center gap-2 sm:gap-3">
             <button
               type="button"
               className={cn(dockBtn, shuffleOn && "text-[hsl(141,73%,48%)]")}
@@ -178,7 +178,7 @@ export function PlayerDockChrome({
               type="button"
               onClick={onPlayPause}
               disabled={playDisabled}
-              className="mx-1 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-transform disabled:opacity-40 disabled:hover:scale-100 shadow-lg"
+              className="mx-0.5 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-transform disabled:opacity-40 disabled:hover:scale-100 shadow-lg"
               title={isPlaying ? t("player.pause") : t("player.play")}
             >
               {isPlaying ? <Pause className="w-5 h-5" fill="currentColor" /> : <Play className="w-5 h-5 ml-0.5" fill="currentColor" />}
@@ -220,7 +220,7 @@ export function PlayerDockChrome({
         </div>
 
         {/* Destra: pannelli (popover) o mic/coda, connect, volume, fullscreen */}
-        <div className="flex items-center justify-end gap-0.5 sm:gap-1 min-w-0 pb-1">
+        <div className="flex items-center justify-end gap-1 sm:gap-1.5 min-w-0 pb-1">
           {dockPanelActions ?? (
             <>
               {onDetails && (
@@ -247,7 +247,7 @@ export function PlayerDockChrome({
           ) : null}
           {showVolumeControl ? (
             <div
-              className="flex items-center gap-0.5 sm:gap-1 max-w-[100px] sm:max-w-[140px] shrink min-w-0 group/vol"
+              className="flex items-center gap-1 max-w-[110px] sm:max-w-[140px] shrink min-w-0 group/vol"
               onMouseEnter={() => setVolOpen(true)}
               onMouseLeave={() => setVolOpen(false)}
             >
