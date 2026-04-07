@@ -273,11 +273,16 @@ const FullPlayer = ({
   }, [currentIndex, onChangeIndex]);
 
   const handleNext = useCallback(() => {
-    if (currentIndex >= songs.length - 1) return;
-    queueContinueAfterLoad.current = true;
-    setKitAutoplayNonce((n) => n + 1);
-    onChangeIndex(currentIndex + 1);
-  }, [currentIndex, songs.length, onChangeIndex]);
+    if (currentIndex < songs.length - 1) {
+      queueContinueAfterLoad.current = true;
+      setKitAutoplayNonce((n) => n + 1);
+      onChangeIndex(currentIndex + 1);
+    } else if (dockRepeat === "all" && songs.length > 0) {
+      queueContinueAfterLoad.current = true;
+      setKitAutoplayNonce((n) => n + 1);
+      onChangeIndex(0);
+    }
+  }, [currentIndex, songs.length, onChangeIndex, dockRepeat]);
 
   const onDockPlayPause = useCallback(() => {
     const s = songs[currentIndex];
