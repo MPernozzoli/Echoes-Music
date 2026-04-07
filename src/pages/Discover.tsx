@@ -7,11 +7,12 @@ import SongCard from "@/components/SongCard";
 import EmotionalProfileCard from "@/components/EmotionalProfile";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
 import SearchFeedback from "@/components/SearchFeedback";
-import { examplePrompts, mockSearchResults, mockSongs } from "@/data/mockData";
+import { examplePrompts } from "@/data/mockData";
 import type { SearchResult } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 import { trackSearch, trackResults, trackInteraction, maybeCreateTrainingEvent } from "@/services/tracking";
 import { Lightbulb, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 
 const Discover = () => {
   const [searchParams] = useSearchParams();
