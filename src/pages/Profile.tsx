@@ -1,7 +1,25 @@
+import { useState, useEffect } from "react";
 import AppLayout from "@/components/AppLayout";
-import { User, Music, Palette, LogOut, ExternalLink } from "lucide-react";
+import { User, Music, Palette, LogOut, ExternalLink, Shield } from "lucide-react";
+import { getUserSettings, setAllowAnonymizedData } from "@/services/tracking";
 
 const Profile = () => {
+  const [allowData, setAllowData] = useState(true);
+  const [loadingSettings, setLoadingSettings] = useState(true);
+
+  useEffect(() => {
+    getUserSettings().then((s) => {
+      if (s) setAllowData(s.allow_anonymized_improvement_data);
+      setLoadingSettings(false);
+    });
+  }, []);
+
+  const handleToggle = async () => {
+    const next = !allowData;
+    setAllowData(next);
+    await setAllowAnonymizedData(next);
+  };
+
   return (
     <AppLayout>
       <div className="max-w-2xl mx-auto px-4 md:px-6 py-8 pb-20 md:pb-8">
@@ -52,6 +70,36 @@ const Profile = () => {
               </div>
             </div>
             <span className="text-sm text-muted-foreground font-body px-3 py-1 rounded-lg bg-muted">Dark</span>
+          </div>
+        </div>
+
+        {/* Privacy / Data */}
+        <div className="glass-card rounded-2xl p-6 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Shield className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-body text-sm font-medium text-foreground">Improvement Data</h3>
+                <p className="text-xs text-muted-foreground font-body max-w-xs">
+                  Allow anonymized data to help improve recommendations
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleToggle}
+              disabled={loadingSettings}
+              className={`relative w-11 h-6 rounded-full transition-colors ${
+                allowData ? "bg-primary" : "bg-muted"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-primary-foreground transition-transform ${
+                  allowData ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
           </div>
         </div>
 
