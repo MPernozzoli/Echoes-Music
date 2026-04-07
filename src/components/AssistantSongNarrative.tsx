@@ -1,5 +1,5 @@
-import { useMemo, useState, type ReactNode } from "react";
-import type { Song } from "@/data/mockData";
+import { useState, type ReactNode } from "react";
+import type { EmotionalProfile, Song } from "@/data/mockData";
 import type { QueueListenSource } from "@/context/PlaybackQueueContext";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -9,58 +9,37 @@ import { cn } from "@/lib/utils";
 import { requestPlaybackToggle } from "@/lib/playbackToggleBridge";
 import { trackResultFeedback } from "@/services/tracking";
 
-function normTitle(s: string) {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{M}/gu, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function spotifyTrackIdFromSong(song: Song): string | undefined {
   const u = song.spotifyUri;
   if (!u) return undefined;
   return u.replace(/^spotify:track:/i, "");
 }
 
-export function fallbackNarrativeForResult(prompt: string, songs: Song[]): string {
-  if (!songs.length) return "";
-  const head = `Per «${prompt}» ho pensato a questi brani: `;
-  const tail = songs.map((s) => `«${s.title}» (${s.artist}) — ${s.explanation}`).join(" ");
-  return head + tail;
-}
+/** Quando manca narrativeReply dal modello (messaggi vecchi o errore). */
+export function fallbackNarrativeForResult(
+  prompt: string,
+  profile: EmotionalProfile,
+  opts: { lucky?: boolean; songCount: number }
+): string {
+  const mood = profile.mood.trim();
+  const themeHint = profile.themes.length ? profile.themes.slice(0, 3).join(", ") : "";
+  const moodClip = (s: string, n: number) => (s.length <= n ? s : `${s.slice(0, n)}…`);
 
-type Segment = { type: "text"; text: string } | { type: "song"; song: Song; index: number };
-
-function parseNarrative(narrative: string, songs: Song[]): Segment[] {
-  const used = new Set<number>();
-  const segments: Segment[] = [];
-  const re = /«([^»]+)»/gu;
-  let last = 0;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(narrative)) !== null) {
-    if (m.index > last) segments.push({ type: "text", text: narrative.slice(last, m.index) });
-    const raw = m[1].trim();
-    const n = normTitle(raw);
-    let idx = songs.findIndex((s, i) => !used.has(i) && normTitle(s.title) === n);
-    if (idx < 0) {
-      idx = songs.findIndex(
-        (s, i) =>
-          !used.has(i) &&
-          (n.includes(normTitle(s.title)) || normTitle(s.title).includes(n))
-      );
-    }
-    if (idx >= 0) {
-      used.add(idx);
-      segments.push({ type: "song", song: songs[idx], index: idx });
-    } else {
-      segments.push({ type: "text", text: m[0] });
-    }
-    last = m.index + m[0].length;
+  if (opts.lucky) {
+    return [
+      `Ho messo insieme ${opts.songCount} brani come piccola “radiografia” del tuo gusto: un punto di partenza più centrale e qualche scoperta nello stesso quartiere emotivo.`,
+      themeHint ? ` Temi che ricorrono: ${themeHint}.` : "",
+      ` Il filo: ${moodClip(mood, 240)}`,
+      ` I titoli sono qui sotto: apri ognuno per la scheda con la spiegazione sul singolo brano e i comandi per ascoltare o mettere in coda.`,
+    ].join("");
   }
-  if (last < narrative.length) segments.push({ type: "text", text: narrative.slice(last) });
-  return segments;
+
+  return [
+    `Ho cercato di tradurre «${prompt}» in un arco musicale coerente.`,
+    ` L’impasto emotivo: ${moodClip(mood, 260)}`,
+    themeHint ? ` Temi: ${themeHint}.` : "",
+    ` Scorri i brani qui sotto — in ogni titolo trovi perché quel pezzo c’entra e cosa puoi farci.`,
+  ].join("");
 }
 
 interface SongLinkPopoverProps {
@@ -77,6 +56,7 @@ interface SongLinkPopoverProps {
   isFavorite: (id: string) => boolean;
   toggleFavorite: (song: Song) => void;
   tracking?: { searchId: string; resultIdsBySongId: Record<string, string> };
+  triggerVariant?: "link" | "chip";
 }
 
 function SongLinkPopover({
@@ -93,6 +73,7 @@ function SongLinkPopover({
   isFavorite,
   toggleFavorite,
   tracking,
+  triggerVariant = "link",
 }: SongLinkPopoverProps) {
   const [open, setOpen] = useState(false);
   const isCurrent = queue[currentIndex]?.id === song.id;
@@ -111,17 +92,27 @@ function SongLinkPopover({
     }
   };
 
+  const triggerClass =
+    triggerVariant === "chip"
+      ? cn(
+          "rounded-full border border-primary/30 bg-primary/8 px-2.5 py-1 text-xs font-body font-medium text-primary",
+          "hover:bg-primary/15 hover:border-primary/45 transition-colors",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        )
+      : cn(
+          "inline font-medium text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-sm"
+        );
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button
-          type="button"
-          className={cn(
-            "inline font-medium text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-sm"
+        <button type="button" className={triggerClass}>
+          {triggerVariant === "chip" ? (
+            <span className="max-w-[14rem] truncate inline-block align-bottom">{song.title}</span>
+          ) : (
+            <>«{song.title}»</>
           )}
-        >
-          «{song.title}»
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-[min(100vw-2rem,20rem)] p-3" align="start" side="top">
@@ -225,37 +216,39 @@ export function AssistantSongNarrative({
   tracking,
   className,
 }: AssistantSongNarrativeProps) {
-  const segments = useMemo(() => parseNarrative(narrative, songs), [narrative, songs]);
-
-  const body: ReactNode[] = [];
-  segments.forEach((seg, i) => {
-    if (seg.type === "text") {
-      if (seg.text) body.push(<span key={`t-${i}`}>{seg.text}</span>);
-    } else {
-      body.push(
-        <SongLinkPopover
-          key={`s-${seg.song.id}-${i}`}
-          song={seg.song}
-          songIndex={seg.index}
-          allSongs={songs}
-          source={source}
-          queue={queue}
-          currentIndex={currentIndex}
-          isGloballyPlaying={isGloballyPlaying}
-          playTrackFromResult={playTrackFromResult}
-          appendToQueue={appendToQueue}
-          insertAfterCurrent={insertAfterCurrent}
-          isFavorite={isFavorite}
-          toggleFavorite={toggleFavorite}
-          tracking={tracking}
-        />
-      );
-    }
+  const chips: ReactNode[] = [];
+  songs.forEach((song, index) => {
+    if (index > 0) chips.push(<span key={`sep-${song.id}`} className="text-muted-foreground text-xs px-0.5 select-none" aria-hidden>·</span>);
+    chips.push(
+      <SongLinkPopover
+        key={song.id}
+        song={song}
+        songIndex={index}
+        allSongs={songs}
+        source={source}
+        queue={queue}
+        currentIndex={currentIndex}
+        isGloballyPlaying={isGloballyPlaying}
+        playTrackFromResult={playTrackFromResult}
+        appendToQueue={appendToQueue}
+        insertAfterCurrent={insertAfterCurrent}
+        isFavorite={isFavorite}
+        toggleFavorite={toggleFavorite}
+        tracking={tracking}
+        triggerVariant="chip"
+      />
+    );
   });
 
   return (
-    <div className={cn("text-sm font-body text-foreground/95 leading-relaxed whitespace-pre-line", className)}>
-      {body}
+    <div className={cn("space-y-3", className)}>
+      <p className="text-sm font-body text-foreground/95 leading-relaxed whitespace-pre-line">{narrative}</p>
+      {songs.length > 0 && (
+        <div className="pt-2 border-t border-border/35">
+          <p className="text-[10px] font-body uppercase tracking-wider text-muted-foreground mb-2">Brani</p>
+          <div className="flex flex-wrap gap-y-2 gap-x-0.5 items-center">{chips}</div>
+        </div>
+      )}
     </div>
   );
 }

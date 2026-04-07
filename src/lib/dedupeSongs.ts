@@ -17,6 +17,8 @@ function isVersionParenContent(inner: string): boolean {
     /remaster/.test(s) ||
     /\bmono\b|\bstereo\b/.test(s) ||
     /\bedit\b|\bversion\b/.test(s) ||
+    /\bremix\b|\bre-?mix\b|club\s+mix|extended\s+mix|radio\s+mix|dub\s+mix/.test(s) ||
+    /extended|rework|vip\b|dub\b/.test(s) ||
     /\bsingle\b|\bradio\b/.test(s) ||
     /acoustic/.test(s) ||
     /re-?record/.test(s) ||
@@ -26,21 +28,29 @@ function isVersionParenContent(inner: string): boolean {
     /^from\s/.test(s) ||
     /soundtrack|\bost\b/.test(s) ||
     /unplugged|session|demo/.test(s) ||
-    /instrumental/.test(s)
+    /instrumental/.test(s) ||
+    /karaoke|sped up|slowed|8d\b/.test(s)
   );
 }
 
-/** Titolo “canonico” per raggruppare varianti (remaster, mono/stereo, ecc.). */
-function titleBaseForGrouping(title: string): string {
-  let t = title.toLowerCase().trim();
+/** Suffix tipo " - Live at …", " (Remastered 2023)" inline. */
+function stripTrailingVersionSuffixes(t: string): string {
+  let s = t.trim();
+  const dashLive = /\s+-\s*live\b/i;
+  if (dashLive.test(s)) s = s.split(dashLive)[0].trim();
   const paren = /\s*\(([^)]*)\)\s*$/;
   for (let i = 0; i < 12; i++) {
-    const m = t.match(paren);
+    const m = s.match(paren);
     if (!m) break;
     if (!isVersionParenContent(m[1])) break;
-    t = t.slice(0, m.index).trim();
+    s = s.slice(0, m.index).trim();
   }
-  return t.replace(/\s+/g, " ");
+  return s.replace(/\s+/g, " ");
+}
+
+/** Titolo “canonico” per raggruppare varianti (remaster, mono/stereo, remix, ecc.). */
+function titleBaseForGrouping(title: string): string {
+  return stripTrailingVersionSuffixes(title.toLowerCase());
 }
 
 /** True se il titolo originale indica una registrazione live (merita convivenza con lo studio). */

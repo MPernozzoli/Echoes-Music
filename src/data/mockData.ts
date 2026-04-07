@@ -29,7 +29,7 @@ export interface SearchResult {
   emotionalProfile: EmotionalProfile;
   songs: Song[];
   adjacentInterpretations: string[];
-  /** Testo dell’assistente con titoli tra « » collegati ai brani */
+  /** Paragrafo discorsivo (senza elenco titoli); i brani sono mostrati sotto come chip con tooltip */
   narrativeReply?: string;
   tracking?: SearchResultTracking;
   /** pick = lista con azioni coda; inline = avviata subito in coda globale */

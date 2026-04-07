@@ -761,7 +761,13 @@ const Chat = () => {
                         </div>
                         {r.songs.length > 0 && activeConversationId ? (
                           <AssistantSongNarrative
-                            narrative={r.narrativeReply?.trim() || fallbackNarrativeForResult(r.prompt, r.songs)}
+                            narrative={
+                              r.narrativeReply?.trim() ||
+                              fallbackNarrativeForResult(r.prompt, r.emotionalProfile, {
+                                lucky: r.prompt === "Sorprendimi",
+                                songCount: r.songs.length,
+                              })
+                            }
                             songs={r.songs}
                             source={{
                               conversationId: activeConversationId,

@@ -181,7 +181,7 @@ interface AIInterpretation {
     catharsis: string;
     emotionalTension: string;
   };
-  /** 2–6 frasi: argomenta le scelte citando OGNI brano con il titolo esatto tra « e » (es. «Let It Go»). */
+  /** Paragrafo discorsivo sul perché della selezione (niente elenco brani). */
   narrativeReply: string;
   searchQueries: string[];
   adjacentInterpretations: string[];
@@ -229,7 +229,8 @@ async function interpretDiscovery(params: {
 The user did not type a prompt. Use ONLY the long-term taste profile and conversation memory (if any) in the message to pick:
 - One excellent "hero" starting track that fits them.
 - Several more tracks that feel like discovery — slightly less obvious, same emotional/genre neighborhood.
-Still output full searchQueries and songSuggestions (6-8 real songs).`
+Still output full searchQueries and songSuggestions (6-8 real songs).
+**narrativeReply (lucky):** write like a short personal note about taste and discovery — warmth, curiosity, tension/release. Do **not** list song titles (the app shows them as links). Do not name every track.`
     : '';
 
   const memoryBlock = `
@@ -260,8 +261,8 @@ Given the user's message:
 1. Detect the language of the active prompt (if any). If it's not English, respond with song suggestions primarily in that language unless the prompt explicitly asks for another language.
 2. Create an emotional profile analyzing themes, mood, energy, intimacy, catharsis, and emotional tension (rich text for UI).
 3. Generate 4-5 highly specific search queries optimized for Spotify/Apple Music search (use "artist name - song title" format when possible, or genre/mood keywords).
-4. Suggest 6-8 specific REAL songs with correct artists. Prioritize songs whose LYRICS match the user's intent. For each: emotional tags (3 words), a poetic explanation connecting the song's actual lyrical content to the prompt (1-2 sentences), and relevance score (0-100).
-5. Write **narrativeReply**: 2-6 sentences in the same language as the user. Argue organically why this set fits the prompt; weave in emotions and themes. You MUST mention **every** song from songSuggestions at least once using its **exact title** wrapped in French quotation marks « and » (example: «Circle of Life»). Do not use bullet lists.
+4. Suggest 6-8 specific REAL songs with correct artists. Prioritize songs whose LYRICS match the user's intent. **Avoid suggesting multiple storefront variants of the same work** (e.g. same song as studio + remaster + remix + live) unless the user clearly wants versions; prefer one canonical cut per song. For each suggestion: emotional tags (3 words), a **distinct** poetic explanation tied to that song's lyrics or identity (never copy the same sentence across songs), and relevance score (0-100).
+5. Write **narrativeReply**: 2-5 sentences, same language as the user. One flowing paragraph: why this **cluster** fits the request emotionally (themes, arc, intent). Sound human and specific. **Do not** list every song, **do not** use «guillemets» or track-by-track blurbs — per-track reasoning lives only in each song's **explanation** field. You may name at most one anchor track if it feels natural; otherwise no titles. No bullet lists.
 6. Generate 2-3 adjacent interpretations — creative alternative readings of the prompt (or of the lucky pick).
 7. Fill conversationMemoryUpdate and userTasteProfileUpdate as described.
 
@@ -305,7 +306,7 @@ CRITICAL: Only suggest songs that actually exist. Use correct artist names and s
               narrativeReply: {
                 type: 'string',
                 description:
-                  '2-6 sentences; mention each song title exactly once in «French quotes» matching songSuggestions titles; same language as user',
+                  '2-5 sentences: organic paragraph on why this selection fits; same language as user; no «quotes», no listing all songs; per-song blurbs only in songSuggestions.explanation',
               },
               songSuggestions: {
                 type: 'array',
@@ -581,6 +582,22 @@ Deno.serve(async (req) => {
       }
     }
 
+    const preferItFallback =
+      typeof descriptionLanguage === 'string' && descriptionLanguage.trim().toLowerCase().startsWith('it');
+    const explPoolIt = [
+      'Si integra nel percorso emotivo della ricerca, tra timbro e respiro degli altri brani.',
+      'Apre una sfumatura diversa ma coerente: stesso clima, angolazione nuova.',
+      'Sostiene il filo dell’ascolto senza ripetere le stesse motivazioni delle altre scelte.',
+      'Porta una tensione o un sollievo che dialoga col resto della selezione.',
+    ];
+    const explPoolEn = [
+      'Fits the emotional arc of this set through tone and pacing, alongside the other picks.',
+      'Adds a complementary angle — same neighborhood, a different window in.',
+      'Carries the thread without recycling the same justification as sibling tracks.',
+      'Brings a distinct energy that still belongs in this cluster.',
+    ];
+    const explPool = preferItFallback ? explPoolIt : explPoolEn;
+
     // Enrich tracks with AI suggestions' emotional data
     const enrichedSongs = uniqueTracks.map((track, i) => {
       const aiMatch = interpretation.songSuggestions.find(
@@ -595,7 +612,7 @@ Deno.serve(async (req) => {
         ...(track.releaseYear != null ? { releaseYear: track.releaseYear } : {}),
         artwork: track.artworkUrl,
         emotionalTags: aiMatch?.emotionalTags || interpretation.emotionalProfile.themes.slice(0, 3),
-        explanation: aiMatch?.explanation || `This track resonates with the ${interpretation.emotionalProfile.mood.toLowerCase()} mood of your search.`,
+        explanation: aiMatch?.explanation || explPool[i % explPool.length],
         relevanceScore: aiMatch?.relevanceScore || Math.max(60, 95 - i * 5),
         provider: track.provider,
         spotifyUri: track.spotifyUri,
