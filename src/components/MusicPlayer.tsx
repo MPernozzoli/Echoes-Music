@@ -6,40 +6,18 @@ import { useAppleMusic } from "@/context/AppleMusicContext";
 interface MusicPlayerProps {
   trackTitle: string;
   artistName: string;
-  spotifyUrl?: string;
+  spotifyTrackId?: string;
+  appleMusicTrackId?: string;
 }
 
-// Mock Spotify track IDs for demo
-const MOCK_SPOTIFY_IDS: Record<string, string> = {
-  "The Night We Met": "2QBBhjJEpUzUo7GWQsMiF6",
-  "Skinny Love": "3VEx2YOqLj90LcSYMqrHfD",
-  "Midnight City": "6GyFP1nfCDB8lbD2bG0Hq9",
-  "Holocene": "28SayANFjWJBIMiHQp5Kyd",
-  "Retrograde": "1KGi9sZVMeszgZOWivFpxs",
-  "Re: Stacks": "3zVU0dsPwluOTMKbLRmsFo",
-};
-
-// Mock Apple Music IDs for demo
-const MOCK_APPLE_IDS: Record<string, string> = {
-  "The Night We Met": "1440857781",
-  "Skinny Love": "300739902",
-  "Midnight City": "467005199",
-  "Holocene": "438682855",
-  "Retrograde": "623085974",
-  "Re: Stacks": "300739908",
-};
-
-const MusicPlayer = ({ trackTitle, artistName }: MusicPlayerProps) => {
+const MusicPlayer = ({ trackTitle, artistName, spotifyTrackId, appleMusicTrackId }: MusicPlayerProps) => {
   const spotify = useSpotify();
   const appleMusic = useAppleMusic();
   const [activePlayer, setActivePlayer] = useState<"spotify" | "apple" | null>(null);
   const [isPlayingApple, setIsPlayingApple] = useState(false);
 
-  const spotifyId = MOCK_SPOTIFY_IDS[trackTitle];
-  const appleId = MOCK_APPLE_IDS[trackTitle];
-
-  const hasSpotify = !!spotifyId;
-  const hasApple = !!appleId && appleMusic.isAvailable;
+  const hasSpotify = !!spotifyTrackId;
+  const hasApple = !!appleMusicTrackId && appleMusic.isAvailable;
 
   if (!hasSpotify && !hasApple) return null;
 
@@ -55,11 +33,10 @@ const MusicPlayer = ({ trackTitle, artistName }: MusicPlayerProps) => {
         await mk.pause();
         setIsPlayingApple(false);
       } else {
-        await mk.setQueue({ songs: [appleId] });
+        await mk.setQueue({ songs: [appleMusicTrackId] });
         await mk.play();
         setIsPlayingApple(true);
 
-        // Listen for playback end
         mk.addEventListener("playbackStateDidChange", (e: any) => {
           if (e.state === 0 || e.state === 10) setIsPlayingApple(false);
         });
@@ -71,7 +48,6 @@ const MusicPlayer = ({ trackTitle, artistName }: MusicPlayerProps) => {
 
   return (
     <div className="mt-3" onClick={(e) => e.stopPropagation()}>
-      {/* Player toggle if both available */}
       {showBoth && (
         <div className="flex gap-1 mb-2">
           <button
@@ -98,10 +74,10 @@ const MusicPlayer = ({ trackTitle, artistName }: MusicPlayerProps) => {
       )}
 
       {/* Spotify embed */}
-      {defaultPlayer === "spotify" && spotifyId && (
+      {defaultPlayer === "spotify" && spotifyTrackId && (
         <div>
           <iframe
-            src={`https://open.spotify.com/embed/track/${spotifyId}?utm_source=generator&theme=0`}
+            src={`https://open.spotify.com/embed/track/${spotifyTrackId}?utm_source=generator&theme=0`}
             width="100%"
             height="80"
             frameBorder="0"
@@ -120,7 +96,7 @@ const MusicPlayer = ({ trackTitle, artistName }: MusicPlayerProps) => {
       )}
 
       {/* Apple Music player */}
-      {defaultPlayer === "apple" && appleId && (
+      {defaultPlayer === "apple" && appleMusicTrackId && (
         <div>
           {appleMusic.isAuthorized ? (
             <button

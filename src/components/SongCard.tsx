@@ -20,6 +20,8 @@ interface SongCardProps {
   searchId?: string;
   onTagClick?: (tag: string) => void;
   showPlayer?: boolean;
+  spotifyUri?: string;
+  appleMusicId?: string;
 }
 
 const SongCard = ({
@@ -37,6 +39,8 @@ const SongCard = ({
   searchId,
   onTagClick,
   showPlayer = true,
+  spotifyUri,
+  appleMusicId,
 }: SongCardProps) => {
   const [imgLoaded, setImgLoaded] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -153,7 +157,14 @@ const SongCard = ({
           </div>
 
           {/* Music Player */}
-          {showPlayer && <MusicPlayer trackTitle={title} artistName={artist} />}
+          {showPlayer && (
+            <MusicPlayer
+              trackTitle={title}
+              artistName={artist}
+              spotifyTrackId={spotifyUri?.replace('spotify:track:', '')}
+              appleMusicTrackId={appleMusicId}
+            />
+          )}
 
           {/* Inline feedback */}
           {searchResultId && searchId && (
