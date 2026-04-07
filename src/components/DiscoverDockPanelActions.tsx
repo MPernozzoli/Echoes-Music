@@ -56,7 +56,7 @@ export function DiscoverDockPanelActions({
 
   const panelOpenChange =
     (id: DockPopoverId) => (open: boolean) =>
-      setDockPopover((cur) => (open ? id : cur === id ? null : cur));
+      setDockPopover(open ? id : dockPopover === id ? null : dockPopover);
 
   return (
     <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
