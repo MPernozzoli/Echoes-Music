@@ -157,7 +157,14 @@ const SongCard = ({
           </div>
 
           {/* Music Player */}
-          {showPlayer && <MusicPlayer trackTitle={title} artistName={artist} />}
+          {showPlayer && (
+            <MusicPlayer
+              trackTitle={title}
+              artistName={artist}
+              spotifyTrackId={spotifyUri?.replace('spotify:track:', '')}
+              appleMusicTrackId={appleMusicId}
+            />
+          )}
 
           {/* Inline feedback */}
           {searchResultId && searchId && (
