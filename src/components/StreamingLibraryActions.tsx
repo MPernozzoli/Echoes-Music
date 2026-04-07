@@ -1,6 +1,7 @@
-import { useCallback, useState } from "react";
-import { Library, ListMusic, Loader2 } from "lucide-react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { Library, ListMusic, Loader2, Search } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { useAppleMusic } from "@/context/useAppleMusic";
 import { useSpotify } from "@/context/useSpotify";
@@ -36,6 +37,15 @@ export function StreamingLibraryActions({
   const [playlistsLoading, setPlaylistsLoading] = useState(false);
   const [playlists, setPlaylists] = useState<{ id: string; name: string }[]>([]);
   const [addingTo, setAddingTo] = useState<string | null>(null);
+  const [plSearch, setPlSearch] = useState("");
+  const plSearchRef = useRef<HTMLInputElement>(null);
+  const { t } = useTranslation();
+
+  const filteredPlaylists = useMemo(() => {
+    if (!plSearch.trim()) return playlists;
+    const q = plSearch.toLowerCase();
+    return playlists.filter((p) => p.name.toLowerCase().includes(q));
+  }, [playlists, plSearch]);
 
   const showApple = Boolean(appleAvail && appleOk && appleMusicTrackId);
   const showSpotify = Boolean(spotifyOk && spotifyTrackId && !spotifyLoading);
@@ -83,6 +93,7 @@ export function StreamingLibraryActions({
     (open: boolean) => {
       setPlaylistsOpen(open);
       if (open && playlists.length === 0) void loadPlaylists();
+      if (!open) setPlSearch("");
     },
     [loadPlaylists, playlists.length],
   );
@@ -158,16 +169,31 @@ export function StreamingLibraryActions({
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-72 p-2" align="start">
-              <p className="text-xs font-body text-muted-foreground px-2 py-1">Le tue playlist</p>
+              <p className="text-xs font-body text-muted-foreground px-2 py-1">{t("streaming.yourPlaylists")}</p>
+              {!playlistsLoading && playlists.length > 0 && (
+                <div className="relative px-1 pb-2">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+                  <input
+                    ref={plSearchRef}
+                    type="text"
+                    value={plSearch}
+                    onChange={(e) => setPlSearch(e.target.value)}
+                    placeholder={t("streaming.searchPlaylists")}
+                    className="w-full h-7 pl-6 pr-2 text-xs font-body rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                </div>
+              )}
               <div className="max-h-52 overflow-y-auto space-y-0.5">
                 {playlistsLoading ? (
                   <div className="flex justify-center py-4">
                     <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                   </div>
                 ) : playlists.length === 0 ? (
-                  <p className="text-xs font-body text-muted-foreground px-2 py-2">Nessuna playlist</p>
+                  <p className="text-xs font-body text-muted-foreground px-2 py-2">{t("streaming.noPlaylists")}</p>
+                ) : filteredPlaylists.length === 0 ? (
+                  <p className="text-xs font-body text-muted-foreground px-2 py-2">{t("streaming.noPlaylistsMatch")}</p>
                 ) : (
-                  playlists.map((p) => (
+                  filteredPlaylists.map((p) => (
                     <button
                       key={p.id}
                       type="button"

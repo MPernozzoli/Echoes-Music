@@ -245,7 +245,9 @@
     "saveAllToLibrary": "Save all to library",
     "saveAllHint": "Save to your streaming library",
     "spotifySavedAllTracks": "{{count}} tracks saved to Spotify",
-    "appleAddedAllLibrary": "{{count}} tracks added to Apple Music library"
+    "appleAddedAllLibrary": "{{count}} tracks added to Apple Music library",
+    "searchPlaylists": "Search playlists…",
+    "noPlaylistsMatch": "No playlists found"
   },
   "narrative": {
     "selectedTracks": "Selected tracks",

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, Disc, Loader2, ChevronLeft } from "lucide-react";
+import { Plus, Disc, Loader2, ChevronLeft, Search } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { DOCK_ICON_BTN } from "@/components/PlayerDockChrome";
@@ -45,9 +45,17 @@ export function DockStreamingActions({ spotifyTrackId, appleMusicTrackId }: Dock
   const [playlistsLoading, setPlaylistsLoading] = useState(false);
   const [playlists, setPlaylists] = useState<{ id: string; name: string }[]>([]);
   const [addingTo, setAddingTo] = useState<string | null>(null);
+  const [plSearch, setPlSearch] = useState("");
+  const plSearchRef = useRef<HTMLInputElement>(null);
 
   const needLibPicker = showApple && showSpotify;
   const needPlPicker = showApple && showSpotify;
+
+  const filteredPlaylists = useMemo(() => {
+    if (!plSearch.trim()) return playlists;
+    const q = plSearch.toLowerCase();
+    return playlists.filter((p) => p.name.toLowerCase().includes(q));
+  }, [playlists, plSearch]);
 
   const onAppleLibrary = useCallback(async () => {
     if (!appleMusicTrackId) return;
@@ -115,6 +123,7 @@ export function DockStreamingActions({ spotifyTrackId, appleMusicTrackId }: Dock
       setPlStep(needPlPicker ? "pick" : "list");
       setPlService(null);
       setPlaylists([]);
+      setPlSearch("");
       return;
     }
     if (needPlPicker) {
@@ -290,6 +299,19 @@ export function DockStreamingActions({ spotifyTrackId, appleMusicTrackId }: Dock
                 </button>
               )}
               <p className="text-[11px] text-muted-foreground font-body px-1 pb-2">{t("streaming.yourPlaylists")}</p>
+              {!playlistsLoading && playlists.length > 0 && (
+                <div className="relative px-1 pb-2">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground pointer-events-none" />
+                  <input
+                    ref={plSearchRef}
+                    type="text"
+                    value={plSearch}
+                    onChange={(e) => setPlSearch(e.target.value)}
+                    placeholder={t("streaming.searchPlaylists")}
+                    className="w-full h-7 pl-6 pr-2 text-xs font-body rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                </div>
+              )}
               <div className="max-h-52 overflow-y-auto space-y-0.5">
                 {playlistsLoading ? (
                   <div className="flex justify-center py-6">
@@ -297,8 +319,10 @@ export function DockStreamingActions({ spotifyTrackId, appleMusicTrackId }: Dock
                   </div>
                 ) : playlists.length === 0 ? (
                   <p className="text-xs font-body text-muted-foreground px-2 py-3">{t("streaming.noPlaylists")}</p>
+                ) : filteredPlaylists.length === 0 ? (
+                  <p className="text-xs font-body text-muted-foreground px-2 py-3">{t("streaming.noPlaylistsMatch")}</p>
                 ) : (
-                  playlists.map((p) => (
+                  filteredPlaylists.map((p) => (
                     <button
                       key={p.id}
                       type="button"

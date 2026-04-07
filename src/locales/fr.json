@@ -236,7 +236,9 @@
     "saveAllToLibrary": "Tout enregistrer dans la bibliothèque",
     "saveAllHint": "Enregistrer dans la bibliothèque du service",
     "spotifySavedAllTracks": "{{count}} titres enregistrés sur Spotify",
-    "appleAddedAllLibrary": "{{count}} titres ajoutés à la bibliothèque Apple Music"
+    "appleAddedAllLibrary": "{{count}} titres ajoutés à la bibliothèque Apple Music",
+    "searchPlaylists": "Rechercher playlists…",
+    "noPlaylistsMatch": "Aucune playlist trouvée"
   },
   "narrative": {
     "selectedTracks": "Titres sélectionnés",

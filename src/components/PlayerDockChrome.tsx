@@ -128,21 +128,33 @@ export function PlayerDockChrome({
       <div className="h-4 sm:h-5 md:h-6 shrink-0" aria-hidden />
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(220px,32%)_1fr_minmax(200px,28%)] gap-x-6 gap-y-3 items-end px-3 sm:px-4 pb-3 pt-1">
-        {/* Sinistra: copertina + testo + azioni */}
-        <div className="relative flex flex-col justify-end min-w-0 min-h-[3.5rem] pl-[4.25rem] sm:pl-[5rem] md:pl-[7rem]">
+        {/* Sinistra: copertina (hover → ingrandisce) + testo che scorre a destra via peer */}
+        <div className="relative flex flex-col justify-end min-w-0 min-h-[3.5rem] pl-[4.25rem] sm:pl-[5rem] md:pl-[7rem] overflow-visible">
           <div
             className={cn(
-              "absolute left-0 bottom-0 rounded-lg overflow-hidden shadow-2xl ring-1 ring-white/10 bg-zinc-900",
+              "peer absolute left-0 bottom-0 z-10 rounded-lg overflow-hidden shadow-2xl ring-1 ring-white/10 bg-zinc-900",
+              "origin-bottom-left cursor-default",
+              "transition-[transform,box-shadow] duration-300 ease-out",
+              "hover:z-30 hover:scale-[1.12] hover:shadow-[0_12px_40px_-8px_rgba(0,0,0,0.55)] hover:ring-white/20",
+              "motion-reduce:transition-none motion-reduce:hover:scale-100",
               artworkOverlapClassName
             )}
+            title={title}
           >
             <img src={artworkUrl} alt="" className="w-full h-full object-cover" width={96} height={96} />
           </div>
-          <div className="min-w-0 pb-0.5">
-            <p className="text-[15px] sm:text-base font-semibold truncate hover:underline cursor-default text-white leading-snug">{title}</p>
-            <p className="text-xs text-zinc-400 truncate mt-0.5">{subtitle}</p>
-          </div>
-          <div className="flex items-center gap-1 mt-1.5 -ml-0.5">
+          <div
+            className={cn(
+              "min-w-0 transition-transform duration-300 ease-out",
+              "peer-hover:translate-x-2 sm:peer-hover:translate-x-3 md:peer-hover:translate-x-4",
+              "motion-reduce:transition-none motion-reduce:peer-hover:translate-x-0"
+            )}
+          >
+            <div className="pb-0.5">
+              <p className="text-[15px] sm:text-base font-semibold truncate hover:underline cursor-default text-white leading-snug">{title}</p>
+              <p className="text-xs text-zinc-400 truncate mt-0.5">{subtitle}</p>
+            </div>
+            <div className="flex items-center gap-1 mt-1.5 -ml-0.5">
             {trackExtraActions}
             {libraryButton ?? (
               <button
@@ -157,6 +169,7 @@ export function PlayerDockChrome({
                 <Heart className={cn("w-3.5 h-3.5", isFavorite && "fill-primary text-primary")} />
               </button>
             )}
+            </div>
           </div>
         </div>
 

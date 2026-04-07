@@ -236,7 +236,9 @@
     "saveAllToLibrary": "Alle in Mediathek speichern",
     "saveAllHint": "In Streaming-Mediathek speichern",
     "spotifySavedAllTracks": "{{count}} Titel auf Spotify gespeichert",
-    "appleAddedAllLibrary": "{{count}} Titel zur Apple Music Mediathek hinzugefügt"
+    "appleAddedAllLibrary": "{{count}} Titel zur Apple Music Mediathek hinzugefügt",
+    "searchPlaylists": "Playlists suchen…",
+    "noPlaylistsMatch": "Keine Playlists gefunden"
   },
   "narrative": {
     "selectedTracks": "Ausgewählte Titel",
