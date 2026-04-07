@@ -1,3 +1,4 @@
+/* @refresh skip */
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import type { Song, SearchResult, ListenHistoryEntry } from "@/data/mockData";
 import i18n, {

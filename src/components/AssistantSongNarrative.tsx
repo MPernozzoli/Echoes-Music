@@ -1,3 +1,4 @@
+/* @refresh skip */
 import { useState, type ReactNode } from "react";
 import type { EmotionalProfile, Song } from "@/data/mockData";
 import type { QueueListenSource } from "@/context/PlaybackQueueContext";
