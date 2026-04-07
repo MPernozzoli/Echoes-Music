@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider } from "@/context/AppContext";
+import { ConversationProvider } from "@/context/ConversationContext";
 import { SpotifyProvider } from "@/context/SpotifyContext";
 import { AppleMusicProvider } from "@/context/AppleMusicContext";
 import Landing from "./pages/Landing";
@@ -24,6 +25,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AppProvider>
+          <ConversationProvider>
           <SpotifyProvider>
             <AppleMusicProvider>
               <Routes>
@@ -38,6 +40,7 @@ const App = () => (
               </Routes>
             </AppleMusicProvider>
           </SpotifyProvider>
+          </ConversationProvider>
         </AppProvider>
       </BrowserRouter>
     </TooltipProvider>

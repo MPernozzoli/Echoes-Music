@@ -127,6 +127,41 @@ async function searchAppleMusic(query: string, limit = 5): Promise<TrackResult[]
   }));
 }
 
+// --- Canonical axes (must match client) ---
+type EnergyBand = 'low' | 'medium' | 'high';
+
+interface StandardAxes {
+  moodLabel: string;
+  energy: EnergyBand;
+  intimacy: number;
+  catharsis: EnergyBand;
+  emotionalTension: EnergyBand;
+  dominantThemes: string[];
+}
+
+function normalizeStandardAxes(raw: Record<string, unknown> | null | undefined): StandardAxes {
+  const e = String(raw?.energy || '').toLowerCase();
+  const energy: EnergyBand = e === 'low' || e === 'high' ? e : 'medium';
+  const c = String(raw?.catharsis || '').toLowerCase();
+  const catharsis: EnergyBand = c === 'low' || c === 'high' ? c : 'medium';
+  const t = String(raw?.emotionalTension || '').toLowerCase();
+  const emotionalTension: EnergyBand = t === 'low' || t === 'high' ? t : 'medium';
+  let intimacy = Number(raw?.intimacy);
+  if (!Number.isFinite(intimacy)) intimacy = 3;
+  intimacy = Math.min(5, Math.max(1, Math.round(intimacy)));
+  const themes = Array.isArray(raw?.dominantThemes)
+    ? (raw!.dominantThemes as unknown[]).filter((x): x is string => typeof x === 'string').map((s) => s.trim()).filter(Boolean).slice(0, 8)
+    : [];
+  let moodLabel = typeof raw?.moodLabel === 'string' ? raw.moodLabel.trim() : '';
+  if (moodLabel.length > 120) moodLabel = moodLabel.slice(0, 119) + '…';
+  return { moodLabel, energy, intimacy, catharsis, emotionalTension, dominantThemes: themes };
+}
+
+function clampSummary(s: string, max: number): string {
+  const t = (s || '').trim();
+  return t.length <= max ? t : t.slice(0, max - 1) + '…';
+}
+
 // --- AI interpretation ---
 interface AIInterpretation {
   emotionalProfile: {
@@ -140,15 +175,59 @@ interface AIInterpretation {
   searchQueries: string[];
   adjacentInterpretations: string[];
   songSuggestions: Array<{ title: string; artist: string; emotionalTags: string[]; explanation: string; relevanceScore: number }>;
+  conversationMemoryUpdate?: {
+    threadSummary: string;
+    standardAxes: Record<string, unknown>;
+  };
+  userTasteProfileUpdate?: {
+    globalSummary?: string;
+    userStandardAxes?: Record<string, unknown>;
+    genreAffinityTags?: string[];
+    preferredLanguages?: string[];
+  };
 }
 
-async function interpretPrompt(prompt: string, descriptionLanguage?: string): Promise<AIInterpretation> {
+const standardAxesSchema = {
+  type: 'object',
+  properties: {
+    moodLabel: { type: 'string', description: 'Short mood label, max ~120 chars' },
+    energy: { type: 'string', enum: ['low', 'medium', 'high'] },
+    intimacy: { type: 'number', description: '1-5' },
+    catharsis: { type: 'string', enum: ['low', 'medium', 'high'] },
+    emotionalTension: { type: 'string', enum: ['low', 'medium', 'high'] },
+    dominantThemes: { type: 'array', items: { type: 'string' }, maxItems: 8 },
+  },
+  required: ['moodLabel', 'energy', 'intimacy', 'catharsis', 'emotionalTension', 'dominantThemes'],
+};
+
+async function interpretDiscovery(params: {
+  userContent: string;
+  descriptionLanguage?: string;
+  mode: 'search' | 'lucky';
+}): Promise<AIInterpretation> {
   const apiKey = Deno.env.get('LOVABLE_API_KEY');
   if (!apiKey) throw new Error('LOVABLE_API_KEY not configured');
 
-  const languageInstruction = descriptionLanguage && descriptionLanguage !== 'auto'
-    ? `IMPORTANT: The user has set their preferred language to "${descriptionLanguage}". ALL song explanations/descriptions MUST be written in ${descriptionLanguage}, regardless of the language of the user's prompt or the songs themselves. The emotional profile text (mood, energy, etc.) should also be in ${descriptionLanguage}.`
+  const languageInstruction = params.descriptionLanguage && params.descriptionLanguage !== 'auto'
+    ? `IMPORTANT: The user has set their preferred language to "${params.descriptionLanguage}". ALL song explanations/descriptions MUST be written in ${params.descriptionLanguage}, regardless of the language of the user's prompt or the songs themselves. The emotional profile text (mood, energy, etc.) should also be in ${params.descriptionLanguage}.`
     : `Write explanations and emotional profile text in the same language as the user's prompt.`;
+
+  const luckyBlock = params.mode === 'lucky'
+    ? `
+## Lucky / surprise mode:
+The user did not type a prompt. Use ONLY the long-term taste profile and conversation memory (if any) in the message to pick:
+- One excellent "hero" starting track that fits them.
+- Several more tracks that feel like discovery — slightly less obvious, same emotional/genre neighborhood.
+Still output full searchQueries and songSuggestions (6-8 real songs).`
+    : '';
+
+  const memoryBlock = `
+## Memory (structured, not full chat):
+The user message may include JSON blocks "conversationMemory" and "userTasteProfile". Use them ONLY for continuity and taste defaults.
+The **current user message** always wins if it conflicts with memory.
+After interpreting, you MUST output:
+- **conversationMemoryUpdate**: a 2-4 sentence threadSummary merging prior summary with this turn; **standardAxes** using ONLY enums: energy/catharsis/emotionalTension in low|medium|high, intimacy integer 1-5, dominantThemes array (max 8 short tags), moodLabel short.
+- **userTasteProfileUpdate**: optional incremental globalSummary (brief), userStandardAxes (same schema), genreAffinityTags (max 12), preferredLanguages (max 6). Only include fields that should change.`;
 
   const systemPrompt = `You are Echoes, an advanced emotionally and culturally intelligent music discovery engine with deep knowledge of song lyrics, genres, languages, and musical concepts.
 
@@ -162,14 +241,17 @@ async function interpretPrompt(prompt: string, descriptionLanguage?: string): Pr
 
 ## Language for descriptions:
 ${languageInstruction}
+${luckyBlock}
+${memoryBlock}
 
 ## Instructions:
-Given the user's prompt:
-1. Detect the language of the prompt. If it's not English, respond with song suggestions primarily in that language unless the prompt explicitly asks for another language.
-2. Create an emotional profile analyzing themes, mood, energy, intimacy, catharsis, and emotional tension.
+Given the user's message:
+1. Detect the language of the active prompt (if any). If it's not English, respond with song suggestions primarily in that language unless the prompt explicitly asks for another language.
+2. Create an emotional profile analyzing themes, mood, energy, intimacy, catharsis, and emotional tension (rich text for UI).
 3. Generate 4-5 highly specific search queries optimized for Spotify/Apple Music search (use "artist name - song title" format when possible, or genre/mood keywords).
 4. Suggest 6-8 specific REAL songs with correct artists. Prioritize songs whose LYRICS match the user's intent. For each: emotional tags (3 words), a poetic explanation connecting the song's actual lyrical content to the prompt (1-2 sentences), and relevance score (0-100).
-5. Generate 2-3 adjacent interpretations — creative alternative readings of the prompt.
+5. Generate 2-3 adjacent interpretations — creative alternative readings of the prompt (or of the lucky pick).
+6. Fill conversationMemoryUpdate and userTasteProfileUpdate as described.
 
 CRITICAL: Only suggest songs that actually exist. Use correct artist names and song titles. When the user asks about lyrical content, your explanation MUST reference actual lyrics or themes from the song.`;
 
@@ -184,7 +266,7 @@ CRITICAL: Only suggest songs that actually exist. Use correct artist names and s
       model: 'google/gemini-3-flash-preview',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: prompt },
+        { role: 'user', content: params.userContent },
       ],
       tools: [{
         type: 'function',
@@ -222,8 +304,25 @@ CRITICAL: Only suggest songs that actually exist. Use correct artist names and s
                   required: ['title', 'artist', 'emotionalTags', 'explanation', 'relevanceScore'],
                 },
               },
+              conversationMemoryUpdate: {
+                type: 'object',
+                properties: {
+                  threadSummary: { type: 'string' },
+                  standardAxes: standardAxesSchema,
+                },
+                required: ['threadSummary', 'standardAxes'],
+              },
+              userTasteProfileUpdate: {
+                type: 'object',
+                properties: {
+                  globalSummary: { type: 'string' },
+                  userStandardAxes: standardAxesSchema,
+                  genreAffinityTags: { type: 'array', items: { type: 'string' }, maxItems: 12 },
+                  preferredLanguages: { type: 'array', items: { type: 'string' }, maxItems: 6 },
+                },
+              },
             },
-            required: ['emotionalProfile', 'searchQueries', 'adjacentInterpretations', 'songSuggestions'],
+            required: ['emotionalProfile', 'searchQueries', 'adjacentInterpretations', 'songSuggestions', 'conversationMemoryUpdate'],
           },
         },
       }],
@@ -247,6 +346,123 @@ CRITICAL: Only suggest songs that actually exist. Use correct artist names and s
   return JSON.parse(toolCall.function.arguments);
 }
 
+async function interpretMemoryCompact(params: {
+  descriptionLanguage?: string;
+  conversationMemory: Record<string, unknown> | null;
+  userTasteProfile: Record<string, unknown> | null;
+  lastUserPrompt?: string;
+}): Promise<{ conversationMemoryUpdate: { threadSummary: string; standardAxes: StandardAxes }; userTasteProfileUpdate?: AIInterpretation['userTasteProfileUpdate'] }> {
+  const apiKey = Deno.env.get('LOVABLE_API_KEY');
+  if (!apiKey) throw new Error('LOVABLE_API_KEY not configured');
+
+  const userContent = [
+    'Compress and realign conversation memory only. Do not suggest songs.',
+    params.lastUserPrompt ? `Last user prompt snippet: ${params.lastUserPrompt.slice(0, 500)}` : '',
+    `conversationMemory: ${JSON.stringify(params.conversationMemory || {})}`,
+    `userTasteProfile: ${JSON.stringify(params.userTasteProfile || {})}`,
+  ].filter(Boolean).join('\n');
+
+  const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'google/gemini-3-flash-preview',
+      messages: [
+        {
+          role: 'system',
+          content: 'Output only structured memory updates. threadSummary 2-4 sentences. standardAxes must use enums low|medium|high and intimacy 1-5.',
+        },
+        { role: 'user', content: userContent },
+      ],
+      tools: [{
+        type: 'function',
+        function: {
+          name: 'compact_memory',
+          parameters: {
+            type: 'object',
+            properties: {
+              conversationMemoryUpdate: {
+                type: 'object',
+                properties: {
+                  threadSummary: { type: 'string' },
+                  standardAxes: standardAxesSchema,
+                },
+                required: ['threadSummary', 'standardAxes'],
+              },
+              userTasteProfileUpdate: {
+                type: 'object',
+                properties: {
+                  globalSummary: { type: 'string' },
+                  userStandardAxes: standardAxesSchema,
+                  genreAffinityTags: { type: 'array', items: { type: 'string' } },
+                  preferredLanguages: { type: 'array', items: { type: 'string' } },
+                },
+              },
+            },
+            required: ['conversationMemoryUpdate'],
+          },
+        },
+      }],
+      tool_choice: { type: 'function', function: { name: 'compact_memory' } },
+    }),
+  });
+
+  if (!res.ok) {
+    const status = res.status;
+    const text = await res.text();
+    console.error('AI gateway error (compact):', status, text);
+    if (status === 429) throw new Error('Rate limited - please try again shortly');
+    if (status === 402) throw new Error('AI credits exhausted');
+    throw new Error('AI memory compact failed');
+  }
+
+  const data = await res.json();
+  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+  if (!toolCall) throw new Error('AI did not return structured output');
+  const parsed = JSON.parse(toolCall.function.arguments);
+  const axes = normalizeStandardAxes(parsed.conversationMemoryUpdate?.standardAxes);
+  return {
+    conversationMemoryUpdate: {
+      threadSummary: clampSummary(parsed.conversationMemoryUpdate?.threadSummary || '', 560),
+      standardAxes: axes,
+    },
+    userTasteProfileUpdate: parsed.userTasteProfileUpdate,
+  };
+}
+
+function buildUserContent(
+  prompt: string,
+  conversationMemory: Record<string, unknown> | null | undefined,
+  userTasteProfile: Record<string, unknown> | null | undefined,
+): string {
+  const parts: string[] = [];
+  if (conversationMemory && Object.keys(conversationMemory).length > 0) {
+    parts.push(`conversationMemory (JSON): ${JSON.stringify(conversationMemory)}`);
+  }
+  if (userTasteProfile && Object.keys(userTasteProfile).length > 0) {
+    parts.push(`userTasteProfile (JSON): ${JSON.stringify(userTasteProfile)}`);
+  }
+  parts.push(`Current user prompt: ${prompt || '(none — follow mode instructions)'}`);
+  return parts.join('\n\n');
+}
+
+function sanitizeInterpretation(i: AIInterpretation): AIInterpretation {
+  const cm = i.conversationMemoryUpdate;
+  if (cm?.standardAxes) {
+    cm.standardAxes = normalizeStandardAxes(cm.standardAxes as Record<string, unknown>) as unknown as Record<string, unknown>;
+  }
+  if (cm?.threadSummary) cm.threadSummary = clampSummary(cm.threadSummary, 560);
+  const ut = i.userTasteProfileUpdate;
+  if (ut?.userStandardAxes) {
+    ut.userStandardAxes = normalizeStandardAxes(ut.userStandardAxes as Record<string, unknown>) as unknown as Record<string, unknown>;
+  }
+  if (ut?.globalSummary) ut.globalSummary = clampSummary(ut.globalSummary, 560);
+  return i;
+}
+
 // --- Main handler ---
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -254,15 +470,61 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { prompt, descriptionLanguage } = await req.json();
-    if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
+    const body = await req.json().catch(() => ({}));
+    const {
+      prompt: rawPrompt,
+      descriptionLanguage,
+      mode = 'search',
+      conversationMemory,
+      userTasteProfile,
+      lastUserPrompt,
+    } = body as {
+      prompt?: string;
+      descriptionLanguage?: string;
+      mode?: string;
+      conversationMemory?: Record<string, unknown> | null;
+      userTasteProfile?: Record<string, unknown> | null;
+      lastUserPrompt?: string;
+    };
+
+    if (mode === 'memory_compact') {
+      const compact = await interpretMemoryCompact({
+        descriptionLanguage,
+        conversationMemory: conversationMemory ?? null,
+        userTasteProfile: userTasteProfile ?? null,
+        lastUserPrompt,
+      });
+      return new Response(JSON.stringify({
+        conversationMemoryUpdate: {
+          threadSummary: compact.conversationMemoryUpdate.threadSummary,
+          standardAxes: compact.conversationMemoryUpdate.standardAxes,
+        },
+        userTasteProfileUpdate: compact.userTasteProfileUpdate ?? undefined,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const prompt = typeof rawPrompt === 'string' ? rawPrompt.trim() : '';
+    if (mode !== 'lucky' && prompt.length === 0) {
       return new Response(JSON.stringify({ error: 'prompt is required' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Step 1: AI interpretation
-    const interpretation = await interpretPrompt(prompt.trim(), descriptionLanguage);
+    const userContent = buildUserContent(
+      mode === 'lucky' ? '' : prompt,
+      conversationMemory ?? null,
+      userTasteProfile ?? null,
+    );
+
+    const interpretation = sanitizeInterpretation(
+      await interpretDiscovery({
+        userContent,
+        descriptionLanguage,
+        mode: mode === 'lucky' ? 'lucky' : 'search',
+      }),
+    );
 
     // Step 2: Search both platforms using AI-generated queries + direct song lookups
     const allQueries = [
@@ -317,11 +579,18 @@ Deno.serve(async (req) => {
     // Sort by relevance
     enrichedSongs.sort((a, b) => b.relevanceScore - a.relevanceScore);
 
-    // Return top results
+    const cm = interpretation.conversationMemoryUpdate;
+    const ut = interpretation.userTasteProfileUpdate;
+
     const result = {
       emotionalProfile: interpretation.emotionalProfile,
       songs: enrichedSongs.slice(0, 8),
       adjacentInterpretations: interpretation.adjacentInterpretations,
+      conversationMemoryUpdate: cm ? {
+        threadSummary: cm.threadSummary,
+        standardAxes: normalizeStandardAxes(cm.standardAxes as Record<string, unknown>),
+      } : undefined,
+      userTasteProfileUpdate: ut,
     };
 
     return new Response(JSON.stringify(result), {

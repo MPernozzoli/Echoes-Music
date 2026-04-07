@@ -1,15 +1,50 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowRight, Sparkles, Search, Music } from "lucide-react";
+import { ArrowRight, Sparkles, Search, Music, Wand2 } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
 import PromptInput from "@/components/PromptInput";
 import SongCard from "@/components/SongCard";
 import { examplePrompts, mockSongs } from "@/data/mockData";
+import { useApp } from "@/context/AppContext";
+import { useConversations } from "@/context/ConversationContext";
+import { callMusicSearch } from "@/services/musicSearchApi";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 const Landing = () => {
   const navigate = useNavigate();
+  const { descriptionLanguage } = useApp();
+  const { userTasteProfile } = useConversations();
+  const [luckyLoading, setLuckyLoading] = useState(false);
 
   const handlePromptSubmit = (value: string) => {
     navigate(`/discover?q=${encodeURIComponent(value)}`);
+  };
+
+  const handleLucky = async () => {
+    setLuckyLoading(true);
+    try {
+      const data = await callMusicSearch({
+        mode: "lucky",
+        userTasteProfile,
+        descriptionLanguage,
+      });
+      if (data.error) {
+        if (data.error.includes("Rate") || data.error.includes("429")) toast.error("Troppi richieste. Riprova tra poco.");
+        else if (data.error.includes("credits") || data.error.includes("402")) toast.error("Crediti AI esauriti.");
+        else toast.error(data.error);
+        return;
+      }
+      if (!data.emotionalProfile || !data.songs?.length) {
+        toast.error("Nessun brano trovato. Prova dopo qualche ricerca per affinare il profilo.");
+        return;
+      }
+      navigate("/discover", { state: { luckyPayload: data } });
+    } catch {
+      toast.error("Qualcosa è andato storto");
+    } finally {
+      setLuckyLoading(false);
+    }
   };
 
   return (
@@ -40,8 +75,28 @@ const Landing = () => {
             Describe a feeling, a memory, or a thought. Echoes turns it into music.
           </p>
 
-          <div className="max-w-2xl mx-auto mb-8 animate-fade-up" style={{ animationDelay: "200ms" }}>
+          <div className="max-w-2xl mx-auto mb-4 animate-fade-up" style={{ animationDelay: "200ms" }}>
             <PromptInput onSubmit={handlePromptSubmit} size="hero" />
+          </div>
+
+          <div className="flex justify-center mb-8 animate-fade-up" style={{ animationDelay: "250ms" }}>
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="rounded-full px-6 gap-2 border-primary/30 hover:bg-primary/10 font-body"
+              disabled={luckyLoading}
+              onClick={() => void handleLucky()}
+            >
+              {luckyLoading ? (
+                <span className="text-sm">Sto scegliendo…</span>
+              ) : (
+                <>
+                  <Wand2 className="w-4 h-4 text-primary" />
+                  Sorprendimi
+                </>
+              )}
+            </Button>
           </div>
 
           <div className="flex flex-wrap justify-center gap-2 animate-fade-up" style={{ animationDelay: "300ms" }}>

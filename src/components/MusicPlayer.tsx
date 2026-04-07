@@ -3,6 +3,7 @@ import { useSpotify } from "@/context/SpotifyContext";
 import { useAppleMusic } from "@/context/AppleMusicContext";
 import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
 import { AppleMusicEmbed } from "@/components/AppleMusicEmbed";
+import { AppleMusicKitPlayer } from "@/components/AppleMusicKitPlayer";
 
 interface MusicPlayerProps {
   trackTitle: string;
@@ -22,14 +23,17 @@ const MusicPlayer = ({ trackTitle, artistName, spotifyTrackId, appleMusicTrackId
   const appleOnlyFallback = !spotifyTrackId && !!appleMusicTrackId;
 
   if (preferApple) {
+    const useKit = appleMusic.isAuthorized && appleMusic.isAvailable;
     return (
       <div className="mt-3" onClick={(e) => e.stopPropagation()}>
-        <AppleMusicEmbed trackId={appleMusicTrackId!} trackTitle={trackTitle} height={175} />
-        {appleMusic.isAuthorized && (
-          <p className="text-[10px] text-[hsl(350,80%,55%)]/50 font-body mt-1 flex items-center gap-1">
-            <Volume2 className="w-3 h-3" />
-            Player Apple Music (account connesso)
-          </p>
+        {useKit ? (
+          <AppleMusicKitPlayer
+            trackId={appleMusicTrackId!}
+            trackKey={`${trackTitle}-${appleMusicTrackId}`}
+            compact
+          />
+        ) : (
+          <AppleMusicEmbed trackId={appleMusicTrackId!} trackTitle={trackTitle} height={175} />
         )}
       </div>
     );
@@ -59,9 +63,18 @@ const MusicPlayer = ({ trackTitle, artistName, spotifyTrackId, appleMusicTrackId
   }
 
   if (appleOnlyFallback) {
+    const useKit = appleMusic.isAuthorized && appleMusic.isAvailable;
     return (
       <div className="mt-3" onClick={(e) => e.stopPropagation()}>
-        <AppleMusicEmbed trackId={appleMusicTrackId!} trackTitle={trackTitle} height={175} />
+        {useKit ? (
+          <AppleMusicKitPlayer
+            trackId={appleMusicTrackId!}
+            trackKey={`${trackTitle}-${appleMusicTrackId}`}
+            compact
+          />
+        ) : (
+          <AppleMusicEmbed trackId={appleMusicTrackId!} trackTitle={trackTitle} height={175} />
+        )}
       </div>
     );
   }

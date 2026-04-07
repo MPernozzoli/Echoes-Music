@@ -7,7 +7,7 @@ interface AppLayoutProps {
 
 const navItems = [
   { label: "Discover", path: "/discover", icon: Search },
-  { label: "History", path: "/history", icon: Clock },
+  { label: "Chat", path: "/history", icon: Clock },
   { label: "Favorites", path: "/favorites", icon: Heart },
   { label: "Profile", path: "/profile", icon: User },
 ];

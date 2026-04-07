@@ -2,8 +2,10 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Play, Pause, SkipBack, SkipForward, Heart, Volume2, VolumeX, Info } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import type { Song } from "@/data/mockData";
+import { useAppleMusic } from "@/context/AppleMusicContext";
 import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
 import { AppleMusicEmbed } from "@/components/AppleMusicEmbed";
+import { AppleMusicKitPlayer } from "@/components/AppleMusicKitPlayer";
 
 interface FullPlayerProps {
   songs: Song[];
@@ -12,6 +14,9 @@ interface FullPlayerProps {
   isFavorite: (id: string) => boolean;
   onToggleFavorite: (id: string) => void;
   onShowDetails?: () => void;
+  /** Tenta play automatico (es. “Sorprendimi”) su preview HTML5 */
+  autoplay?: boolean;
+  onAutoplayConsumed?: () => void;
 }
 
 function formatTime(seconds: number): string {
@@ -28,9 +33,12 @@ const FullPlayer = ({
   isFavorite,
   onToggleFavorite,
   onShowDetails,
+  autoplay = false,
+  onAutoplayConsumed,
 }: FullPlayerProps) => {
   const song = songs[currentIndex];
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const autoplayTried = useRef(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -39,6 +47,7 @@ const FullPlayer = ({
   const [audioReady, setAudioReady] = useState(false);
   const [useEmbed, setUseEmbed] = useState(false);
   const playbackMode = useStreamingPlaybackMode();
+  const appleMusic = useAppleMusic();
 
   // Determine playback source
   const previewUrl = song?.previewUrl;
@@ -48,6 +57,7 @@ const FullPlayer = ({
 
   // Reset state when song changes
   useEffect(() => {
+    autoplayTried.current = false;
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);
@@ -89,6 +99,20 @@ const FullPlayer = ({
       setUseEmbed(true);
     }
   }, [song?.id, previewUrl, useApplePlayback]);
+
+  useEffect(() => {
+    if (!autoplay || useApplePlayback || useEmbed || !audioReady || !audioRef.current || autoplayTried.current) return;
+    autoplayTried.current = true;
+    audioRef.current
+      .play()
+      .then(() => {
+        setIsPlaying(true);
+        onAutoplayConsumed?.();
+      })
+      .catch(() => {
+        onAutoplayConsumed?.();
+      });
+  }, [autoplay, audioReady, useApplePlayback, useEmbed, song?.id, onAutoplayConsumed]);
 
   // Volume sync
   useEffect(() => {
@@ -172,10 +196,19 @@ const FullPlayer = ({
         {song.explanation}
       </p>
 
-      {/* Apple Music: embed ufficiale (come Spotify) */}
+      {/* Apple Music: MusicKit se connesso in app (stessi token), altrimenti embed Apple */}
       {useApplePlayback && appleMusicId && (
         <div className="w-full px-2 mb-4 space-y-3">
-          <AppleMusicEmbed trackId={appleMusicId} trackTitle={song.title} height={152} />
+          {appleMusic.isAuthorized && appleMusic.isAvailable ? (
+            <AppleMusicKitPlayer
+              trackId={appleMusicId}
+              trackKey={song.id}
+              title={song.title}
+              artist={song.artist}
+            />
+          ) : (
+            <AppleMusicEmbed trackId={appleMusicId} trackTitle={song.title} height={152} />
+          )}
           <div className="flex items-center justify-center gap-6">
             <button
               onClick={handlePrev}
