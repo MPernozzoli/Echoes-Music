@@ -13,7 +13,7 @@ import EmotionalProfileCard from "@/components/EmotionalProfile";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
 import SearchFeedback from "@/components/SearchFeedback";
 import { pickDiscoverPromptSuggestions } from "@/lib/discoverPromptSuggestions";
-import type { SearchResult } from "@/data/mockData";
+import type { ListenHistoryEntry, SearchResult } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 import { usePlaybackQueue } from "@/context/PlaybackQueueContext";
 import {
@@ -544,6 +544,38 @@ const Chat = () => {
     ]
   );
 
+  const historyChatExists = useCallback(
+    (id: string) => conversations.some((c) => c.id === id),
+    [conversations]
+  );
+
+  const handleReplayHistoryEntry = useCallback(
+    (entry: ListenHistoryEntry) => {
+      playNowReplace(
+        [entry.song],
+        0,
+        true,
+        {
+          conversationId: entry.conversationId,
+          searchResultId: entry.searchResultId,
+          prompt: entry.prompt,
+        }
+      );
+      setDockPopover(null);
+    },
+    [playNowReplace]
+  );
+
+  const handleOpenHistoryChat = useCallback(
+    (entry: ListenHistoryEntry) => {
+      if (!conversations.some((c) => c.id === entry.conversationId)) return;
+      selectConversation(entry.conversationId);
+      navigate(`${CHAT_PATH}?conversation=${encodeURIComponent(entry.conversationId)}`);
+      setDockPopover(null);
+    },
+    [conversations, selectConversation, navigate]
+  );
+
   const composerProps = {
     onSubmit: handleSearch,
     isLoading,
@@ -934,6 +966,9 @@ const Chat = () => {
                 isFavorite={isFavorite}
                 onToggleFavorite={handleToggleFavorite}
                 listenHistory={listenHistory}
+                historyChatExists={historyChatExists}
+                onReplayHistoryEntry={handleReplayHistoryEntry}
+                onOpenHistoryChat={handleOpenHistoryChat}
               />
             }
           />

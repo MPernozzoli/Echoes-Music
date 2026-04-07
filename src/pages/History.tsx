@@ -1,8 +1,11 @@
+import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { useConversations } from "@/context/ConversationContext";
 import { useApp } from "@/context/AppContext";
-import { Clock, ArrowRight, Trash2, MessageSquare, Headphones } from "lucide-react";
+import { usePlaybackQueue } from "@/context/PlaybackQueueContext";
+import type { ListenHistoryEntry } from "@/data/mockData";
+import { Clock, ArrowRight, Trash2, MessageSquare, Headphones, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -10,6 +13,29 @@ const History = () => {
   const navigate = useNavigate();
   const { conversations, deleteConversation, selectConversation } = useConversations();
   const { listenHistory, clearListenHistory } = useApp();
+  const { playNowReplace } = usePlaybackQueue();
+
+  const replayFromHistory = useCallback(
+    (e: ListenHistoryEntry) => {
+      playNowReplace(
+        [e.song],
+        0,
+        true,
+        {
+          conversationId: e.conversationId,
+          searchResultId: e.searchResultId,
+          prompt: e.prompt,
+        }
+      );
+      if (conversations.some((c) => c.id === e.conversationId)) {
+        selectConversation(e.conversationId);
+        navigate(`/chat?conversation=${encodeURIComponent(e.conversationId)}`);
+      } else {
+        navigate("/chat");
+      }
+    },
+    [playNowReplace, navigate, conversations, selectConversation]
+  );
 
   const sorted = [...conversations].sort(
     (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
@@ -187,22 +213,35 @@ const History = () => {
                           })}
                         </p>
                       </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="shrink-0 gap-1"
-                        disabled={!chatExists}
-                        onClick={() => {
-                          if (!chatExists) return;
-                          selectConversation(e.conversationId);
-                          navigate(`/chat?conversation=${e.conversationId}`);
-                        }}
-                        title={!chatExists ? "Chat eliminata" : undefined}
-                      >
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        Chat
-                      </Button>
+                      <div className="flex flex-col gap-2 shrink-0">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="gap-1"
+                          onClick={() => replayFromHistory(e)}
+                          title="Riproduci di nuovo"
+                        >
+                          <Play className="w-3.5 h-3.5" />
+                          Play
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0 gap-1"
+                          disabled={!chatExists}
+                          onClick={() => {
+                            if (!chatExists) return;
+                            selectConversation(e.conversationId);
+                            navigate(`/chat?conversation=${encodeURIComponent(e.conversationId)}`);
+                          }}
+                          title={!chatExists ? "Chat eliminata" : undefined}
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          Chat
+                        </Button>
+                      </div>
                     </li>
                   );
                 })}
