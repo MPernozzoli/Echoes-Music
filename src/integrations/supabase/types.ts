@@ -308,6 +308,48 @@ export type Database = {
         }
         Relationships: []
       }
+      spotify_connections: {
+        Row: {
+          access_token: string
+          anonymous_session_id: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          product: string | null
+          refresh_token: string
+          spotify_user_id: string
+          token_expires_at: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          access_token: string
+          anonymous_session_id?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          product?: string | null
+          refresh_token: string
+          spotify_user_id: string
+          token_expires_at: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          access_token?: string
+          anonymous_session_id?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          product?: string | null
+          refresh_token?: string
+          spotify_user_id?: string
+          token_expires_at?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_settings: {
         Row: {
           allow_anonymized_improvement_data: boolean
