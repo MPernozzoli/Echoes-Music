@@ -8,39 +8,38 @@ import EmotionalProfileCard from "@/components/EmotionalProfile";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
 import { examplePrompts, mockSearchResults, mockSongs } from "@/data/mockData";
 import type { SearchResult } from "@/data/mockData";
+import { useApp } from "@/context/AppContext";
 import { Lightbulb, RefreshCw } from "lucide-react";
 
 const Discover = () => {
   const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [currentResult, setCurrentResult] = useState<SearchResult | null>(null);
-  const [favorites, setFavorites] = useState<Set<string>>(new Set(["1", "6"]));
   const [hasSearched, setHasSearched] = useState(false);
+  const { toggleFavorite, isFavorite, addToHistory } = useApp();
 
   const handleSearch = (prompt: string) => {
     setIsLoading(true);
     setHasSearched(true);
 
-    // Simulate AI processing
     setTimeout(() => {
       const matchIndex = Math.floor(Math.random() * mockSearchResults.length);
-      const result = {
+      const result: SearchResult = {
         ...mockSearchResults[matchIndex],
+        id: `sr-${Date.now()}`,
         prompt,
         timestamp: new Date().toISOString(),
         songs: [...mockSongs].sort(() => Math.random() - 0.5).slice(0, 4 + Math.floor(Math.random() * 3)),
       };
       setCurrentResult(result);
+      addToHistory(result);
       setIsLoading(false);
     }, 2000);
   };
 
-  const toggleFavorite = (id: string) => {
-    setFavorites((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+  const handleToggleFavorite = (songId: string) => {
+    const song = currentResult?.songs.find((s) => s.id === songId);
+    if (song) toggleFavorite(song);
   };
 
   useEffect(() => {
@@ -51,7 +50,6 @@ const Discover = () => {
   return (
     <AppLayout>
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 pb-20 md:pb-8">
-        {/* Prompt area */}
         <div className="max-w-2xl mx-auto mb-6">
           <PromptInput onSubmit={handleSearch} isLoading={isLoading} />
         </div>
@@ -63,7 +61,6 @@ const Discover = () => {
           </div>
         )}
 
-        {/* Empty state */}
         {!hasSearched && !isLoading && (
           <div className="text-center py-20 max-w-md mx-auto">
             <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
@@ -77,7 +74,6 @@ const Discover = () => {
           </div>
         )}
 
-        {/* Loading */}
         {isLoading && (
           <div className="max-w-2xl mx-auto">
             <p className="text-sm text-muted-foreground font-body mb-4 animate-pulse-soft">
@@ -87,10 +83,8 @@ const Discover = () => {
           </div>
         )}
 
-        {/* Results */}
         {currentResult && !isLoading && (
           <div className="flex flex-col lg:flex-row gap-8">
-            {/* Main feed */}
             <div className="flex-1 min-w-0">
               <p className="text-xs text-muted-foreground font-body uppercase tracking-wider mb-1">Results for</p>
               <h2 className="font-display text-xl font-semibold mb-6 text-foreground">
@@ -103,13 +97,12 @@ const Discover = () => {
                     key={song.id}
                     {...song}
                     index={i}
-                    isFavorite={favorites.has(song.id)}
-                    onToggleFavorite={toggleFavorite}
+                    isFavorite={isFavorite(song.id)}
+                    onToggleFavorite={handleToggleFavorite}
                   />
                 ))}
               </div>
 
-              {/* Adjacent interpretations */}
               {currentResult.adjacentInterpretations.length > 0 && (
                 <div className="mt-10">
                   <div className="flex items-center gap-2 mb-4">
@@ -131,7 +124,6 @@ const Discover = () => {
               )}
             </div>
 
-            {/* Side panel */}
             <div className="lg:w-72 shrink-0">
               <EmotionalProfileCard profile={currentResult.emotionalProfile} />
             </div>

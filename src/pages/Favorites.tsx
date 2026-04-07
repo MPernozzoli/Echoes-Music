@@ -1,14 +1,14 @@
 import AppLayout from "@/components/AppLayout";
 import SongCard from "@/components/SongCard";
-import { mockFavorites } from "@/data/mockData";
+import { useApp } from "@/context/AppContext";
 import { Heart } from "lucide-react";
-import { useState } from "react";
 
 const Favorites = () => {
-  const [favorites, setFavorites] = useState(mockFavorites);
+  const { favorites, toggleFavorite } = useApp();
 
-  const handleRemove = (id: string) => {
-    setFavorites((prev) => prev.filter((s) => s.id !== id));
+  const handleToggle = (songId: string) => {
+    const song = favorites.find((s) => s.id === songId);
+    if (song) toggleFavorite(song);
   };
 
   return (
@@ -30,7 +30,7 @@ const Favorites = () => {
                 {...song}
                 index={i}
                 isFavorite={true}
-                onToggleFavorite={handleRemove}
+                onToggleFavorite={handleToggle}
               />
             ))}
           </div>
