@@ -4,16 +4,19 @@ import type { Song, SearchResult } from "@/data/mockData";
 interface AppState {
   favorites: Song[];
   history: SearchResult[];
+  descriptionLanguage: string;
   toggleFavorite: (song: Song) => void;
   isFavorite: (songId: string) => boolean;
   addToHistory: (result: SearchResult) => void;
   clearHistory: () => void;
+  setDescriptionLanguage: (lang: string) => void;
 }
 
 const AppContext = createContext<AppState | null>(null);
 
 const FAVORITES_KEY = "echoes_favorites";
 const HISTORY_KEY = "echoes_history";
+const LANGUAGE_KEY = "echoes_description_language";
 
 function loadJSON<T>(key: string, fallback: T): T {
   try {
@@ -27,6 +30,7 @@ function loadJSON<T>(key: string, fallback: T): T {
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [favorites, setFavorites] = useState<Song[]>(() => loadJSON(FAVORITES_KEY, []));
   const [history, setHistory] = useState<SearchResult[]>(() => loadJSON(HISTORY_KEY, []));
+  const [descriptionLanguage, setDescriptionLanguage] = useState<string>(() => localStorage.getItem(LANGUAGE_KEY) || "auto");
 
   useEffect(() => {
     localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
@@ -35,6 +39,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
   }, [history]);
+
+  useEffect(() => {
+    localStorage.setItem(LANGUAGE_KEY, descriptionLanguage);
+  }, [descriptionLanguage]);
 
   const toggleFavorite = useCallback((song: Song) => {
     setFavorites((prev) => {
@@ -55,7 +63,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const clearHistory = useCallback(() => setHistory([]), []);
 
   return (
-    <AppContext.Provider value={{ favorites, history, toggleFavorite, isFavorite, addToHistory, clearHistory }}>
+    <AppContext.Provider value={{ favorites, history, descriptionLanguage, toggleFavorite, isFavorite, addToHistory, clearHistory, setDescriptionLanguage }}>
       {children}
     </AppContext.Provider>
   );

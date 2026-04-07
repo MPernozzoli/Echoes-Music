@@ -1,15 +1,29 @@
 import { useState, useEffect } from "react";
 import AppLayout from "@/components/AppLayout";
-import { User, Music, Palette, LogOut, ExternalLink, Shield, Check, Loader2, X } from "lucide-react";
+import { User, Music, Palette, LogOut, ExternalLink, Shield, Check, Loader2, X, Globe } from "lucide-react";
 import { getUserSettings, setAllowAnonymizedData } from "@/services/tracking";
 import { getSpotifyAuthUrl, disconnectSpotify } from "@/services/spotify";
 import { useSpotify } from "@/context/SpotifyContext";
 import { useAppleMusic } from "@/context/AppleMusicContext";
+import { useApp } from "@/context/AppContext";
+
+const LANGUAGES = [
+  { value: "auto", label: "Auto (detect from prompt)" },
+  { value: "it", label: "Italiano" },
+  { value: "en", label: "English" },
+  { value: "es", label: "Español" },
+  { value: "fr", label: "Français" },
+  { value: "de", label: "Deutsch" },
+  { value: "pt", label: "Português" },
+  { value: "ja", label: "日本語" },
+  { value: "ko", label: "한국어" },
+];
 
 const Profile = () => {
   const [allowData, setAllowData] = useState(true);
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [connectingSpotify, setConnectingSpotify] = useState(false);
+  const { descriptionLanguage, setDescriptionLanguage } = useApp();
   const { isConnected: spotifyConnected, displayName: spotifyName, isPremium, loading: spotifyLoading, setDisconnected } = useSpotify();
   const { isAvailable: appleMusicAvailable, isAuthorized: appleMusicAuthorized, loading: appleMusicLoading, authorize: authorizeApple, unauthorize: unauthorizeApple } = useAppleMusic();
 
@@ -147,6 +161,30 @@ const Profile = () => {
                 Connect
               </button>
             ) : null}
+          </div>
+        </div>
+
+        {/* Language */}
+        <div className="glass-card rounded-2xl p-6 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Globe className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-body text-sm font-medium text-foreground">Description Language</h3>
+                <p className="text-xs text-muted-foreground font-body">Language for song descriptions</p>
+              </div>
+            </div>
+            <select
+              value={descriptionLanguage}
+              onChange={(e) => setDescriptionLanguage(e.target.value)}
+              className="text-sm font-body px-3 py-1.5 rounded-lg bg-muted text-foreground border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              {LANGUAGES.map((l) => (
+                <option key={l.value} value={l.value}>{l.label}</option>
+              ))}
+            </select>
           </div>
         </div>
 

@@ -3,7 +3,8 @@ import { useSearchParams } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import PromptInput from "@/components/PromptInput";
 import PromptSuggestions from "@/components/PromptSuggestions";
-import SongCard from "@/components/SongCard";
+import NowPlaying from "@/components/NowPlaying";
+import TrackQueue from "@/components/TrackQueue";
 import EmotionalProfileCard from "@/components/EmotionalProfile";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
 import SearchFeedback from "@/components/SearchFeedback";
@@ -11,7 +12,7 @@ import { examplePrompts } from "@/data/mockData";
 import type { SearchResult } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
 import { trackSearch, trackResults, trackInteraction, maybeCreateTrainingEvent } from "@/services/tracking";
-import { Lightbulb, RefreshCw } from "lucide-react";
+import { Lightbulb, RefreshCw, ListMusic, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 
 const Discover = () => {
@@ -21,12 +22,16 @@ const Discover = () => {
   const [hasSearched, setHasSearched] = useState(false);
   const [dbSearchId, setDbSearchId] = useState<string | null>(null);
   const [resultIdMap, setResultIdMap] = useState<Record<string, string>>({});
-  const { toggleFavorite, isFavorite, addToHistory } = useApp();
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const [showQueue, setShowQueue] = useState(false);
+  const { toggleFavorite, isFavorite, addToHistory, descriptionLanguage } = useApp();
   const searchParamHandled = useRef(false);
 
   const handleSearch = async (prompt: string) => {
     setIsLoading(true);
     setHasSearched(true);
+    setCurrentTrackIndex(0);
+    setShowQueue(false);
 
     try {
       const PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
@@ -38,7 +43,7 @@ const Discover = () => {
           'Content-Type': 'application/json',
           'apikey': ANON_KEY,
         },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, descriptionLanguage }),
       });
 
       if (!res.ok) {
@@ -65,14 +70,8 @@ const Discover = () => {
       addToHistory(result);
       setIsLoading(false);
 
-      // Track search in DB
-      const searchId = await trackSearch({
-        rawPrompt: prompt,
-        profile: result.emotionalProfile,
-      });
+      const searchId = await trackSearch({ rawPrompt: prompt, profile: result.emotionalProfile });
       setDbSearchId(searchId);
-
-      // Track results
       if (searchId) {
         const map = await trackResults(searchId, result.songs);
         setResultIdMap(map);
@@ -89,13 +88,8 @@ const Discover = () => {
     if (song) toggleFavorite(song);
   };
 
-  const handleTagClick = (tag: string) => {
-    handleSearch(`Songs that feel like "${tag}"`);
-  };
-
   const handleRefineSearch = (interp: string) => {
     if (dbSearchId) {
-      // Track refine interaction on first result if available
       const firstTrackId = currentResult?.songs[0]?.id;
       if (firstTrackId && resultIdMap[firstTrackId]) {
         trackInteraction({
@@ -109,7 +103,6 @@ const Discover = () => {
     handleSearch(interp);
   };
 
-  // Generate training event when user leaves results (on new search or unmount)
   useEffect(() => {
     return () => {
       if (dbSearchId && currentResult) {
@@ -138,9 +131,12 @@ const Discover = () => {
     }
   }, []);
 
+  const currentSong = currentResult?.songs[currentTrackIndex];
+
   return (
     <AppLayout>
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 pb-20 md:pb-8">
+        {/* Search bar — always on top */}
         <div className="max-w-2xl mx-auto mb-6">
           <PromptInput onSubmit={handleSearch} isLoading={isLoading} />
         </div>
@@ -174,28 +170,49 @@ const Discover = () => {
           </div>
         )}
 
-        {currentResult && !isLoading && (
+        {currentResult && !isLoading && currentSong && (
           <div className="flex flex-col lg:flex-row gap-8">
+            {/* Main player area */}
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-muted-foreground font-body uppercase tracking-wider mb-1">Results for</p>
-              <h2 className="font-display text-xl font-semibold mb-6 text-foreground">
+              <p className="text-xs text-muted-foreground font-body uppercase tracking-wider mb-1 text-center">Results for</p>
+              <h2 className="font-display text-lg font-semibold mb-8 text-foreground text-center">
                 "{currentResult.prompt}"
               </h2>
 
-              <div className="space-y-4">
-                {currentResult.songs.map((song, i) => (
-                  <SongCard
-                    key={song.id}
-                    {...song}
-                    index={i}
-                    isFavorite={isFavorite(song.id)}
-                    onToggleFavorite={handleToggleFavorite}
-                    searchResultId={resultIdMap[song.id]}
-                    searchId={dbSearchId ?? undefined}
-                    onTagClick={handleTagClick}
-                  />
-                ))}
-              </div>
+              {/* Now Playing */}
+              <NowPlaying
+                song={currentSong}
+                isFavorite={isFavorite(currentSong.id)}
+                onToggleFavorite={handleToggleFavorite}
+              />
+
+              {/* Queue toggle */}
+              {currentResult.songs.length > 1 && (
+                <div className="mt-8">
+                  <button
+                    onClick={() => setShowQueue(!showQueue)}
+                    className="flex items-center gap-2 mx-auto px-4 py-2 rounded-xl border border-border text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/20 transition-all"
+                  >
+                    <ListMusic className="w-4 h-4" />
+                    <span>
+                      {showQueue ? "Hide" : "Show"} queue ({currentResult.songs.length} tracks)
+                    </span>
+                    {showQueue ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+
+                  {showQueue && (
+                    <div className="mt-4 glass-card rounded-2xl p-4 animate-fade-in">
+                      <TrackQueue
+                        songs={currentResult.songs}
+                        currentIndex={currentTrackIndex}
+                        onSelect={setCurrentTrackIndex}
+                        isFavorite={isFavorite}
+                        onToggleFavorite={handleToggleFavorite}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Search-level feedback */}
               {dbSearchId && (
@@ -226,6 +243,7 @@ const Discover = () => {
               )}
             </div>
 
+            {/* Sidebar */}
             <div className="lg:w-72 shrink-0">
               <EmotionalProfileCard profile={currentResult.emotionalProfile} />
             </div>
