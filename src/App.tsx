@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider } from "@/context/AppContext";
 import { SpotifyProvider } from "@/context/SpotifyContext";
+import { AppleMusicProvider } from "@/context/AppleMusicContext";
 import Landing from "./pages/Landing";
 import Discover from "./pages/Discover";
 import History from "./pages/History";
@@ -24,16 +25,18 @@ const App = () => (
       <BrowserRouter>
         <AppProvider>
           <SpotifyProvider>
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/discover" element={<Discover />} />
-              <Route path="/history" element={<History />} />
-              <Route path="/favorites" element={<Favorites />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/insights" element={<Insights />} />
-              <Route path="/spotify-callback" element={<SpotifyCallback />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <AppleMusicProvider>
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/discover" element={<Discover />} />
+                <Route path="/history" element={<History />} />
+                <Route path="/favorites" element={<Favorites />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/insights" element={<Insights />} />
+                <Route path="/spotify-callback" element={<SpotifyCallback />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </AppleMusicProvider>
           </SpotifyProvider>
         </AppProvider>
       </BrowserRouter>
