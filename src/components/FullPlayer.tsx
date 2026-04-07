@@ -407,7 +407,7 @@ const FullPlayer = ({
             onPrev={handlePrev}
             onNext={handleNext}
             prevDisabled={currentIndex === 0}
-            nextDisabled={currentIndex === songs.length - 1}
+            nextDisabled={currentIndex === songs.length - 1 && dockRepeat !== "all"}
             isPlaying={useAppleKitPlayer ? kitTelemetry.isPlaying : isPlaying}
             onPlayPause={onDockPlayPause}
             playDisabled={dockPlayDisabled}
