@@ -2,7 +2,7 @@ import { Volume2 } from "lucide-react";
 import { useSpotify } from "@/context/SpotifyContext";
 import { useAppleMusic } from "@/context/AppleMusicContext";
 import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
-import { AppleMusicTrackControls } from "@/components/AppleMusicTrackControls";
+import { AppleMusicEmbed } from "@/components/AppleMusicEmbed";
 
 interface MusicPlayerProps {
   trackTitle: string;
@@ -16,21 +16,21 @@ const MusicPlayer = ({ trackTitle, artistName, spotifyTrackId, appleMusicTrackId
   const appleMusic = useAppleMusic();
   const playbackMode = useStreamingPlaybackMode();
 
-  const preferApple =
-    playbackMode === "apple" && !!appleMusicTrackId && appleMusic.isAvailable;
+  const preferApple = playbackMode === "apple" && !!appleMusicTrackId;
   const preferSpotifyEmbed =
     !!spotifyTrackId && (playbackMode === "spotify" || playbackMode === "guest");
-  const appleOnlyFallback =
-    !spotifyTrackId && !!appleMusicTrackId && appleMusic.isAvailable;
+  const appleOnlyFallback = !spotifyTrackId && !!appleMusicTrackId;
 
   if (preferApple) {
     return (
       <div className="mt-3" onClick={(e) => e.stopPropagation()}>
-        <AppleMusicTrackControls
-          trackId={appleMusicTrackId!}
-          trackKey={`${trackTitle}-${appleMusicTrackId}`}
-          compact
-        />
+        <AppleMusicEmbed trackId={appleMusicTrackId!} trackTitle={trackTitle} height={175} />
+        {appleMusic.isAuthorized && (
+          <p className="text-[10px] text-[hsl(350,80%,55%)]/50 font-body mt-1 flex items-center gap-1">
+            <Volume2 className="w-3 h-3" />
+            Player Apple Music (account connesso)
+          </p>
+        )}
       </div>
     );
   }
@@ -61,11 +61,7 @@ const MusicPlayer = ({ trackTitle, artistName, spotifyTrackId, appleMusicTrackId
   if (appleOnlyFallback) {
     return (
       <div className="mt-3" onClick={(e) => e.stopPropagation()}>
-        <AppleMusicTrackControls
-          trackId={appleMusicTrackId!}
-          trackKey={`${trackTitle}-${appleMusicTrackId}`}
-          compact
-        />
+        <AppleMusicEmbed trackId={appleMusicTrackId!} trackTitle={trackTitle} height={175} />
       </div>
     );
   }

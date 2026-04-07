@@ -2,9 +2,8 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Play, Pause, SkipBack, SkipForward, Heart, Volume2, VolumeX, Info } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import type { Song } from "@/data/mockData";
-import { useAppleMusic } from "@/context/AppleMusicContext";
 import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
-import { AppleMusicTrackControls } from "@/components/AppleMusicTrackControls";
+import { AppleMusicEmbed } from "@/components/AppleMusicEmbed";
 
 interface FullPlayerProps {
   songs: Song[];
@@ -39,15 +38,13 @@ const FullPlayer = ({
   const [isMuted, setIsMuted] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
   const [useEmbed, setUseEmbed] = useState(false);
-  const appleMusic = useAppleMusic();
   const playbackMode = useStreamingPlaybackMode();
 
   // Determine playback source
   const previewUrl = song?.previewUrl;
   const spotifyTrackId = song?.spotifyUri?.replace("spotify:track:", "");
   const appleMusicId = song?.appleMusicId;
-  const useApplePlayback =
-    playbackMode === "apple" && !!appleMusicId && appleMusic.isAvailable;
+  const useApplePlayback = playbackMode === "apple" && !!appleMusicId;
 
   // Reset state when song changes
   useEffect(() => {
@@ -175,10 +172,10 @@ const FullPlayer = ({
         {song.explanation}
       </p>
 
-      {/* Apple Music (utente con MusicKit autorizzato) */}
+      {/* Apple Music: embed ufficiale (come Spotify) */}
       {useApplePlayback && appleMusicId && (
         <div className="w-full px-2 mb-4 space-y-3">
-          <AppleMusicTrackControls trackId={appleMusicId} trackKey={song.id} />
+          <AppleMusicEmbed trackId={appleMusicId} trackTitle={song.title} height={152} />
           <div className="flex items-center justify-center gap-6">
             <button
               onClick={handlePrev}
