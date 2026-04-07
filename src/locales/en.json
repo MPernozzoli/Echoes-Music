@@ -6,6 +6,12 @@
     "profile": "Profile",
     "home": "Home"
   },
+  "auth": {
+    "freeTokens": "{{count}} searches included when you sign up",
+    "loginError": "Login failed. Please try again.",
+    "subtitle": "Discover music that resonates with your emotions",
+    "continueWithGoogle": "Continue with Google"
+  },
   "landing": {
     "badge": "AI-powered music discovery",
     "title": "Find the song that means",

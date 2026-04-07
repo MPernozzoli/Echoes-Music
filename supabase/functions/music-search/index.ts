@@ -1,7 +1,81 @@
+import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.2';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const AI_MODEL = 'google/gemini-3-flash-preview';
+/** USD / 1M token — stima su listino Gemini 3 Flash testo (Google AI). */
+const USD_PER_MTOK_PROMPT = 0.5;
+const USD_PER_MTOK_COMPLETION = 3.0;
+
+type GatewayUsage = {
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_tokens?: number;
+};
+
+function normalizeUsage(raw: unknown): GatewayUsage {
+  if (!raw || typeof raw !== 'object') return {};
+  const o = raw as Record<string, unknown>;
+  const pt = Number(o.prompt_tokens);
+  const ct = Number(o.completion_tokens);
+  const tt = Number(o.total_tokens);
+  return {
+    prompt_tokens: Number.isFinite(pt) ? Math.round(pt) : undefined,
+    completion_tokens: Number.isFinite(ct) ? Math.round(ct) : undefined,
+    total_tokens: Number.isFinite(tt) ? Math.round(tt) : undefined,
+  };
+}
+
+function estimateGemini3FlashUsd(u: GatewayUsage): number | null {
+  const pt = u.prompt_tokens ?? 0;
+  const ct = u.completion_tokens ?? 0;
+  if (pt === 0 && ct === 0) return null;
+  return (pt * USD_PER_MTOK_PROMPT + ct * USD_PER_MTOK_COMPLETION) / 1_000_000;
+}
+
+async function insertAiUsage(
+  admin: SupabaseClient | null,
+  row: {
+    user_id: string | null;
+    operation: string;
+    search_mode: string | null;
+    usage: GatewayUsage;
+    gateway_request_id?: string | null;
+  },
+): Promise<void> {
+  if (!admin) return;
+  const est = estimateGemini3FlashUsd(row.usage);
+  const { error } = await admin.from('ai_usage_events').insert({
+    user_id: row.user_id,
+    provider: 'lovable_gateway',
+    model: AI_MODEL,
+    operation: row.operation,
+    search_mode: row.search_mode,
+    prompt_tokens: row.usage.prompt_tokens ?? null,
+    completion_tokens: row.usage.completion_tokens ?? null,
+    total_tokens: row.usage.total_tokens ?? null,
+    estimated_cost_usd: est,
+    gateway_request_id: row.gateway_request_id ?? null,
+  });
+  if (error) console.error('ai_usage_events insert:', error);
+}
+
+async function resolveUserContext(req: Request): Promise<{ userId: string | null; admin: SupabaseClient | null }> {
+  const url = Deno.env.get('SUPABASE_URL') ?? '';
+  const anon = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+  const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  const authHeader = req.headers.get('Authorization') ?? '';
+  const jwt = authHeader.replace(/^Bearer\s+/i, '').trim();
+  if (!jwt || !url || !anon || !service) return { userId: null, admin: null };
+  const userClient = createClient(url, anon, { global: { headers: { Authorization: `Bearer ${jwt}` } } });
+  const { data: { user }, error } = await userClient.auth.getUser();
+  if (error || !user) return { userId: null, admin: null };
+  const admin = createClient(url, service, { auth: { persistSession: false } });
+  return { userId: user.id, admin };
+}
 
 // --- Apple Music token generation (reuse logic) ---
 async function importPrivateKey(pem: string): Promise<CryptoKey> {
@@ -225,7 +299,11 @@ async function interpretDiscovery(params: {
   descriptionLanguage?: string;
   mode: 'search' | 'lucky';
   image?: { base64: string; mimeType: string };
-}): Promise<AIInterpretation> {
+}): Promise<{
+  interpretation: AIInterpretation;
+  usage: GatewayUsage;
+  gatewayRequestId: string | null;
+}> {
   const apiKey = Deno.env.get('LOVABLE_API_KEY');
   if (!apiKey) throw new Error('LOVABLE_API_KEY not configured');
 
@@ -314,7 +392,7 @@ CRITICAL: Only suggest songs that actually exist. Use correct artist names and s
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'google/gemini-3-flash-preview',
+      model: AI_MODEL,
       messages: [
         { role: 'system', content: systemPrompt },
         userMessage,
@@ -407,10 +485,16 @@ CRITICAL: Only suggest songs that actually exist. Use correct artist names and s
   }
 
   const data = await res.json();
+  const usage = normalizeUsage(data.usage);
+  const gatewayRequestId = typeof data.id === 'string' ? data.id : null;
   const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
   if (!toolCall) throw new Error('AI did not return structured output');
 
-  return JSON.parse(toolCall.function.arguments);
+  return {
+    interpretation: JSON.parse(toolCall.function.arguments) as AIInterpretation,
+    usage,
+    gatewayRequestId,
+  };
 }
 
 async function interpretMemoryCompact(params: {
@@ -418,7 +502,12 @@ async function interpretMemoryCompact(params: {
   conversationMemory: Record<string, unknown> | null;
   userTasteProfile: Record<string, unknown> | null;
   lastUserPrompt?: string;
-}): Promise<{ conversationMemoryUpdate: { threadSummary: string; standardAxes: StandardAxes }; userTasteProfileUpdate?: AIInterpretation['userTasteProfileUpdate'] }> {
+}): Promise<{
+  conversationMemoryUpdate: { threadSummary: string; standardAxes: StandardAxes };
+  userTasteProfileUpdate?: AIInterpretation['userTasteProfileUpdate'];
+  usage: GatewayUsage;
+  gatewayRequestId: string | null;
+}> {
   const apiKey = Deno.env.get('LOVABLE_API_KEY');
   if (!apiKey) throw new Error('LOVABLE_API_KEY not configured');
 
@@ -436,7 +525,7 @@ async function interpretMemoryCompact(params: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'google/gemini-3-flash-preview',
+      model: AI_MODEL,
       messages: [
         {
           role: 'system',
@@ -487,6 +576,8 @@ async function interpretMemoryCompact(params: {
   }
 
   const data = await res.json();
+  const usage = normalizeUsage(data.usage);
+  const gatewayRequestId = typeof data.id === 'string' ? data.id : null;
   const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
   if (!toolCall) throw new Error('AI did not return structured output');
   const parsed = JSON.parse(toolCall.function.arguments);
@@ -497,6 +588,8 @@ async function interpretMemoryCompact(params: {
       standardAxes: axes,
     },
     userTasteProfileUpdate: parsed.userTasteProfileUpdate,
+    usage,
+    gatewayRequestId,
   };
 }
 
@@ -542,6 +635,7 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const { userId, admin } = await resolveUserContext(req);
     const body = await req.json().catch(() => ({}));
     const {
       prompt: rawPrompt,
@@ -582,6 +676,13 @@ Deno.serve(async (req) => {
         userTasteProfile: userTasteProfile ?? null,
         lastUserPrompt,
       });
+      await insertAiUsage(admin, {
+        user_id: userId,
+        operation: 'memory_compact',
+        search_mode: 'memory_compact',
+        usage: compact.usage,
+        gateway_request_id: compact.gatewayRequestId,
+      });
       return new Response(JSON.stringify({
         conversationMemoryUpdate: {
           threadSummary: compact.conversationMemoryUpdate.threadSummary,
@@ -612,14 +713,30 @@ Deno.serve(async (req) => {
       userTasteProfile ?? null,
     );
 
-    const interpretation = sanitizeInterpretation(
-      await interpretDiscovery({
-        userContent,
-        descriptionLanguage,
-        mode: mode === 'lucky' ? 'lucky' : 'search',
-        ...(hasImage ? { image: { base64: imageB64, mimeType: imageMime } } : {}),
-      }),
-    );
+    if (userId && admin) {
+      const { data: tok } = await admin.from('user_tokens').select('balance').eq('user_id', userId).maybeSingle();
+      if (!tok || tok.balance < 1) {
+        return new Response(JSON.stringify({ error: 'Insufficient tokens' }), {
+          status: 402,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    const discovery = await interpretDiscovery({
+      userContent,
+      descriptionLanguage,
+      mode: mode === 'lucky' ? 'lucky' : 'search',
+      ...(hasImage ? { image: { base64: imageB64, mimeType: imageMime } } : {}),
+    });
+    await insertAiUsage(admin, {
+      user_id: userId,
+      operation: 'interpret_discovery',
+      search_mode: mode === 'lucky' ? 'lucky' : 'search',
+      usage: discovery.usage,
+      gateway_request_id: discovery.gatewayRequestId,
+    });
+    const interpretation = sanitizeInterpretation(discovery.interpretation);
 
     // Step 2: Search both platforms using AI-generated queries + direct song lookups
     const allQueries = [
@@ -706,6 +823,12 @@ Deno.serve(async (req) => {
       } : undefined,
       userTasteProfileUpdate: ut,
     };
+
+    if (userId && admin) {
+      const { data: spent, error: spendErr } = await admin.rpc('spend_token', { p_user_id: userId, p_amount: 1 });
+      if (spendErr) console.error('spend_token rpc:', spendErr);
+      else if (spent !== true) console.error('spend_token returned false', userId);
+    }
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

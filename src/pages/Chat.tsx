@@ -16,6 +16,7 @@ import SearchFeedback from "@/components/SearchFeedback";
 import { pickDiscoverPromptSuggestions } from "@/lib/discoverPromptSuggestions";
 import type { ListenHistoryEntry, SearchResult } from "@/data/mockData";
 import { useApp } from "@/context/useApp";
+import { useAuth } from "@/context/useAuth";
 import { usePlaybackQueue } from "@/context/usePlaybackQueue";
 import { useConversations } from "@/context/useConversations";
 import { memoryOrFromProfile } from "@/lib/conversationMemory";
@@ -89,6 +90,7 @@ const Chat = () => {
   const [chatDockInset, setChatDockInset] = useState(0);
 
   const isMobile = useIsMobile();
+  const { refreshTokenBalance } = useAuth();
   const {
     queue,
     queueSources,
@@ -221,15 +223,22 @@ const Chat = () => {
 
         if (data.error) {
           if (data.error.includes("Rate") || data.error.includes("429")) toast.error(t("chat.toastRate"));
-          else if (data.error.includes("credits") || data.error.includes("402")) toast.error(t("chat.toastCredits"));
-          else toast.error(data.error || t("chat.toastSearchFailed"));
+          else if (
+            data.error.includes("credits") ||
+            data.error.includes("402") ||
+            data.error.includes("Insufficient")
+          ) {
+            toast.error(t("chat.toastCredits"));
+          } else toast.error(data.error || t("chat.toastSearchFailed"));
           setIsLoading(false);
+          void refreshTokenBalance();
           return;
         }
 
         if (!data.emotionalProfile || !data.songs?.length) {
           toast.error(t("chat.toastNoResults"));
           setIsLoading(false);
+          void refreshTokenBalance();
           return;
         }
 
@@ -237,6 +246,7 @@ const Chat = () => {
         if (!songs.length) {
           toast.error(t("chat.toastNoResults"));
           setIsLoading(false);
+          void refreshTokenBalance();
           return;
         }
 
@@ -279,6 +289,7 @@ const Chat = () => {
         }
 
         setIsLoading(false);
+        void refreshTokenBalance();
 
         const searchId = await trackSearch({ rawPrompt: displayPrompt, profile: result.emotionalProfile });
         setDbSearchId(searchId);
@@ -296,10 +307,12 @@ const Chat = () => {
         console.error("Search error:", err);
         toast.error(t("chat.toastSearchError"));
         setIsLoading(false);
+        void refreshTokenBalance();
       }
     },
     [
       t,
+      refreshTokenBalance,
       getConversation,
       descriptionLanguage,
       userTasteProfile,

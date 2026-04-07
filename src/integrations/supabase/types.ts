@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_usage_events: {
+        Row: {
+          completion_tokens: number | null
+          created_at: string
+          estimated_cost_usd: number | null
+          gateway_request_id: string | null
+          id: string
+          model: string
+          operation: string
+          prompt_tokens: number | null
+          provider: string
+          search_mode: string | null
+          total_tokens: number | null
+          user_id: string | null
+        }
+        Insert: {
+          completion_tokens?: number | null
+          created_at?: string
+          estimated_cost_usd?: number | null
+          gateway_request_id?: string | null
+          id?: string
+          model: string
+          operation: string
+          prompt_tokens?: number | null
+          provider?: string
+          search_mode?: string | null
+          total_tokens?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          completion_tokens?: number | null
+          created_at?: string
+          estimated_cost_usd?: number | null
+          gateway_request_id?: string | null
+          id?: string
+          model?: string
+          operation?: string
+          prompt_tokens?: number | null
+          provider?: string
+          search_mode?: string | null
+          total_tokens?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       anonymized_training_events: {
         Row: {
           anonymized_session_id: string
@@ -377,6 +422,21 @@ export type Database = {
         }
         Relationships: []
       }
+      stripe_processed_events: {
+        Row: {
+          created_at: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
       token_transactions: {
         Row: {
           amount: number
@@ -508,6 +568,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      grant_tokens: {
+        Args: {
+          p_amount: number
+          p_description?: string
+          p_type: string
+          p_user_id: string
+        }
+        Returns: null
+      }
       spend_token: {
         Args: { p_amount?: number; p_user_id: string }
         Returns: boolean

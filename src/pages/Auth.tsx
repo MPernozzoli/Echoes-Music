@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Music, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/useAuth";
+import { SIGNUP_TOKEN_BONUS } from "@/constants/tokenEconomy";
 import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
 
@@ -58,7 +59,7 @@ const Auth = () => {
         {/* Welcome tokens badge */}
         <div className="flex items-center justify-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-2 text-sm text-primary">
           <Sparkles className="h-4 w-4" />
-          <span>{t("auth.freeTokens", "20 free searches to get started")}</span>
+          <span>{t("auth.freeTokens", { count: SIGNUP_TOKEN_BONUS })}</span>
         </div>
 
         {/* Google Sign In */}

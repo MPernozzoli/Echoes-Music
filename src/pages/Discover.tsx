@@ -16,6 +16,7 @@ import SearchFeedback from "@/components/SearchFeedback";
 import { pickDiscoverPromptSuggestions } from "@/lib/discoverPromptSuggestions";
 import type { ListenHistoryEntry, SearchResult } from "@/data/mockData";
 import { useApp } from "@/context/useApp";
+import { useAuth } from "@/context/useAuth";
 import { usePlaybackQueue } from "@/context/usePlaybackQueue";
 import { useConversations } from "@/context/useConversations";
 import { memoryOrFromProfile } from "@/lib/conversationMemory";
@@ -106,6 +107,7 @@ const Chat = () => {
   } = usePlaybackQueue();
 
   const { toggleFavorite, isFavorite, descriptionLanguage, recordListen, listenHistory } = useApp();
+  const { refreshTokenBalance } = useAuth();
   const {
     conversations,
     activeConversationId,
@@ -179,15 +181,22 @@ const Chat = () => {
 
         if (data.error) {
           if (data.error.includes("Rate") || data.error.includes("429")) toast.error("Troppi richieste. Riprova tra poco.");
-          else if (data.error.includes("credits") || data.error.includes("402")) toast.error("Crediti AI esauriti.");
-          else toast.error(data.error || "Ricerca fallita");
+          else if (
+            data.error.includes("credits") ||
+            data.error.includes("402") ||
+            data.error.includes("Insufficient")
+          ) {
+            toast.error("Crediti AI esauriti.");
+          } else toast.error(data.error || "Ricerca fallita");
           setIsLoading(false);
+          void refreshTokenBalance();
           return;
         }
 
         if (!data.emotionalProfile || !data.songs?.length) {
           toast.error("Nessun risultato");
           setIsLoading(false);
+          void refreshTokenBalance();
           return;
         }
 
@@ -195,6 +204,7 @@ const Chat = () => {
         if (!songs.length) {
           toast.error("Nessun risultato");
           setIsLoading(false);
+          void refreshTokenBalance();
           return;
         }
 
@@ -236,6 +246,7 @@ const Chat = () => {
         }
 
         setIsLoading(false);
+        void refreshTokenBalance();
 
         const searchId = await trackSearch({ rawPrompt: prompt, profile: result.emotionalProfile });
         setDbSearchId(searchId);
@@ -247,9 +258,11 @@ const Chat = () => {
         console.error("Search error:", err);
         toast.error("Errore durante la ricerca");
         setIsLoading(false);
+        void refreshTokenBalance();
       }
     },
     [
+      refreshTokenBalance,
       getConversation,
       descriptionLanguage,
       userTasteProfile,

@@ -77,7 +77,9 @@ const BuyTokens = () => {
                 </h3>
                 <p className="text-2xl font-bold my-2">{pack.price}</p>
                 <p className="text-xs text-muted-foreground mb-4">
-                  {key === "tokens_50" ? t("pricing.perSearchApprox", { amount: "€0.10" }) : t("pricing.perSearchApprox", { amount: "€0.075" })}
+                  {t("pricing.perSearchApprox", {
+                    amount: `€${(pack.priceAmount / pack.tokens).toFixed(2)}`,
+                  })}
                 </p>
                 <Button
                   variant="outline"

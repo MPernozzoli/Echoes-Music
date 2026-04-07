@@ -22,13 +22,13 @@ const PLANS: Record<string, { price_id: string; product_id: string; mode: "subsc
     price_id: "price_1TJbb7LDyBUZjAjaSnbhOqxp",
     product_id: "prod_UIBzdydTivyNco",
     mode: "payment",
-    tokens: 50,
+    tokens: 65,
   },
   tokens_120: {
     price_id: "price_1TJbbPLDyBUZjAja6Ug6CRRx",
     product_id: "prod_UIBzM97S90Mchr",
     mode: "payment",
-    tokens: 120,
+    tokens: 160,
   },
 };
 
@@ -88,6 +88,13 @@ serve(async (req: Request) => {
       line_items: [{ price: plan.price_id, quantity: 1 }],
       mode: plan.mode,
       allow_promotion_codes: true,
+      ...(plan.mode === "subscription"
+        ? {
+          subscription_data: {
+            metadata: { supabase_user_id: user.id, plan_key },
+          },
+        }
+        : {}),
       success_url: `${origin}${returnPath}?checkout=success&plan=${encodeURIComponent(plan_key)}`,
       cancel_url: `${origin}${returnPath}?checkout=cancelled`,
     });

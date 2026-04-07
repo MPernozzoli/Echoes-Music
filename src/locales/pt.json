@@ -1,5 +1,11 @@
 {
   "nav": { "chat": "Chat", "history": "Histórico", "favorites": "Favoritos", "profile": "Perfil", "home": "Início" },
+  "auth": {
+    "freeTokens": "{{count}} pesquisas incluídas ao criar conta",
+    "loginError": "Falha no login. Tente novamente.",
+    "subtitle": "Descubra música que ressoa com as suas emoções",
+    "continueWithGoogle": "Continuar com Google"
+  },
   "landing": {
     "badge": "Descoberta musical com IA",
     "title": "Encontre a música que diz",

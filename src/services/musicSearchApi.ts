@@ -1,5 +1,6 @@
 import type { EmotionalProfile, Song } from "@/data/mockData";
 import type { ConversationMemory, UserTasteProfile } from "@/types/conversation";
+import { supabase } from "@/integrations/supabase/client";
 
 export type MusicSearchMode = "search" | "lucky" | "memory_compact";
 
@@ -36,11 +37,14 @@ function projectUrl(): string {
 
 export async function callMusicSearch(body: MusicSearchRequest): Promise<MusicSearchResponse> {
   const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const { data: { session } } = await supabase.auth.getSession();
+  const bearer = session?.access_token ?? ANON_KEY;
   const res = await fetch(projectUrl(), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       apikey: ANON_KEY,
+      Authorization: `Bearer ${bearer}`,
     },
     body: JSON.stringify(body),
   });
