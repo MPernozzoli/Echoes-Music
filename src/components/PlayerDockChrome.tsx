@@ -18,10 +18,12 @@ import type { ReactNode } from "react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 
+/** Glifo tipo AirPlay (fascio verso l’alto + base schermo), allineato allo stile sistema Apple */
 function AirPlayIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
-      <path d="M6 22h12l-6-6-6 6zm6-8.17L6.46 17h11.08L12 13.83zm0-11.66L3.74 16h16.52L12 2.17z" />
+      <path d="M12 4.5 20.25 15H3.75L12 4.5z" />
+      <path d="M4.5 16.5h15a1.125 1.125 0 011.125 1.125v1.5A1.125 1.125 0 0119.5 20.25h-15a1.125 1.125 0 01-1.125-1.125v-1.5A1.125 1.125 0 014.5 16.5z" />
     </svg>
   );
 }
@@ -60,9 +62,9 @@ interface PlayerDockChromeProps {
   onOpenQueue?: () => void;
   /** Se impostato, sostituisce mic + coda (es. Popover profilo / cronologia / coda) */
   dockPanelActions?: ReactNode;
-  /** iOS/macOS Safari: sostituisce il blocco volume con AirPlay */
+  /** Safari WebKit: apre il selettore AirPlay (accanto al volume) */
   airPlayOnClick?: () => void;
-  /** false su Apple UI quando si usa solo AirPlay al posto del volume */
+  /** Mostra mute + slider volume (default true) */
   showVolumeControl?: boolean;
   /** + libreria / playlist prima del cuore */
   trackExtraActions?: ReactNode;
@@ -234,22 +236,28 @@ export function PlayerDockChrome({
           {airPlayOnClick ? (
             <button
               type="button"
-              className={cn(dockBtn, "inline-flex")}
+              className={cn(dockBtn, "inline-flex shrink-0")}
               onClick={airPlayOnClick}
               title="AirPlay"
             >
-              <AirPlayIcon className="w-4 h-4" />
+              <AirPlayIcon className="w-[18px] h-[18px]" />
             </button>
-          ) : showVolumeControl ? (
+          ) : null}
+          {showVolumeControl ? (
             <div
-              className="hidden sm:flex items-center gap-1 max-w-[140px] group/vol"
+              className="flex items-center gap-0.5 sm:gap-1 max-w-[100px] sm:max-w-[140px] shrink min-w-0 group/vol"
               onMouseEnter={() => setVolOpen(true)}
               onMouseLeave={() => setVolOpen(false)}
             >
               <button type="button" className={dockBtn} onClick={onMuteToggle} title="Volume">
                 {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
               </button>
-              <div className={cn("w-0 overflow-hidden transition-all group-hover/vol:w-24", volOpen && "w-24")}>
+              <div
+                className={cn(
+                  "min-w-0 overflow-hidden transition-all w-16 sm:w-0 sm:group-hover/vol:w-24",
+                  volOpen && "sm:w-24"
+                )}
+              >
                 <Slider
                   value={[isMuted ? 0 : volume]}
                   min={0}

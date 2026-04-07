@@ -365,7 +365,6 @@ const FullPlayer = ({
             onDetails={dockPanelActions ? undefined : onShowDetails}
             onOpenQueue={dockPanelActions ? undefined : onOpenQueue}
             airPlayOnClick={dockAirPlayUi ? handleDockAirPlay : undefined}
-            showVolumeControl={!dockAirPlayUi}
           />
         </div>
       </>
