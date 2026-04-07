@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { exchangeSpotifyCode } from "@/services/spotify";
-import { useSpotify } from "@/context/SpotifyContext";
+import { useSpotify } from "@/context/useSpotify";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
 
 const SpotifyCallback = () => {

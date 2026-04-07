@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHand
 import { useTranslation } from "react-i18next";
 import { Play, Pause } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
-import { useAppleMusic } from "@/context/AppleMusicContext";
+import { useAppleMusic } from "@/context/useAppleMusic";
 
 type MKInstance = {
   pause: () => Promise<void>;

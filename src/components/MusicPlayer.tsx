@@ -1,6 +1,6 @@
 import { Volume2 } from "lucide-react";
-import { useSpotify } from "@/context/SpotifyContext";
-import { useAppleMusic } from "@/context/AppleMusicContext";
+import { useSpotify } from "@/context/useSpotify";
+import { useAppleMusic } from "@/context/useAppleMusic";
 import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
 import { AppleMusicEmbed } from "@/components/AppleMusicEmbed";
 import { AppleMusicKitPlayer } from "@/components/AppleMusicKitPlayer";

@@ -1,7 +1,7 @@
+/* @refresh skip */
 import {
   createContext,
   useCallback,
-  useContext,
   useMemo,
   useState,
   useEffect,
@@ -10,7 +10,6 @@ import {
 import type { SearchResult } from "@/data/mockData";
 import type { Conversation, ChatMessage, ConversationMemory, UserTasteProfile } from "@/types/conversation";
 import { applyConversationMemoryUpdate, loadUserTasteProfile, mergeUserTasteProfile } from "@/lib/memoryMerge";
-import { emotionalProfileToAxes } from "@/types/conversation";
 
 const CONVERSATIONS_KEY = "echoes_conversations";
 const ACTIVE_CONV_KEY = "echoes_active_conversation_id";
@@ -91,7 +90,7 @@ interface ConversationState {
   getConversation: (id: string | null) => Conversation | undefined;
 }
 
-const ConversationContext = createContext<ConversationState | null>(null);
+export const ConversationContext = createContext<ConversationState | null>(null);
 
 export const ConversationProvider = ({ children }: { children: ReactNode }) => {
   const initialConvState = useMemo(() => getInitialConversationState(), []);
@@ -281,23 +280,3 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
   return <ConversationContext.Provider value={value}>{children}</ConversationContext.Provider>;
 };
 
-export const useConversations = () => {
-  const ctx = useContext(ConversationContext);
-  if (!ctx) throw new Error("useConversations must be used within ConversationProvider");
-  return ctx;
-};
-
-/** Bootstrap memory from first emotional profile if missing */
-export function memoryOrFromProfile(
-  memory: ConversationMemory | null,
-  profile: SearchResult["emotionalProfile"] | null
-): ConversationMemory | null {
-  if (memory?.threadSummary) return memory;
-  if (!profile) return memory;
-  return {
-    threadSummary: profile.mood.slice(0, 200),
-    standardAxes: emotionalProfileToAxes(profile),
-    turnCount: memory?.turnCount ?? 0,
-    lastUpdatedAt: memory?.lastUpdatedAt,
-  };
-}

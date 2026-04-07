@@ -1,5 +1,5 @@
-import { useSpotify } from "@/context/SpotifyContext";
-import { useAppleMusic } from "@/context/AppleMusicContext";
+import { useSpotify } from "@/context/useSpotify";
+import { useAppleMusic } from "@/context/useAppleMusic";
 
 /** Servizio da usare per la riproduzione in base al login. */
 export type StreamingPlaybackMode = "apple" | "spotify" | "guest";

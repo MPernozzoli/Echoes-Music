@@ -15,12 +15,10 @@ import LoadingSkeleton from "@/components/LoadingSkeleton";
 import SearchFeedback from "@/components/SearchFeedback";
 import { pickDiscoverPromptSuggestions } from "@/lib/discoverPromptSuggestions";
 import type { ListenHistoryEntry, SearchResult } from "@/data/mockData";
-import { useApp } from "@/context/AppContext";
-import { usePlaybackQueue } from "@/context/PlaybackQueueContext";
-import {
-  useConversations,
-  memoryOrFromProfile,
-} from "@/context/ConversationContext";
+import { useApp } from "@/context/useApp";
+import { usePlaybackQueue } from "@/context/usePlaybackQueue";
+import { useConversations } from "@/context/useConversations";
+import { memoryOrFromProfile } from "@/lib/conversationMemory";
 import { callMusicSearch } from "@/services/musicSearchApi";
 import {
   trackSearch,
