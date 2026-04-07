@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import PromptInput from "@/components/PromptInput";
@@ -6,9 +6,11 @@ import PromptSuggestions from "@/components/PromptSuggestions";
 import SongCard from "@/components/SongCard";
 import EmotionalProfileCard from "@/components/EmotionalProfile";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
+import SearchFeedback from "@/components/SearchFeedback";
 import { examplePrompts, mockSearchResults, mockSongs } from "@/data/mockData";
 import type { SearchResult } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
+import { trackSearch, trackResults, trackInteraction, maybeCreateTrainingEvent } from "@/services/tracking";
 import { Lightbulb, RefreshCw } from "lucide-react";
 
 const Discover = () => {
@@ -16,13 +18,17 @@ const Discover = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [currentResult, setCurrentResult] = useState<SearchResult | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [dbSearchId, setDbSearchId] = useState<string | null>(null);
+  const [resultIdMap, setResultIdMap] = useState<Record<string, string>>({});
   const { toggleFavorite, isFavorite, addToHistory } = useApp();
+  const searchParamHandled = useRef(false);
 
-  const handleSearch = (prompt: string) => {
+  const handleSearch = async (prompt: string) => {
     setIsLoading(true);
     setHasSearched(true);
 
-    setTimeout(() => {
+    // Simulate AI processing
+    setTimeout(async () => {
       const matchIndex = Math.floor(Math.random() * mockSearchResults.length);
       const result: SearchResult = {
         ...mockSearchResults[matchIndex],
@@ -34,6 +40,19 @@ const Discover = () => {
       setCurrentResult(result);
       addToHistory(result);
       setIsLoading(false);
+
+      // Track search in DB
+      const searchId = await trackSearch({
+        rawPrompt: prompt,
+        profile: result.emotionalProfile,
+      });
+      setDbSearchId(searchId);
+
+      // Track results
+      if (searchId) {
+        const map = await trackResults(searchId, result.songs);
+        setResultIdMap(map);
+      }
     }, 2000);
   };
 
@@ -42,9 +61,53 @@ const Discover = () => {
     if (song) toggleFavorite(song);
   };
 
+  const handleTagClick = (tag: string) => {
+    handleSearch(`Songs that feel like "${tag}"`);
+  };
+
+  const handleRefineSearch = (interp: string) => {
+    if (dbSearchId) {
+      // Track refine interaction on first result if available
+      const firstTrackId = currentResult?.songs[0]?.id;
+      if (firstTrackId && resultIdMap[firstTrackId]) {
+        trackInteraction({
+          searchResultId: resultIdMap[firstTrackId],
+          searchId: dbSearchId,
+          interactionType: "refine_from_result",
+          metadata: { refinedTo: interp },
+        });
+      }
+    }
+    handleSearch(interp);
+  };
+
+  // Generate training event when user leaves results (on new search or unmount)
+  useEffect(() => {
+    return () => {
+      if (dbSearchId && currentResult) {
+        maybeCreateTrainingEvent({
+          searchId: dbSearchId,
+          rawPrompt: currentResult.prompt,
+          interpretationSummary: currentResult.emotionalProfile.mood,
+          displayedResults: currentResult.songs.map((s) => ({
+            trackId: s.id,
+            title: s.title,
+            artist: s.artist,
+            relevanceScore: s.relevanceScore,
+          })),
+          interactionSummary: [],
+          feedbackSummary: [],
+        });
+      }
+    };
+  }, [dbSearchId, currentResult]);
+
   useEffect(() => {
     const q = searchParams.get("q");
-    if (q) handleSearch(q);
+    if (q && !searchParamHandled.current) {
+      searchParamHandled.current = true;
+      handleSearch(q);
+    }
   }, []);
 
   return (
@@ -99,10 +162,21 @@ const Discover = () => {
                     index={i}
                     isFavorite={isFavorite(song.id)}
                     onToggleFavorite={handleToggleFavorite}
+                    searchResultId={resultIdMap[song.id]}
+                    searchId={dbSearchId ?? undefined}
+                    onTagClick={handleTagClick}
                   />
                 ))}
               </div>
 
+              {/* Search-level feedback */}
+              {dbSearchId && (
+                <div className="mt-6 pt-4 border-t border-border/40">
+                  <SearchFeedback searchId={dbSearchId} />
+                </div>
+              )}
+
+              {/* Adjacent interpretations */}
               {currentResult.adjacentInterpretations.length > 0 && (
                 <div className="mt-10">
                   <div className="flex items-center gap-2 mb-4">
@@ -113,7 +187,7 @@ const Discover = () => {
                     {currentResult.adjacentInterpretations.map((interp) => (
                       <button
                         key={interp}
-                        onClick={() => handleSearch(interp)}
+                        onClick={() => handleRefineSearch(interp)}
                         className="block w-full text-left text-sm px-4 py-3 rounded-xl border border-border text-secondary-foreground/70 hover:text-foreground hover:border-primary/20 hover:bg-primary/5 transition-all font-body"
                       >
                         {interp}

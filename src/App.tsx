@@ -9,6 +9,7 @@ import Discover from "./pages/Discover";
 import History from "./pages/History";
 import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
+import Insights from "./pages/Insights";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/history" element={<History />} />
             <Route path="/favorites" element={<Favorites />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/insights" element={<Insights />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AppProvider>

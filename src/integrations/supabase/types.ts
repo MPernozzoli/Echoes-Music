@@ -14,7 +14,327 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      anonymized_training_events: {
+        Row: {
+          anonymized_session_id: string
+          created_at: string
+          displayed_results: Json | null
+          feedback_summary: Json | null
+          id: string
+          interaction_summary: Json | null
+          interpretation_summary: string | null
+          outcome_score: number | null
+          raw_prompt: string
+          search_id: string
+        }
+        Insert: {
+          anonymized_session_id: string
+          created_at?: string
+          displayed_results?: Json | null
+          feedback_summary?: Json | null
+          id?: string
+          interaction_summary?: Json | null
+          interpretation_summary?: string | null
+          outcome_score?: number | null
+          raw_prompt: string
+          search_id: string
+        }
+        Update: {
+          anonymized_session_id?: string
+          created_at?: string
+          displayed_results?: Json | null
+          feedback_summary?: Json | null
+          id?: string
+          interaction_summary?: Json | null
+          interpretation_summary?: string | null
+          outcome_score?: number | null
+          raw_prompt?: string
+          search_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anonymized_training_events_search_id_fkey"
+            columns: ["search_id"]
+            isOneToOne: false
+            referencedRelation: "searches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      result_feedback: {
+        Row: {
+          anonymous_session_id: string | null
+          created_at: string
+          feedback_label: string
+          id: string
+          optional_text_feedback: string | null
+          search_id: string
+          search_result_id: string
+          user_id: string | null
+        }
+        Insert: {
+          anonymous_session_id?: string | null
+          created_at?: string
+          feedback_label: string
+          id?: string
+          optional_text_feedback?: string | null
+          search_id: string
+          search_result_id: string
+          user_id?: string | null
+        }
+        Update: {
+          anonymous_session_id?: string | null
+          created_at?: string
+          feedback_label?: string
+          id?: string
+          optional_text_feedback?: string | null
+          search_id?: string
+          search_result_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "result_feedback_search_id_fkey"
+            columns: ["search_id"]
+            isOneToOne: false
+            referencedRelation: "searches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "result_feedback_search_result_id_fkey"
+            columns: ["search_result_id"]
+            isOneToOne: false
+            referencedRelation: "search_results"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      result_interactions: {
+        Row: {
+          anonymous_session_id: string | null
+          created_at: string
+          id: string
+          interaction_metadata: Json | null
+          interaction_type: string
+          search_id: string
+          search_result_id: string
+          user_id: string | null
+        }
+        Insert: {
+          anonymous_session_id?: string | null
+          created_at?: string
+          id?: string
+          interaction_metadata?: Json | null
+          interaction_type: string
+          search_id: string
+          search_result_id: string
+          user_id?: string | null
+        }
+        Update: {
+          anonymous_session_id?: string | null
+          created_at?: string
+          id?: string
+          interaction_metadata?: Json | null
+          interaction_type?: string
+          search_id?: string
+          search_result_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "result_interactions_search_id_fkey"
+            columns: ["search_id"]
+            isOneToOne: false
+            referencedRelation: "searches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "result_interactions_search_result_id_fkey"
+            columns: ["search_result_id"]
+            isOneToOne: false
+            referencedRelation: "search_results"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      search_feedback: {
+        Row: {
+          anonymous_session_id: string | null
+          created_at: string
+          feedback_label: string
+          id: string
+          optional_text_feedback: string | null
+          search_id: string
+          user_id: string | null
+        }
+        Insert: {
+          anonymous_session_id?: string | null
+          created_at?: string
+          feedback_label: string
+          id?: string
+          optional_text_feedback?: string | null
+          search_id: string
+          user_id?: string | null
+        }
+        Update: {
+          anonymous_session_id?: string | null
+          created_at?: string
+          feedback_label?: string
+          id?: string
+          optional_text_feedback?: string | null
+          search_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "search_feedback_search_id_fkey"
+            columns: ["search_id"]
+            isOneToOne: false
+            referencedRelation: "searches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      search_results: {
+        Row: {
+          album_name: string | null
+          artist_name: string
+          artwork_url: string | null
+          created_at: string
+          emotional_tags: Json | null
+          id: string
+          match_explanation: string
+          position: number
+          relevance_score: number | null
+          search_id: string
+          source_provider: string
+          track_id: string
+          track_title: string
+        }
+        Insert: {
+          album_name?: string | null
+          artist_name: string
+          artwork_url?: string | null
+          created_at?: string
+          emotional_tags?: Json | null
+          id?: string
+          match_explanation: string
+          position: number
+          relevance_score?: number | null
+          search_id: string
+          source_provider?: string
+          track_id: string
+          track_title: string
+        }
+        Update: {
+          album_name?: string | null
+          artist_name?: string
+          artwork_url?: string | null
+          created_at?: string
+          emotional_tags?: Json | null
+          id?: string
+          match_explanation?: string
+          position?: number
+          relevance_score?: number | null
+          search_id?: string
+          source_provider?: string
+          track_id?: string
+          track_title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "search_results_search_id_fkey"
+            columns: ["search_id"]
+            isOneToOne: false
+            referencedRelation: "searches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      searches: {
+        Row: {
+          anonymous_session_id: string | null
+          created_at: string
+          id: string
+          interpretation_summary: string | null
+          interpreted_catharsis: string | null
+          interpreted_energy: string | null
+          interpreted_intimacy: string | null
+          interpreted_mood: Json | null
+          interpreted_tension: string | null
+          interpreted_themes: Json | null
+          model_version: string
+          prompt_language: string
+          prompt_version: string
+          raw_prompt: string
+          refine_metadata: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          anonymous_session_id?: string | null
+          created_at?: string
+          id?: string
+          interpretation_summary?: string | null
+          interpreted_catharsis?: string | null
+          interpreted_energy?: string | null
+          interpreted_intimacy?: string | null
+          interpreted_mood?: Json | null
+          interpreted_tension?: string | null
+          interpreted_themes?: Json | null
+          model_version?: string
+          prompt_language?: string
+          prompt_version?: string
+          raw_prompt: string
+          refine_metadata?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          anonymous_session_id?: string | null
+          created_at?: string
+          id?: string
+          interpretation_summary?: string | null
+          interpreted_catharsis?: string | null
+          interpreted_energy?: string | null
+          interpreted_intimacy?: string | null
+          interpreted_mood?: Json | null
+          interpreted_tension?: string | null
+          interpreted_themes?: Json | null
+          model_version?: string
+          prompt_language?: string
+          prompt_version?: string
+          raw_prompt?: string
+          refine_metadata?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          allow_anonymized_improvement_data: boolean
+          anonymous_session_id: string | null
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          allow_anonymized_improvement_data?: boolean
+          anonymous_session_id?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          allow_anonymized_improvement_data?: boolean
+          anonymous_session_id?: string | null
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
