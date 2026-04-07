@@ -51,6 +51,7 @@ import { cn } from "@/lib/utils";
 import { dedupeSongVersions, filterSongsByMinRelevance } from "@/lib/dedupeSongs";
 import SearchResultTrackList from "@/components/SearchResultTrackList";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { isLuckyPrompt } from "@/constants/luckyPrompt";
 
 function buildSearchResult(
   prompt: string,
@@ -519,6 +520,7 @@ const Chat = () => {
 
   const memorySummary = activeConversation?.conversationMemory?.threadSummary;
   const standardAxes = activeConversation?.conversationMemory?.standardAxes;
+  const isLuckyLatestTurn = Boolean(currentResult && isLuckyPrompt(currentResult.prompt));
 
   const tagSong = currentSong ?? currentResult?.songs[0];
 
@@ -915,41 +917,58 @@ const Chat = () => {
               </div>
             </div>
 
-            {activeConversation && (memorySummary || standardAxes || activeConversation.conversationProfile) && (
+            {activeConversation &&
+              (isLuckyLatestTurn || memorySummary || standardAxes || activeConversation.conversationProfile) && (
               <aside className="lg:w-72 shrink-0 space-y-3 lg:border-l lg:border-border/40 lg:pl-5 lg:py-4 lg:overflow-y-auto lg:max-h-[calc(100dvh-3.5rem-3.25rem)]">
-                <p className="text-xs text-muted-foreground font-body uppercase tracking-wider lg:pt-1">Profilo del thread</p>
-                {memorySummary && (
-                  <div className="glass-card rounded-2xl p-4 text-sm font-body text-secondary-foreground/90 leading-relaxed">
-                    {memorySummary}
-                  </div>
-                )}
-                {standardAxes && (
-                  <div className="glass-card rounded-2xl p-4 text-xs font-body space-y-2 text-muted-foreground">
-                    <div>
-                      <span className="uppercase tracking-wider text-[10px]">Assi</span>
-                      <p className="text-foreground mt-1">
-                        Energia: {standardAxes.energy} · Intimità: {standardAxes.intimacy}/5 · Tensione:{" "}
-                        {standardAxes.emotionalTension} · Catarsi: {standardAxes.catharsis}
-                      </p>
-                      {standardAxes.moodLabel && (
-                        <p className="text-foreground/80 mt-2">{standardAxes.moodLabel}</p>
-                      )}
-                      {standardAxes.dominantThemes.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {standardAxes.dominantThemes.map((t) => (
-                            <span key={t} className="px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                              {t}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                {isLuckyLatestTurn ? (
+                  <>
+                    <p className="text-xs text-muted-foreground font-body uppercase tracking-wider lg:pt-1">
+                      {t("chat.luckySidebarTitle")}
+                    </p>
+                    <div className="glass-card rounded-2xl p-4 text-sm font-body text-secondary-foreground/90 leading-relaxed">
+                      {t("chat.luckySidebarBody")}
                     </div>
-                  </div>
-                )}
-                {activeConversation.conversationProfile && (
-                  <div className="hidden xl:block">
-                    <EmotionalProfileCard profile={activeConversation.conversationProfile} />
-                  </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-muted-foreground font-body uppercase tracking-wider lg:pt-1">
+                      {t("chat.threadProfile")}
+                    </p>
+                    {memorySummary && (
+                      <div className="glass-card rounded-2xl p-4 text-sm font-body text-secondary-foreground/90 leading-relaxed">
+                        {memorySummary}
+                      </div>
+                    )}
+                    {standardAxes && (
+                      <div className="glass-card rounded-2xl p-4 text-xs font-body space-y-2 text-muted-foreground">
+                        <div>
+                          <span className="uppercase tracking-wider text-[10px]">{t("chat.axes")}</span>
+                          <p className="text-foreground mt-1">
+                            {t("chat.axisEnergy")}: {standardAxes.energy} · {t("chat.axisIntimacy")}: {standardAxes.intimacy}
+                            /5 · {t("chat.axisTension")}: {standardAxes.emotionalTension} · {t("chat.axisCatharsis")}:{" "}
+                            {standardAxes.catharsis}
+                          </p>
+                          {standardAxes.moodLabel && (
+                            <p className="text-foreground/80 mt-2">{standardAxes.moodLabel}</p>
+                          )}
+                          {standardAxes.dominantThemes.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {standardAxes.dominantThemes.map((tag) => (
+                                <span key={tag} className="px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {activeConversation.conversationProfile && (
+                      <div className="hidden xl:block">
+                        <EmotionalProfileCard profile={activeConversation.conversationProfile} />
+                      </div>
+                    )}
+                  </>
                 )}
               </aside>
             )}

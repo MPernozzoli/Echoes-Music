@@ -214,7 +214,7 @@ const Profile = () => {
           </div>
         )}
 
-        <div className="glass-card rounded-2xl p-6 mb-6">
+        <div id="streaming-services" className="glass-card rounded-2xl p-6 mb-6 scroll-mt-24">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-[hsl(141,73%,42%)]/10 flex items-center justify-center">

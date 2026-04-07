@@ -157,8 +157,10 @@
     "queueHide": "Hide",
     "queueTracks": "queue ({{count}} tracks)",
     "maybeMeant": "Maybe you meant…",
-    "threadProfile": "Thread profile",
-    "axes": "Axes",
+    "luckySidebarTitle": "Surprise mode",
+    "luckySidebarBody": "This pick isn’t tied to a chat narrative — it’s a surprise selection shaped by your taste. Use the field below to steer the next search, or refine the mood with “Maybe you meant…” when it appears.",
+    "threadProfile": "Memory for this chat",
+    "axes": "Emotional nuances",
     "axisEnergy": "Energy",
     "axisIntimacy": "Intimacy",
     "axisTension": "Tension",
@@ -170,7 +172,10 @@
     "toastSearchError": "Error while searching",
     "surpriseMe": "Surprise me",
     "composerPlaceholder": "Text or photo — feeling, memory, moment…",
-    "imageSearchLabel": "🖼️ Image search"
+    "imageSearchLabel": "🖼️ Image search",
+    "streamingConnectTitle": "Connect a streaming service",
+    "streamingConnectBody": "Link Spotify or Apple Music with an active subscription to play full tracks in the app and add them to your playlists.",
+    "streamingConnectCta": "Go to profile to connect"
   },
   "promptInput": {
     "placeholderDefault": "Describe a feeling, a memory, or a moment...",

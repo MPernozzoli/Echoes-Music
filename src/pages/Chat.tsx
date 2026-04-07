@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
+import { useSearchParams, useNavigate, useLocation, Link } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import PromptInput, { type PromptSubmitPayload } from "@/components/PromptInput";
 import PromptSuggestions from "@/components/PromptSuggestions";
@@ -17,6 +17,8 @@ import { pickDiscoverPromptSuggestions } from "@/lib/discoverPromptSuggestions";
 import type { ListenHistoryEntry, SearchResult } from "@/data/mockData";
 import { useApp } from "@/context/useApp";
 import { useAuth } from "@/context/useAuth";
+import { useSpotify } from "@/context/useSpotify";
+import { useAppleMusic } from "@/context/useAppleMusic";
 import { usePlaybackQueue } from "@/context/usePlaybackQueue";
 import { useConversations } from "@/context/useConversations";
 import { memoryOrFromProfile } from "@/lib/conversationMemory";
@@ -25,12 +27,14 @@ import { trackSearch, trackResults, trackInteraction, maybeCreateTrainingEvent }
 import { emotionalProfileToAxes } from "@/types/conversation";
 import { normalizeStandardAxes } from "@/lib/memoryMerge";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   Bot,
   Lightbulb,
   RefreshCw,
   ListMusic,
+  Headphones,
   ChevronDown,
   ChevronUp,
   X,
@@ -91,6 +95,12 @@ const Chat = () => {
 
   const isMobile = useIsMobile();
   const { refreshTokenBalance } = useAuth();
+  const { isConnected: spotifyConnected, loading: spotifyLoading } = useSpotify();
+  const {
+    isAvailable: appleMusicAvailable,
+    isAuthorized: appleMusicAuthorized,
+    loading: appleMusicLoading,
+  } = useAppleMusic();
   const {
     queue,
     queueSources,
@@ -172,6 +182,10 @@ const Chat = () => {
   );
   const currentSong = queue[currentIndex] ?? currentResult?.songs[0] ?? null;
   const hasAnyMessage = (activeConversation?.messages.length ?? 0) > 0;
+  const streamingLinked =
+    spotifyConnected || (appleMusicAvailable && appleMusicAuthorized);
+  const showStreamingConnectBanner =
+    hasAnyMessage && !spotifyLoading && !appleMusicLoading && !streamingLinked;
   /** Su desktop con coda, profilo/coda duplicati sono nel dock — non nel thread */
   const hideInlineDockExtras = queue.length > 0 && !isMobile;
   useLayoutEffect(() => {
@@ -629,6 +643,7 @@ const Chat = () => {
 
   const memorySummary = activeConversation?.conversationMemory?.threadSummary;
   const standardAxes = activeConversation?.conversationMemory?.standardAxes;
+  const isLuckyLatestTurn = Boolean(currentResult && isLuckyPrompt(currentResult.prompt));
 
   const tagSong = currentSong ?? currentResult?.songs[0];
 
@@ -805,6 +820,23 @@ const Chat = () => {
 
               {hasAnyMessage && (
                 <div className="max-w-3xl mx-auto w-full space-y-4">
+                  {showStreamingConnectBanner && (
+                    <Alert className="border-primary/25 bg-primary/[0.06] text-foreground shadow-sm rounded-2xl pr-3">
+                      <Headphones className="h-4 w-4 text-primary/80" />
+                      <AlertTitle className="font-body text-sm font-semibold text-foreground/90">
+                        {t("chat.streamingConnectTitle")}
+                      </AlertTitle>
+                      <AlertDescription className="font-body text-[13px] text-muted-foreground mt-1.5 space-y-2">
+                        <p>{t("chat.streamingConnectBody")}</p>
+                        <Link
+                          to="/profile#streaming-services"
+                          className="inline-flex items-center gap-1 font-medium text-primary hover:underline underline-offset-2"
+                        >
+                          {t("chat.streamingConnectCta")}
+                        </Link>
+                      </AlertDescription>
+                    </Alert>
+                  )}
                   {activeConversation?.messages.map((m, mi) => {
                     if (m.role === "user") {
                       return (
@@ -984,40 +1016,61 @@ const Chat = () => {
               </div>
             </div>
 
-            {activeConversation && (memorySummary || standardAxes || activeConversation.conversationProfile) && (
+            {activeConversation &&
+              (isLuckyLatestTurn || memorySummary || standardAxes || activeConversation.conversationProfile) && (
               <aside className="hidden lg:flex lg:w-64 shrink-0 flex-col gap-3 lg:border-l lg:border-border/20 lg:pl-5 lg:py-5 lg:overflow-y-auto lg:max-h-[calc(100dvh-3.5rem-3rem)]">
-                <p className="text-[10px] text-muted-foreground/50 font-body uppercase tracking-[0.14em] font-medium">{t("chat.threadProfile")}</p>
-                {memorySummary && (
-                  <div className="rounded-xl border border-border/20 bg-card/40 p-3.5 text-[12px] font-body text-secondary-foreground/80 leading-relaxed">
-                    {memorySummary}
-                  </div>
-                )}
-                {standardAxes && (
-                  <div className="rounded-xl border border-border/20 bg-card/40 p-3.5 text-[11px] font-body space-y-2 text-muted-foreground/70">
-                    <span className="uppercase tracking-[0.12em] text-[9px] font-medium text-muted-foreground/50">{t("chat.axes")}</span>
-                    <p className="text-foreground/70 leading-relaxed">
-                      {t("chat.axisEnergy")}: {standardAxes.energy} · {t("chat.axisIntimacy")}: {standardAxes.intimacy}/5 ·{" "}
-                      {t("chat.axisTension")}: {standardAxes.emotionalTension} · {t("chat.axisCatharsis")}:{" "}
-                      {standardAxes.catharsis}
+                {isLuckyLatestTurn ? (
+                  <>
+                    <p className="text-[10px] text-muted-foreground/50 font-body uppercase tracking-[0.14em] font-medium">
+                      {t("chat.luckySidebarTitle")}
                     </p>
-                    {standardAxes.moodLabel && (
-                      <p className="text-foreground/60 text-[11px]">{standardAxes.moodLabel}</p>
-                    )}
-                    {standardAxes.dominantThemes.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1.5">
-                        {standardAxes.dominantThemes.map((t) => (
-                          <span key={t} className="px-1.5 py-0.5 rounded-md bg-primary/6 text-primary/70 text-[10px] font-medium">
-                            {t}
-                          </span>
-                        ))}
+                    <div className="rounded-xl border border-border/20 bg-card/40 p-3.5 text-[12px] font-body text-secondary-foreground/80 leading-relaxed">
+                      {t("chat.luckySidebarBody")}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[10px] text-muted-foreground/50 font-body uppercase tracking-[0.14em] font-medium">
+                      {t("chat.threadProfile")}
+                    </p>
+                    {memorySummary && (
+                      <div className="rounded-xl border border-border/20 bg-card/40 p-3.5 text-[12px] font-body text-secondary-foreground/80 leading-relaxed">
+                        {memorySummary}
                       </div>
                     )}
-                  </div>
-                )}
-                {activeConversation.conversationProfile && (
-                  <div className="hidden xl:block">
-                    <EmotionalProfileCard profile={activeConversation.conversationProfile} />
-                  </div>
+                    {standardAxes && (
+                      <div className="rounded-xl border border-border/20 bg-card/40 p-3.5 text-[11px] font-body space-y-2 text-muted-foreground/70">
+                        <span className="uppercase tracking-[0.12em] text-[9px] font-medium text-muted-foreground/50">
+                          {t("chat.axes")}
+                        </span>
+                        <p className="text-foreground/70 leading-relaxed">
+                          {t("chat.axisEnergy")}: {standardAxes.energy} · {t("chat.axisIntimacy")}: {standardAxes.intimacy}/5 ·{" "}
+                          {t("chat.axisTension")}: {standardAxes.emotionalTension} · {t("chat.axisCatharsis")}:{" "}
+                          {standardAxes.catharsis}
+                        </p>
+                        {standardAxes.moodLabel && (
+                          <p className="text-foreground/60 text-[11px]">{standardAxes.moodLabel}</p>
+                        )}
+                        {standardAxes.dominantThemes.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {standardAxes.dominantThemes.map((tag) => (
+                              <span
+                                key={tag}
+                                className="px-1.5 py-0.5 rounded-md bg-primary/6 text-primary/70 text-[10px] font-medium"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {activeConversation.conversationProfile && (
+                      <div className="hidden xl:block">
+                        <EmotionalProfileCard profile={activeConversation.conversationProfile} />
+                      </div>
+                    )}
+                  </>
                 )}
               </aside>
             )}

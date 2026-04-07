@@ -143,8 +143,10 @@
     "queueHide": "Ausblenden",
     "queueTracks": "Warteschlange ({{count}} Titel)",
     "maybeMeant": "Meintest du vielleicht…",
-    "threadProfile": "Thread-Profil",
-    "axes": "Achsen",
+    "luckySidebarTitle": "Überraschungsmodus",
+    "luckySidebarBody": "Diese Auswahl folgt keinem Chat-Faden — sie wirkt wie eine Überraschung aus deinem Geschmack. Schreib unten, wohin es als Nächstes soll, oder verfeinere die Stimmung über „Vielleicht meintest du …“, falls es erscheint.",
+    "threadProfile": "Gedächtnis dieses Chats",
+    "axes": "Emotionale Nuancen",
     "axisEnergy": "Energie",
     "axisIntimacy": "Intimität",
     "axisTension": "Spannung",
@@ -156,7 +158,10 @@
     "toastSearchError": "Fehler bei der Suche",
     "surpriseMe": "Überrasche mich",
     "composerPlaceholder": "Text oder Foto — Gefühl, Erinnerung, Moment…",
-    "imageSearchLabel": "🖼️ Bildsuche"
+    "imageSearchLabel": "🖼️ Bildsuche",
+    "streamingConnectTitle": "Streaming-Dienst verbinden",
+    "streamingConnectBody": "Mit Spotify oder Apple Music und aktivem Abo kannst du vollständige Titel in der App abspielen und zu deinen Playlists hinzufügen.",
+    "streamingConnectCta": "Zum Profil zum Verbinden"
   },
   "promptInput": {
     "placeholderDefault": "Beschreibe ein Gefühl, eine Erinnerung oder einen Moment…",

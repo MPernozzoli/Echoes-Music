@@ -148,8 +148,10 @@
     "queueHide": "Nascondi",
     "queueTracks": "coda ({{count}} brani)",
     "maybeMeant": "Forse intendevi…",
-    "threadProfile": "Profilo del thread",
-    "axes": "Assi",
+    "luckySidebarTitle": "Modalità sorpresa",
+    "luckySidebarBody": "Questa ricerca non costruisce un filo con la chat: è una proposta casuale ispirata al tuo gusto. Scrivi sotto cosa vuoi ascoltare per orientare il turno successivo, oppure affina il mood con «Forse intendevi…» se compare.",
+    "threadProfile": "Memoria di questa chat",
+    "axes": "Sfumature emotive",
     "axisEnergy": "Energia",
     "axisIntimacy": "Intimità",
     "axisTension": "Tensione",
@@ -161,7 +163,10 @@
     "toastSearchError": "Errore durante la ricerca",
     "surpriseMe": "Sorprendimi",
     "composerPlaceholder": "Testo o foto — sentimento, ricordo, momento…",
-    "imageSearchLabel": "🖼️ Ricerca da immagine"
+    "imageSearchLabel": "🖼️ Ricerca da immagine",
+    "streamingConnectTitle": "Collega uno streaming",
+    "streamingConnectBody": "Se colleghi Spotify o Apple Music con un abbonamento attivo, puoi ascoltare i brani interi dall’app e aggiungerli alle tue playlist.",
+    "streamingConnectCta": "Vai al profilo per collegare"
   },
   "promptInput": {
     "placeholderDefault": "Descrivi un sentimento, un ricordo o un momento…",

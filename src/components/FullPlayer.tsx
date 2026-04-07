@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
+import { unstable_batchedUpdates } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { setPlaybackToggleHandler } from "@/lib/playbackToggleBridge";
 import { toast } from "sonner";
@@ -118,11 +119,15 @@ const FullPlayer = ({
       return;
     }
     if (i < len - 1) {
-      setKitAutoplayNonce((n) => n + 1);
-      onChangeIndexRef.current(i + 1);
+      unstable_batchedUpdates(() => {
+        setKitAutoplayNonce((n) => n + 1);
+        onChangeIndexRef.current(i + 1);
+      });
     } else if (repeat === "all" && len > 0) {
-      setKitAutoplayNonce((n) => n + 1);
-      onChangeIndexRef.current(0);
+      unstable_batchedUpdates(() => {
+        setKitAutoplayNonce((n) => n + 1);
+        onChangeIndexRef.current(0);
+      });
     } else {
       playbackCbRef.current?.(false);
     }
@@ -326,7 +331,7 @@ const FullPlayer = ({
       setPlaybackToggleHandler(null);
       return;
     }
-    setPlaybackToggleHandler(() => () => toggleGlobalPlayback());
+    setPlaybackToggleHandler(toggleGlobalPlayback);
     return () => setPlaybackToggleHandler(null);
   }, [songs, currentIndex, toggleGlobalPlayback]);
 

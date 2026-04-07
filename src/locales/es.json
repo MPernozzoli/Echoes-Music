@@ -143,8 +143,10 @@
     "queueHide": "Ocultar",
     "queueTracks": "cola ({{count}} temas)",
     "maybeMeant": "Quizá querías decir…",
-    "threadProfile": "Perfil del hilo",
-    "axes": "Ejes",
+    "luckySidebarTitle": "Modo sorpresa",
+    "luckySidebarBody": "Esta búsqueda no sigue un hilo de la conversación: es una propuesta sorprendente según tu gusto. Escribe abajo qué quieres escuchar para orientar el siguiente turno, o afinar el mood con «Quizá quisiste decir…» si aparece.",
+    "threadProfile": "Memoria de este chat",
+    "axes": "Matices emocionales",
     "axisEnergy": "Energía",
     "axisIntimacy": "Intimidad",
     "axisTension": "Tensión",
@@ -156,7 +158,10 @@
     "toastSearchError": "Error durante la búsqueda",
     "surpriseMe": "Sorpréndeme",
     "composerPlaceholder": "Texto o foto — sentimiento, recuerdo, momento…",
-    "imageSearchLabel": "🖼️ Búsqueda por imagen"
+    "imageSearchLabel": "🖼️ Búsqueda por imagen",
+    "streamingConnectTitle": "Conecta un servicio de streaming",
+    "streamingConnectBody": "Si conectas Spotify o Apple Music con una suscripción activa, podrás escuchar canciones completas en la app y añadirlas a tus playlists.",
+    "streamingConnectCta": "Ir al perfil para conectar"
   },
   "promptInput": {
     "placeholderDefault": "Describe un sentimiento, un recuerdo o un momento…",
