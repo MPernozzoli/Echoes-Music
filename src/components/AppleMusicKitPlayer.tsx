@@ -84,6 +84,8 @@ export const AppleMusicKitPlayer = forwardRef<AppleMusicKitPlayerHandle, AppleMu
     const lastTelemetry = useRef(0);
     const onTelemetryRef = useRef(onTelemetry);
     onTelemetryRef.current = onTelemetry;
+    /** Ultimo brano applicato a MusicKit (evita doppio play quando il parent azzera solo il nonce) */
+    const lastSyncedItemKeyRef = useRef<string | null>(null);
 
     useImperativeHandle(
       ref,
@@ -180,26 +182,51 @@ export const AppleMusicKitPlayer = forwardRef<AppleMusicKitPlayerHandle, AppleMu
       };
     }, [resolvedMode]);
 
+    // Allinea sempre la coda MusicKit al brano selezionato (coda UI, next/prev, ecc.), non solo quando sale il nonce.
     useEffect(() => {
-      if (queueAutoplayNonce < 1 || !isAuthorized || !isAvailable) return;
+      if (!isAuthorized || !isAvailable) return;
       const mk = getMK();
       if (!mk) {
-        onQueueAutoplayConsumed?.();
+        if (queueAutoplayNonce >= 1) onQueueAutoplayConsumed?.();
         return;
       }
+
+      const itemKey = `${trackId}\0${trackKey ?? ""}`;
+      const forcePlay = queueAutoplayNonce >= 1;
+      const identityChanged = lastSyncedItemKeyRef.current !== itemKey;
+      if (!identityChanged && !forcePlay) return;
+
       let cancelled = false;
       void (async () => {
         try {
-          await mk.setQueue({ songs: [trackId] });
-          await mk.play();
-          if (!cancelled) {
-            setIsPlaying(true);
-            wasPlayingRef.current = true;
+          if (identityChanged) {
+            const ps = (mk as unknown as { playbackState?: number }).playbackState;
+            const mkWasPlaying = ps === 2;
+            await mk.setQueue({ songs: [trackId] });
+            if (cancelled) return;
+            lastSyncedItemKeyRef.current = itemKey;
+            if (forcePlay || mkWasPlaying) {
+              await mk.play();
+              if (!cancelled) {
+                setIsPlaying(true);
+                wasPlayingRef.current = true;
+                setDuration(mk.currentPlaybackDuration || 0);
+              }
+            }
+          } else if (forcePlay) {
+            await mk.setQueue({ songs: [trackId] });
+            if (cancelled) return;
+            await mk.play();
+            if (!cancelled) {
+              setIsPlaying(true);
+              wasPlayingRef.current = true;
+              setDuration(mk.currentPlaybackDuration || 0);
+            }
           }
         } catch (err) {
-          console.error("MusicKit queue autoplay:", err);
+          console.error("MusicKit sync queue:", err);
         } finally {
-          if (!cancelled) onQueueAutoplayConsumed?.();
+          if (!cancelled && forcePlay) onQueueAutoplayConsumed?.();
         }
       })();
       return () => {

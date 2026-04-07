@@ -1,14 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Brain, Heart, Music2, Search, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const STEPS = [
-  { icon: Sparkles, label: "Analisi del messaggio" },
-  { icon: Brain, label: "Contesto e memoria del thread" },
-  { icon: Heart, label: "Interpretazione emotiva" },
-  { icon: Search, label: "Ricerca brani sulle piattaforme" },
-  { icon: Music2, label: "Selezione e ordinamento" },
-] as const;
 
 interface MusicSearchThinkingProps {
   active: boolean;
@@ -16,7 +9,20 @@ interface MusicSearchThinkingProps {
 }
 
 const MusicSearchThinking = ({ active, className }: MusicSearchThinkingProps) => {
+  const { t } = useTranslation();
   const [phase, setPhase] = useState(0);
+
+  const steps = useMemo(
+    () =>
+      [
+        { icon: Sparkles, label: t("thinking.step1") },
+        { icon: Brain, label: t("thinking.step2") },
+        { icon: Heart, label: t("thinking.step3") },
+        { icon: Search, label: t("thinking.step4") },
+        { icon: Music2, label: t("thinking.step5") },
+      ] as const,
+    [t]
+  );
 
   useEffect(() => {
     if (!active) {
@@ -24,11 +30,11 @@ const MusicSearchThinking = ({ active, className }: MusicSearchThinkingProps) =>
       return;
     }
     setPhase(0);
-    const t = window.setInterval(() => {
-      setPhase((p) => (p < STEPS.length - 1 ? p + 1 : p));
+    const timer = window.setInterval(() => {
+      setPhase((p) => (p < steps.length - 1 ? p + 1 : p));
     }, 2200);
-    return () => window.clearInterval(t);
-  }, [active]);
+    return () => window.clearInterval(timer);
+  }, [active, steps.length]);
 
   if (!active) return null;
 
@@ -44,13 +50,13 @@ const MusicSearchThinking = ({ active, className }: MusicSearchThinkingProps) =>
           <Sparkles className="h-4 w-4 text-primary animate-pulse" />
         </div>
         <div>
-          <p className="text-xs font-body uppercase tracking-wider text-muted-foreground">Echoes sta elaborando</p>
-          <p className="text-sm font-display font-semibold text-foreground">Un momento…</p>
+          <p className="text-xs font-body uppercase tracking-wider text-muted-foreground">{t("thinking.working")}</p>
+          <p className="text-sm font-display font-semibold text-foreground">{t("thinking.moment")}</p>
         </div>
       </div>
 
       <ol className="space-y-2 mb-5">
-        {STEPS.map((step, i) => {
+        {steps.map((step, i) => {
           const Icon = step.icon;
           const done = i < phase;
           const current = i === phase;

@@ -29,7 +29,14 @@ export interface UserTasteProfile {
 }
 
 export type ChatMessage =
-  | { id: string; role: "user"; text: string; timestamp: string }
+  | {
+      id: string;
+      role: "user";
+      text: string;
+      timestamp: string;
+      /** Anteprima locale (stessa immagine inviata al backend, ridimensionata) */
+      imagePreviewUrl?: string;
+    }
   | { id: string; role: "assistant"; timestamp: string; searchResult: SearchResult };
 
 export interface Conversation {

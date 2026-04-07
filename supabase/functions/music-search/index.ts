@@ -215,6 +215,7 @@ async function interpretDiscovery(params: {
   userContent: string;
   descriptionLanguage?: string;
   mode: 'search' | 'lucky';
+  image?: { base64: string; mimeType: string };
 }): Promise<AIInterpretation> {
   const apiKey = Deno.env.get('LOVABLE_API_KEY');
   if (!apiKey) throw new Error('LOVABLE_API_KEY not configured');
@@ -241,6 +242,13 @@ After interpreting, you MUST output:
 - **conversationMemoryUpdate**: a 2-4 sentence threadSummary merging prior summary with this turn; **standardAxes** using ONLY enums: energy/catharsis/emotionalTension in low|medium|high, intimacy integer 1-5, dominantThemes array (max 8 short tags), moodLabel short.
 - **userTasteProfileUpdate**: optional incremental globalSummary (brief), userStandardAxes (same schema), genreAffinityTags (max 12), preferredLanguages (max 6). Only include fields that should change.`;
 
+  const visionAddendum = params.image
+    ? `
+
+## Image attached:
+The user included a **photo**. You can see it in the same user turn. Use visual cues: palette, light, subject, setting, era/fashion if visible, film-still or poster vibes, texture (grain, neon, nature). Map what you see to **mood, themes, and concrete song picks** (soundtracks, genres, artists that fit that world). If text prompt is empty, infer everything from the image plus memory.`
+    : '';
+
   const systemPrompt = `You are Echoes, an advanced emotionally and culturally intelligent music discovery engine with deep knowledge of song lyrics, genres, languages, and musical concepts.
 
 ## Your capabilities:
@@ -257,7 +265,7 @@ ${luckyBlock}
 ${memoryBlock}
 
 ## Instructions:
-Given the user's message:
+Given the user's message${params.image ? ' (and attached image)' : ''}:
 1. Detect the language of the active prompt (if any). If it's not English, respond with song suggestions primarily in that language unless the prompt explicitly asks for another language.
 2. Create an emotional profile analyzing themes, mood, energy, intimacy, catharsis, and emotional tension (rich text for UI).
 3. Generate 4-5 highly specific search queries optimized for Spotify/Apple Music search (use "artist name - song title" format when possible, or genre/mood keywords).
@@ -266,8 +274,25 @@ Given the user's message:
 6. Generate 2-3 adjacent interpretations — creative alternative readings of the prompt (or of the lucky pick).
 7. Fill conversationMemoryUpdate and userTasteProfileUpdate as described.
 
-CRITICAL: Only suggest songs that actually exist. Use correct artist names and song titles. When the user asks about lyrical content, your explanation MUST reference actual lyrics or themes from the song.`;
+CRITICAL: Only suggest songs that actually exist. Use correct artist names and song titles. When the user asks about lyrical content, your explanation MUST reference actual lyrics or themes from the song.${visionAddendum}`;
 
+  const userMessage = params.image
+    ? {
+      role: 'user',
+      content: [
+        {
+          type: 'text',
+          text: `${params.userContent}\n\n[Immagine allegata: interpreta atmosfera, palette, soggetto, contesto e colonna sonora implicita.]`,
+        },
+        {
+          type: 'image_url',
+          image_url: {
+            url: `data:${params.image.mimeType};base64,${params.image.base64}`,
+          },
+        },
+      ],
+    }
+    : { role: 'user', content: params.userContent };
 
   const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
@@ -279,7 +304,7 @@ CRITICAL: Only suggest songs that actually exist. Use correct artist names and s
       model: 'google/gemini-3-flash-preview',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: params.userContent },
+        userMessage,
       ],
       tools: [{
         type: 'function',
@@ -470,7 +495,9 @@ function buildUserContent(
   if (userTasteProfile && Object.keys(userTasteProfile).length > 0) {
     parts.push(`userTasteProfile (JSON): ${JSON.stringify(userTasteProfile)}`);
   }
-  parts.push(`Current user prompt: ${prompt || '(none — follow mode instructions)'}`);
+  parts.push(
+    `Current user prompt: ${prompt || '(none — user attached an image only, or lucky mode; infer from image and/or memory as instructed)'}`,
+  );
   return parts.join('\n\n');
 }
 
@@ -501,6 +528,8 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const {
       prompt: rawPrompt,
+      imageBase64: rawImageB64,
+      imageMimeType: rawImageMime,
       descriptionLanguage,
       mode = 'search',
       conversationMemory,
@@ -508,12 +537,26 @@ Deno.serve(async (req) => {
       lastUserPrompt,
     } = body as {
       prompt?: string;
+      imageBase64?: string;
+      imageMimeType?: string;
       descriptionLanguage?: string;
       mode?: string;
       conversationMemory?: Record<string, unknown> | null;
       userTasteProfile?: Record<string, unknown> | null;
       lastUserPrompt?: string;
     };
+
+    const imageB64 = typeof rawImageB64 === 'string' ? rawImageB64.replace(/\s/g, '') : '';
+    const mimeIn = typeof rawImageMime === 'string' ? rawImageMime.trim().toLowerCase() : '';
+    const allowedMime = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
+    const imageMime = allowedMime.has(mimeIn) ? (mimeIn === 'image/jpg' ? 'image/jpeg' : mimeIn) : 'image/jpeg';
+    const hasImage = imageB64.length > 120;
+    if (hasImage && imageB64.length > 6_000_000) {
+      return new Response(JSON.stringify({ error: 'image too large' }), {
+        status: 413,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     if (mode === 'memory_compact') {
       const compact = await interpretMemoryCompact({
@@ -534,8 +577,14 @@ Deno.serve(async (req) => {
     }
 
     const prompt = typeof rawPrompt === 'string' ? rawPrompt.trim() : '';
-    if (mode !== 'lucky' && prompt.length === 0) {
-      return new Response(JSON.stringify({ error: 'prompt is required' }), {
+    if (mode !== 'lucky' && prompt.length === 0 && !hasImage) {
+      return new Response(JSON.stringify({ error: 'prompt or image is required' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (mode === 'lucky' && hasImage) {
+      return new Response(JSON.stringify({ error: 'image is not supported in lucky mode' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -551,6 +600,7 @@ Deno.serve(async (req) => {
         userContent,
         descriptionLanguage,
         mode: mode === 'lucky' ? 'lucky' : 'search',
+        ...(hasImage ? { image: { base64: imageB64, mimeType: imageMime } } : {}),
       }),
     );
 

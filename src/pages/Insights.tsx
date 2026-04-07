@@ -1,16 +1,17 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import AppLayout from "@/components/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, MessageCircle, Search, TrendingUp, ThumbsUp, ThumbsDown, Hash, Activity } from "lucide-react";
 
 interface StatCard {
-  label: string;
+  labelKey: "insights.statSearches" | "insights.statResults" | "insights.statInteractions" | "insights.statFeedback" | "insights.statTraining";
   value: string | number;
   icon: React.ElementType;
-  sub?: string;
 }
 
 const Insights = () => {
+  const { t, i18n } = useTranslation();
   const [stats, setStats] = useState<StatCard[]>([]);
   const [topThemes, setTopThemes] = useState<{ theme: string; count: number }[]>([]);
   const [feedbackBreakdown, setFeedbackBreakdown] = useState<{ label: string; count: number }[]>([]);
@@ -41,27 +42,25 @@ const Insights = () => {
     const resultFb = resultFbRes.data ?? [];
     const training = trainingRes.data ?? [];
 
-    // Stats
     const totalSearches = searches.length;
     const totalResults = results.length;
     const totalInteractions = interactions.length;
     const totalFeedback = searchFb.length + resultFb.length;
 
     setStats([
-      { label: "Searches", value: totalSearches, icon: Search },
-      { label: "Results shown", value: totalResults, icon: BarChart3 },
-      { label: "Interactions", value: totalInteractions, icon: Activity },
-      { label: "Feedback items", value: totalFeedback, icon: MessageCircle },
-      { label: "Training events", value: training.length, icon: TrendingUp },
+      { labelKey: "insights.statSearches", value: totalSearches, icon: Search },
+      { labelKey: "insights.statResults", value: totalResults, icon: BarChart3 },
+      { labelKey: "insights.statInteractions", value: totalInteractions, icon: Activity },
+      { labelKey: "insights.statFeedback", value: totalFeedback, icon: MessageCircle },
+      { labelKey: "insights.statTraining", value: training.length, icon: TrendingUp },
     ]);
 
-    // Top themes
     const themeCounts: Record<string, number> = {};
     searches.forEach((s) => {
       const themes = s.interpreted_themes;
       if (Array.isArray(themes)) {
-        (themes as string[]).forEach((t) => {
-          themeCounts[t] = (themeCounts[t] || 0) + 1;
+        (themes as string[]).forEach((th) => {
+          themeCounts[th] = (themeCounts[th] || 0) + 1;
         });
       }
     });
@@ -72,7 +71,6 @@ const Insights = () => {
         .map(([theme, count]) => ({ theme, count }))
     );
 
-    // Feedback breakdown
     const fbCounts: Record<string, number> = {};
     [...searchFb, ...resultFb].forEach((f) => {
       const label = f.feedback_label;
@@ -84,10 +82,9 @@ const Insights = () => {
         .map(([label, count]) => ({ label, count }))
     );
 
-    // Interaction types
     const intCounts: Record<string, number> = {};
-    interactions.forEach((i) => {
-      intCounts[i.interaction_type] = (intCounts[i.interaction_type] || 0) + 1;
+    interactions.forEach((it) => {
+      intCounts[it.interaction_type] = (intCounts[it.interaction_type] || 0) + 1;
     });
     setTopInteractions(
       Object.entries(intCounts)
@@ -95,7 +92,6 @@ const Insights = () => {
         .map(([type, count]) => ({ type, count }))
     );
 
-    // Recent searches
     setRecentSearches(
       searches.slice(0, 8).map((s) => ({
         prompt: s.raw_prompt,
@@ -114,9 +110,9 @@ const Insights = () => {
     <AppLayout>
       <div className="max-w-4xl mx-auto px-4 md:px-6 py-8 pb-20 md:pb-8">
         <div className="mb-10">
-          <p className="text-xs text-muted-foreground font-body uppercase tracking-wider mb-1">Internal</p>
-          <h1 className="font-display text-3xl font-bold mb-2">Product Insights</h1>
-          <p className="text-muted-foreground font-body text-sm">Quality signals from AI music recommendations.</p>
+          <p className="text-xs text-muted-foreground font-body uppercase tracking-wider mb-1">{t("insights.internal")}</p>
+          <h1 className="font-display text-3xl font-bold mb-2">{t("insights.title")}</h1>
+          <p className="text-muted-foreground font-body text-sm">{t("insights.subtitle")}</p>
         </div>
 
         {loading ? (
@@ -127,64 +123,61 @@ const Insights = () => {
           </div>
         ) : (
           <>
-            {/* Stat cards */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-10">
               {stats.map((s) => (
-                <div key={s.label} className="glass-card rounded-xl p-4 text-center">
+                <div key={s.labelKey} className="glass-card rounded-xl p-4 text-center">
                   <s.icon className="w-4 h-4 text-primary mx-auto mb-2" />
                   <p className="font-display text-2xl font-bold text-foreground">{s.value}</p>
-                  <p className="text-xs text-muted-foreground font-body mt-0.5">{s.label}</p>
+                  <p className="text-xs text-muted-foreground font-body mt-0.5">{t(s.labelKey)}</p>
                 </div>
               ))}
             </div>
 
             <div className="grid md:grid-cols-2 gap-6 mb-10">
-              {/* Top Themes */}
               <div className="glass-card rounded-2xl p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Hash className="w-4 h-4 text-primary" />
-                  <h3 className="font-display text-base font-semibold">Top Themes</h3>
+                  <h3 className="font-display text-base font-semibold">{t("insights.topThemes")}</h3>
                 </div>
                 {topThemes.length === 0 ? (
-                  <p className="text-sm text-muted-foreground font-body">No data yet.</p>
+                  <p className="text-sm text-muted-foreground font-body">{t("insights.noData")}</p>
                 ) : (
                   <div className="space-y-2">
-                    {topThemes.map((t) => (
-                      <div key={t.theme} className="flex items-center gap-3">
-                        <span className="text-sm font-body text-foreground w-28 truncate">{t.theme}</span>
+                    {topThemes.map((row) => (
+                      <div key={row.theme} className="flex items-center gap-3">
+                        <span className="text-sm font-body text-foreground w-28 truncate">{row.theme}</span>
                         <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                           <div
                             className="h-full bg-primary/60 rounded-full transition-all"
-                            style={{ width: `${(t.count / maxThemeCount) * 100}%` }}
+                            style={{ width: `${(row.count / maxThemeCount) * 100}%` }}
                           />
                         </div>
-                        <span className="text-xs text-muted-foreground font-body w-6 text-right">{t.count}</span>
+                        <span className="text-xs text-muted-foreground font-body w-6 text-right">{row.count}</span>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
 
-              {/* Interaction Types */}
               <div className="glass-card rounded-2xl p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Activity className="w-4 h-4 text-primary" />
-                  <h3 className="font-display text-base font-semibold">Interaction Types</h3>
+                  <h3 className="font-display text-base font-semibold">{t("insights.interactionTypes")}</h3>
                 </div>
                 {topInteractions.length === 0 ? (
-                  <p className="text-sm text-muted-foreground font-body">No data yet.</p>
+                  <p className="text-sm text-muted-foreground font-body">{t("insights.noData")}</p>
                 ) : (
                   <div className="space-y-2">
-                    {topInteractions.map((t) => (
-                      <div key={t.type} className="flex items-center gap-3">
-                        <span className="text-sm font-body text-foreground w-32 truncate">{t.type.replace(/_/g, " ")}</span>
+                    {topInteractions.map((row) => (
+                      <div key={row.type} className="flex items-center gap-3">
+                        <span className="text-sm font-body text-foreground w-32 truncate">{row.type.replace(/_/g, " ")}</span>
                         <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                           <div
                             className="h-full bg-accent/60 rounded-full transition-all"
-                            style={{ width: `${(t.count / maxInteractionCount) * 100}%` }}
+                            style={{ width: `${(row.count / maxInteractionCount) * 100}%` }}
                           />
                         </div>
-                        <span className="text-xs text-muted-foreground font-body w-6 text-right">{t.count}</span>
+                        <span className="text-xs text-muted-foreground font-body w-6 text-right">{row.count}</span>
                       </div>
                     ))}
                   </div>
@@ -192,18 +185,17 @@ const Insights = () => {
               </div>
             </div>
 
-            {/* Feedback Breakdown */}
             <div className="glass-card rounded-2xl p-6 mb-10">
               <div className="flex items-center gap-2 mb-4">
                 <MessageCircle className="w-4 h-4 text-primary" />
-                <h3 className="font-display text-base font-semibold">Feedback Breakdown</h3>
+                <h3 className="font-display text-base font-semibold">{t("insights.feedbackBreakdown")}</h3>
               </div>
               {feedbackBreakdown.length === 0 ? (
-                <p className="text-sm text-muted-foreground font-body">No feedback yet.</p>
+                <p className="text-sm text-muted-foreground font-body">{t("insights.noFeedback")}</p>
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {feedbackBreakdown.map((f) => {
-                    const isPositive = ["good match", "better than expected", "good results"].includes(f.label);
+                    const isPositive = ["good match", "better than expected", "good results", "good"].includes(f.label);
                     return (
                       <div
                         key={f.label}
@@ -223,24 +215,23 @@ const Insights = () => {
               )}
             </div>
 
-            {/* Recent Searches */}
             <div className="glass-card rounded-2xl p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Search className="w-4 h-4 text-primary" />
-                <h3 className="font-display text-base font-semibold">Recent Searches</h3>
+                <h3 className="font-display text-base font-semibold">{t("insights.recentSearches")}</h3>
               </div>
               {recentSearches.length === 0 ? (
-                <p className="text-sm text-muted-foreground font-body">No searches yet.</p>
+                <p className="text-sm text-muted-foreground font-body">{t("insights.noSearches")}</p>
               ) : (
                 <div className="space-y-3">
-                  {recentSearches.map((s, i) => (
-                    <div key={i} className="flex items-start justify-between gap-4 py-2 border-b border-border/30 last:border-0">
+                  {recentSearches.map((s, idx) => (
+                    <div key={idx} className="flex items-start justify-between gap-4 py-2 border-b border-border/30 last:border-0">
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-body text-foreground truncate">"{s.prompt}"</p>
+                        <p className="text-sm font-body text-foreground truncate">&quot;{s.prompt}&quot;</p>
                         <p className="text-xs text-muted-foreground font-body mt-0.5">{s.mood}</p>
                       </div>
                       <p className="text-xs text-muted-foreground font-body shrink-0">
-                        {new Date(s.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        {new Date(s.created_at).toLocaleDateString(i18n.language, { month: "short", day: "numeric" })}
                       </p>
                     </div>
                   ))}

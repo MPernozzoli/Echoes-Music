@@ -1,11 +1,17 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import type { Song, SearchResult, ListenHistoryEntry } from "@/data/mockData";
+import i18n, {
+  UI_LANG_KEY,
+  resolveUiLanguage,
+  type SupportedUiLang,
+} from "@/i18n/config";
 
 interface AppState {
   favorites: Song[];
   history: SearchResult[];
   listenHistory: ListenHistoryEntry[];
   descriptionLanguage: string;
+  uiLanguage: SupportedUiLang;
   toggleFavorite: (song: Song) => void;
   isFavorite: (songId: string) => boolean;
   addToHistory: (result: SearchResult) => void;
@@ -13,6 +19,7 @@ interface AppState {
   recordListen: (entry: Omit<ListenHistoryEntry, "id" | "listenedAt">) => void;
   clearListenHistory: () => void;
   setDescriptionLanguage: (lang: string) => void;
+  setUiLanguage: (lang: SupportedUiLang) => void;
 }
 
 const AppContext = createContext<AppState | null>(null);
@@ -61,6 +68,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     parseListenHistory(loadJSON(LISTEN_HISTORY_KEY, []))
   );
   const [descriptionLanguage, setDescriptionLanguage] = useState<string>(() => localStorage.getItem(LANGUAGE_KEY) || "auto");
+  const [uiLanguage, setUiLanguageState] = useState<SupportedUiLang>(() => resolveUiLanguage(localStorage.getItem(UI_LANG_KEY)));
 
   useEffect(() => {
     localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
@@ -77,6 +85,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     localStorage.setItem(LANGUAGE_KEY, descriptionLanguage);
   }, [descriptionLanguage]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(UI_LANG_KEY, uiLanguage);
+    } catch {
+      /* ignore */
+    }
+    void i18n.changeLanguage(uiLanguage);
+    document.documentElement.lang = uiLanguage;
+  }, [uiLanguage]);
+
+  const setUiLanguage = useCallback((lang: SupportedUiLang) => {
+    setUiLanguageState(lang);
+  }, []);
 
   const toggleFavorite = useCallback((song: Song) => {
     setFavorites((prev) => {
@@ -123,6 +145,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         history,
         listenHistory,
         descriptionLanguage,
+        uiLanguage,
         toggleFavorite,
         isFavorite,
         addToHistory,
@@ -130,6 +153,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         recordListen,
         clearListenHistory,
         setDescriptionLanguage,
+        setUiLanguage,
       }}
     >
       {children}

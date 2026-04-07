@@ -1,3 +1,5 @@
+import { Sparkles } from "lucide-react";
+
 interface PromptSuggestionsProps {
   suggestions: string[];
   onSelect: (prompt: string) => void;
@@ -6,12 +8,14 @@ interface PromptSuggestionsProps {
 const PromptSuggestions = ({ suggestions, onSelect }: PromptSuggestionsProps) => {
   return (
     <div className="flex flex-wrap gap-2">
-      {suggestions.map((suggestion) => (
+      {suggestions.map((suggestion, i) => (
         <button
           key={suggestion}
           onClick={() => onSelect(suggestion)}
-          className="text-sm px-4 py-2 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-primary/30 hover:bg-primary/5 transition-all duration-300 font-body"
+          className="group flex items-center gap-1.5 text-sm px-4 py-2.5 rounded-2xl border border-border/60 bg-card/50 text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/[0.06] hover:shadow-sm transition-all duration-300 font-body animate-fade-slide-up"
+          style={{ animationDelay: `${i * 60}ms` }}
         >
+          <Sparkles className="w-3 h-3 text-primary/50 group-hover:text-primary transition-colors shrink-0" />
           {suggestion}
         </button>
       ))}

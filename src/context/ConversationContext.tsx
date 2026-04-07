@@ -71,7 +71,11 @@ interface ConversationState {
   selectConversation: (id: string | null) => void;
   deleteConversation: (id: string) => void;
   renameConversation: (id: string, title: string) => void;
-  appendUserMessage: (conversationId: string, text: string) => void;
+  appendUserMessage: (
+    conversationId: string,
+    text: string,
+    meta?: { imagePreviewUrl?: string }
+  ) => void;
   appendAssistantResult: (conversationId: string, result: SearchResult) => void;
   patchSearchResultTracking: (
     conversationId: string,
@@ -141,27 +145,34 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
     );
   }, []);
 
-  const appendUserMessage = useCallback((conversationId: string, text: string) => {
-    const msg: ChatMessage = {
-      id: `u-${Date.now()}`,
-      role: "user",
-      text,
-      timestamp: new Date().toISOString(),
-    };
-    setConversations((prev) =>
-      prev.map((c) => {
-        if (c.id !== conversationId) return c;
-        const title =
-          c.messages.length === 0 ? text.slice(0, 48) + (text.length > 48 ? "…" : "") : c.title;
-        return {
-          ...c,
-          title,
-          updatedAt: msg.timestamp,
-          messages: [...c.messages, msg],
-        };
-      })
-    );
-  }, []);
+  const appendUserMessage = useCallback(
+    (conversationId: string, text: string, meta?: { imagePreviewUrl?: string }) => {
+      const msg: ChatMessage = {
+        id: `u-${Date.now()}`,
+        role: "user",
+        text,
+        timestamp: new Date().toISOString(),
+        ...(meta?.imagePreviewUrl ? { imagePreviewUrl: meta.imagePreviewUrl } : {}),
+      };
+      setConversations((prev) =>
+        prev.map((c) => {
+          if (c.id !== conversationId) return c;
+          const titleSeed = text.trim() || (meta?.imagePreviewUrl ? "Foto" : "Messaggio");
+          const title =
+            c.messages.length === 0
+              ? titleSeed.slice(0, 48) + (titleSeed.length > 48 ? "…" : "")
+              : c.title;
+          return {
+            ...c,
+            title,
+            updatedAt: msg.timestamp,
+            messages: [...c.messages, msg],
+          };
+        })
+      );
+    },
+    []
+  );
 
   const appendAssistantResult = useCallback((conversationId: string, result: SearchResult) => {
     const msg: ChatMessage = {

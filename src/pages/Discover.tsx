@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import PromptInput from "@/components/PromptInput";
@@ -75,6 +76,7 @@ function buildSearchResult(
 const CHAT_PATH = "/chat";
 
 const Chat = () => {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -354,12 +356,13 @@ const Chat = () => {
     if (!st?.luckyPayload?.emotionalProfile || !st.luckyPayload.songs?.length) return;
     luckyProcessed.current = true;
     const id = createConversation();
-    appendUserMessage(id, "Sorprendimi");
+    const surpriseLabel = t("chat.surpriseMe");
+    appendUserMessage(id, surpriseLabel);
     const data = st.luckyPayload;
     const luckySongs = dedupeSongVersions(data.songs!);
     const presentation: SearchResult["playbackPresentation"] = isGloballyPlaying ? "pick" : "inline";
     const result = buildSearchResult(
-      "Sorprendimi",
+      surpriseLabel,
       {
         emotionalProfile: data.emotionalProfile!,
         songs: luckySongs,
@@ -389,7 +392,7 @@ const Chat = () => {
     if (data.userTasteProfileUpdate) mergeUserTasteFromUpdate(data.userTasteProfileUpdate);
     navigate(`${CHAT_PATH}?conversation=${id}`, { replace: true, state: {} });
     void (async () => {
-      const searchId = await trackSearch({ rawPrompt: "Sorprendimi", profile: result.emotionalProfile });
+      const searchId = await trackSearch({ rawPrompt: surpriseLabel, profile: result.emotionalProfile });
       setDbSearchId(searchId);
       if (searchId) {
         const map = await trackResults(searchId, result.songs);
@@ -397,6 +400,7 @@ const Chat = () => {
       }
     })();
   }, [
+    t,
     location.state,
     createConversation,
     appendUserMessage,
@@ -577,7 +581,10 @@ const Chat = () => {
   );
 
   const composerProps = {
-    onSubmit: handleSearch,
+    onSubmit: (p: { text: string }) => {
+      const t = p.text.trim();
+      if (t) handleSearch(t);
+    },
     isLoading,
     size: "compact" as const,
     placeholder: "Sentimento, ricordo, momento…",

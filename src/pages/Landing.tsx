@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Sparkles, Search, Music, Wand2 } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 const Landing = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { descriptionLanguage } = useApp();
   const { userTasteProfile, conversations } = useConversations();
@@ -45,26 +47,34 @@ const Landing = () => {
         descriptionLanguage,
       });
       if (data.error) {
-        if (data.error.includes("Rate") || data.error.includes("429")) toast.error("Troppi richieste. Riprova tra poco.");
-        else if (data.error.includes("credits") || data.error.includes("402")) toast.error("Crediti AI esauriti.");
+        if (data.error.includes("Rate") || data.error.includes("429")) toast.error(t("landing.toastRateLimit"));
+        else if (data.error.includes("credits") || data.error.includes("402")) toast.error(t("landing.toastNoCredits"));
         else toast.error(data.error);
         return;
       }
       if (!data.emotionalProfile || !data.songs?.length) {
-        toast.error("Nessun brano trovato. Prova dopo qualche ricerca per affinare il profilo.");
+        toast.error(t("landing.toastNoSongs"));
         return;
       }
       navigate("/chat", { state: { luckyPayload: data } });
     } catch {
-      toast.error("Qualcosa è andato storto");
+      toast.error(t("landing.toastGenericError"));
     } finally {
       setLuckyLoading(false);
     }
   };
 
+  const steps = useMemo(
+    () => [
+      { icon: Sparkles, title: t("landing.step1Title"), desc: t("landing.step1Desc") },
+      { icon: Search, title: t("landing.step2Title"), desc: t("landing.step2Desc") },
+      { icon: Music, title: t("landing.step3Title"), desc: t("landing.step3Desc") },
+    ],
+    [t]
+  );
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero */}
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
         <img
           src={heroBg}
@@ -78,20 +88,27 @@ const Landing = () => {
         <div className="relative z-10 max-w-3xl mx-auto px-6 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border bg-card/50 text-muted-foreground text-sm font-body mb-8 animate-fade-in">
             <Sparkles className="w-3.5 h-3.5 text-primary" />
-            AI-powered music discovery
+            {t("landing.badge")}
           </div>
 
           <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-foreground leading-[1.1] mb-6 animate-fade-up">
-            Find the song that means{" "}
-            <span className="gradient-warm-text italic">what you mean.</span>
+            {t("landing.title")}{" "}
+            <span className="gradient-warm-text italic">{t("landing.titleItalic")}</span>
           </h1>
 
           <p className="text-lg md:text-xl text-muted-foreground font-body max-w-xl mx-auto mb-10 animate-fade-up" style={{ animationDelay: "100ms" }}>
-            Describe a feeling, a memory, or a thought. Echoes turns it into music.
+            {t("landing.subtitle")}
           </p>
 
           <div className="max-w-2xl mx-auto mb-4 animate-fade-up" style={{ animationDelay: "200ms" }}>
-            <PromptInput onSubmit={handlePromptSubmit} size="hero" />
+            <PromptInput
+              onSubmit={(p) => {
+                const text = p.text.trim();
+                if (text) handlePromptSubmit(text);
+              }}
+              size="hero"
+              placeholder={t("promptInput.placeholderDefault")}
+            />
           </div>
 
           <div className="flex justify-center mb-8 animate-fade-up" style={{ animationDelay: "250ms" }}>
@@ -104,11 +121,11 @@ const Landing = () => {
               onClick={() => void handleLucky()}
             >
               {luckyLoading ? (
-                <span className="text-sm">Sto scegliendo…</span>
+                <span className="text-sm">{t("landing.luckyLoading")}</span>
               ) : (
                 <>
                   <Wand2 className="w-4 h-4 text-primary" />
-                  Sorprendimi
+                  {t("landing.luckyButton")}
                 </>
               )}
             </Button>
@@ -118,6 +135,7 @@ const Landing = () => {
             {landingPrompts.map((prompt) => (
               <button
                 key={prompt}
+                type="button"
                 onClick={() => handlePromptSubmit(prompt)}
                 className="text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all font-body"
               >
@@ -128,19 +146,17 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* How it works */}
       <section className="py-24 px-6">
         <div className="max-w-4xl mx-auto">
           <h2 className="font-display text-3xl md:text-4xl font-semibold text-center mb-16">
-            How <span className="gradient-warm-text">Echoes</span> works
+            <Trans
+              i18nKey="landing.howHeading"
+              components={[<span key="e" className="gradient-warm-text" />]}
+            />
           </h2>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {[
-              { icon: Sparkles, title: "Describe your feeling", desc: "Type anything — a memory, an emotion, a moment. No keywords needed." },
-              { icon: Search, title: "AI interprets your intent", desc: "Echoes reads the emotional texture of your words and maps them to music." },
-              { icon: Music, title: "Discover your songs", desc: "Get curated recommendations with deep explanations of why each song fits." },
-            ].map((step, i) => (
+            {steps.map((step, i) => (
               <div key={i} className="glass-card rounded-2xl p-6 text-center">
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
                   <step.icon className="w-6 h-6 text-primary" />
@@ -153,15 +169,15 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Preview results */}
       <section className="py-24 px-6 gradient-warm rounded-t-3xl">
         <div className="max-w-2xl mx-auto">
-          <p className="text-xs uppercase tracking-widest text-primary font-body mb-3 text-center">Preview</p>
+          <p className="text-xs uppercase tracking-widest text-primary font-body mb-3 text-center">{t("landing.preview")}</p>
           <h2 className="font-display text-3xl md:text-4xl font-semibold text-center mb-4">
-            Results that <span className="italic">mean</span> something
+            {t("landing.resultsTitle")} <span className="italic">{t("landing.resultsTitleItalic")}</span>
+            {t("landing.resultsTitleEnd")}
           </h2>
           <p className="text-muted-foreground text-center font-body mb-12 max-w-lg mx-auto">
-            Every recommendation comes with context — not just metadata, but an understanding of why the song resonates.
+            {t("landing.resultsSubtitle")}
           </p>
 
           <div className="space-y-4">
@@ -175,17 +191,16 @@ const Landing = () => {
               to="/chat"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-body font-medium hover:opacity-90 transition-opacity"
             >
-              Enter Echoes
+              {t("landing.enterEchoes")}
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="py-12 px-6 text-center">
         <p className="font-display text-lg gradient-warm-text mb-2">Echoes</p>
-        <p className="text-xs text-muted-foreground font-body">Music discovery, reimagined.</p>
+        <p className="text-xs text-muted-foreground font-body">{t("landing.footerTagline")}</p>
       </footer>
     </div>
   );

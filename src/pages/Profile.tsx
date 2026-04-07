@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
+import { useTheme } from "next-themes";
 import AppLayout from "@/components/AppLayout";
 import { User, Music, Palette, LogOut, ExternalLink, Shield, Check, Loader2, X, Globe } from "lucide-react";
 import { getUserSettings, setAllowAnonymizedData } from "@/services/tracking";
@@ -6,9 +8,9 @@ import { getSpotifyAuthUrl, disconnectSpotify } from "@/services/spotify";
 import { useSpotify } from "@/context/SpotifyContext";
 import { useAppleMusic } from "@/context/AppleMusicContext";
 import { useApp } from "@/context/AppContext";
+import { SUPPORTED_UI_LANGS, type SupportedUiLang } from "@/i18n/config";
 
-const LANGUAGES = [
-  { value: "auto", label: "Auto (detect from prompt)" },
+const DESCRIPTION_LANGS: { value: string; label: string }[] = [
   { value: "it", label: "Italiano" },
   { value: "en", label: "English" },
   { value: "es", label: "Español" },
@@ -19,13 +21,27 @@ const LANGUAGES = [
   { value: "ko", label: "한국어" },
 ];
 
+const UI_LANG_LABEL: Record<SupportedUiLang, string> = {
+  it: "Italiano",
+  en: "English",
+  fr: "Français",
+  de: "Deutsch",
+  es: "Español",
+  pt: "Português",
+};
+
 const Profile = () => {
+  const { t } = useTranslation();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [allowData, setAllowData] = useState(true);
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [connectingSpotify, setConnectingSpotify] = useState(false);
-  const { descriptionLanguage, setDescriptionLanguage } = useApp();
+  const { descriptionLanguage, setDescriptionLanguage, uiLanguage, setUiLanguage } = useApp();
   const { isConnected: spotifyConnected, displayName: spotifyName, isPremium, loading: spotifyLoading, setDisconnected } = useSpotify();
   const { isAvailable: appleMusicAvailable, isAuthorized: appleMusicAuthorized, loading: appleMusicLoading, authorize: authorizeApple, unauthorize: unauthorizeApple } = useAppleMusic();
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     getUserSettings().then((s) => {
@@ -59,22 +75,20 @@ const Profile = () => {
   return (
     <AppLayout>
       <div className="max-w-2xl mx-auto px-4 md:px-6 py-8 pb-20 md:pb-8">
-        <h1 className="font-display text-3xl font-bold mb-8">Settings</h1>
+        <h1 className="font-display text-3xl font-bold mb-8">{t("profile.title")}</h1>
 
-        {/* User info */}
         <div className="glass-card rounded-2xl p-6 mb-6">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
               <User className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h2 className="font-display text-lg font-semibold">Demo User</h2>
-              <p className="text-sm text-muted-foreground font-body">demo@echoes.app</p>
+              <h2 className="font-display text-lg font-semibold">{t("profile.demoUser")}</h2>
+              <p className="text-sm text-muted-foreground font-body">{t("profile.demoEmail")}</p>
             </div>
           </div>
         </div>
 
-        {/* Spotify */}
         <div className="glass-card rounded-2xl p-6 mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -82,9 +96,9 @@ const Profile = () => {
                 <Music className="w-5 h-5 text-[hsl(141,73%,42%)]" />
               </div>
               <div>
-                <h3 className="font-body text-sm font-medium text-foreground">Spotify</h3>
+                <h3 className="font-body text-sm font-medium text-foreground">{t("profile.spotify")}</h3>
                 {spotifyLoading ? (
-                  <p className="text-xs text-muted-foreground font-body">Checking…</p>
+                  <p className="text-xs text-muted-foreground font-body">{t("profile.checking")}</p>
                 ) : spotifyConnected ? (
                   <div>
                     <p className="text-xs text-primary font-body flex items-center gap-1">
@@ -92,39 +106,38 @@ const Profile = () => {
                       {spotifyName}
                     </p>
                     <p className="text-[10px] text-muted-foreground font-body">
-                      {isPremium ? "Premium — Full playback enabled" : "Free — Preview only"}
+                      {isPremium ? t("profile.premiumFull") : t("profile.freePreview")}
                     </p>
-                    <p className="text-[10px] text-muted-foreground font-body mt-1 max-w-[220px]">
-                      Libreria e playlist: se non funzionano, disconnetti e ricollega per aggiornare i permessi.
-                    </p>
+                    <p className="text-[10px] text-muted-foreground font-body mt-1 max-w-[220px]">{t("profile.libraryHint")}</p>
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground font-body">Connect for playback</p>
+                  <p className="text-xs text-muted-foreground font-body">{t("profile.connectPlayback")}</p>
                 )}
               </div>
             </div>
             {spotifyConnected ? (
               <button
+                type="button"
                 onClick={handleDisconnectSpotify}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-destructive/30 text-sm font-body text-destructive/70 hover:text-destructive hover:border-destructive/50 transition-all"
               >
                 <X className="w-3 h-3" />
-                Disconnect
+                {t("profile.disconnect")}
               </button>
             ) : (
               <button
+                type="button"
                 onClick={handleConnectSpotify}
                 disabled={connectingSpotify}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-border text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all disabled:opacity-50"
               >
                 {connectingSpotify ? <Loader2 className="w-3 h-3 animate-spin" /> : <ExternalLink className="w-3 h-3" />}
-                Connect
+                {t("profile.connect")}
               </button>
             )}
           </div>
         </div>
 
-        {/* Apple Music */}
         <div className="glass-card rounded-2xl p-6 mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -132,82 +145,118 @@ const Profile = () => {
                 <Music className="w-5 h-5 text-[hsl(350,80%,55%)]" />
               </div>
               <div>
-                <h3 className="font-body text-sm font-medium text-foreground">Apple Music</h3>
+                <h3 className="font-body text-sm font-medium text-foreground">{t("profile.appleMusic")}</h3>
                 {appleMusicLoading ? (
-                  <p className="text-xs text-muted-foreground font-body">Loading MusicKit…</p>
+                  <p className="text-xs text-muted-foreground font-body">{t("profile.loadingMusickit")}</p>
                 ) : !appleMusicAvailable ? (
-                  <p className="text-xs text-muted-foreground font-body">MusicKit not available</p>
+                  <p className="text-xs text-muted-foreground font-body">{t("profile.musickitUnavailable")}</p>
                 ) : appleMusicAuthorized ? (
                   <p className="text-xs text-[hsl(350,80%,55%)] font-body flex items-center gap-1">
                     <Check className="w-3 h-3" />
-                    Connected — Full playback enabled
+                    {t("profile.appleConnected")}
                   </p>
                 ) : (
-                  <p className="text-xs text-muted-foreground font-body">Connect for full playback</p>
+                  <p className="text-xs text-muted-foreground font-body">{t("profile.appleConnectHint")}</p>
                 )}
               </div>
             </div>
             {appleMusicAuthorized ? (
               <button
+                type="button"
                 onClick={unauthorizeApple}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-destructive/30 text-sm font-body text-destructive/70 hover:text-destructive hover:border-destructive/50 transition-all"
               >
                 <X className="w-3 h-3" />
-                Disconnect
+                {t("profile.disconnect")}
               </button>
             ) : appleMusicAvailable ? (
               <button
+                type="button"
                 onClick={authorizeApple}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-border text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all"
               >
                 <ExternalLink className="w-3 h-3" />
-                Connect
+                {t("profile.connect")}
               </button>
             ) : null}
           </div>
         </div>
 
-        {/* Language */}
         <div className="glass-card rounded-2xl p-6 mb-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                 <Globe className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h3 className="font-body text-sm font-medium text-foreground">Description Language</h3>
-                <p className="text-xs text-muted-foreground font-body">Language for song descriptions</p>
+                <h3 className="font-body text-sm font-medium text-foreground">{t("profile.uiLanguage")}</h3>
+                <p className="text-xs text-muted-foreground font-body">{t("profile.uiLanguageHint")}</p>
               </div>
             </div>
             <select
-              value={descriptionLanguage}
-              onChange={(e) => setDescriptionLanguage(e.target.value)}
-              className="text-sm font-body px-3 py-1.5 rounded-lg bg-muted text-foreground border border-border focus:outline-none focus:ring-1 focus:ring-primary"
+              value={uiLanguage}
+              onChange={(e) => setUiLanguage(e.target.value as SupportedUiLang)}
+              className="text-sm font-body px-3 py-1.5 rounded-lg bg-muted text-foreground border border-border focus:outline-none focus:ring-1 focus:ring-primary w-full sm:w-auto"
             >
-              {LANGUAGES.map((l) => (
-                <option key={l.value} value={l.value}>{l.label}</option>
+              {SUPPORTED_UI_LANGS.map((code) => (
+                <option key={code} value={code}>
+                  {UI_LANG_LABEL[code]}
+                </option>
               ))}
             </select>
           </div>
         </div>
 
-        {/* Theme */}
         <div className="glass-card rounded-2xl p-6 mb-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Globe className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-body text-sm font-medium text-foreground">{t("profile.descriptionLanguage")}</h3>
+                <p className="text-xs text-muted-foreground font-body">{t("profile.descriptionLanguageHint")}</p>
+              </div>
+            </div>
+            <select
+              value={descriptionLanguage}
+              onChange={(e) => setDescriptionLanguage(e.target.value)}
+              className="text-sm font-body px-3 py-1.5 rounded-lg bg-muted text-foreground border border-border focus:outline-none focus:ring-1 focus:ring-primary w-full sm:w-auto"
+            >
+              <option value="auto">{t("profile.langAuto")}</option>
+              {DESCRIPTION_LANGS.map((l) => (
+                <option key={l.value} value={l.value}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="glass-card rounded-2xl p-6 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                 <Palette className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h3 className="font-body text-sm font-medium text-foreground">Theme</h3>
-                <p className="text-xs text-muted-foreground font-body">Visual appearance</p>
+                <h3 className="font-body text-sm font-medium text-foreground">{t("profile.theme")}</h3>
+                <p className="text-xs text-muted-foreground font-body">{t("profile.themeHint")}</p>
               </div>
             </div>
-            <span className="text-sm text-muted-foreground font-body px-3 py-1 rounded-lg bg-muted">Dark</span>
+            <select
+              value={mounted ? theme ?? "system" : "dark"}
+              onChange={(e) => setTheme(e.target.value)}
+              disabled={!mounted}
+              className="text-sm font-body px-3 py-1.5 rounded-lg bg-muted text-foreground border border-border focus:outline-none focus:ring-1 focus:ring-primary w-full sm:w-auto"
+            >
+              <option value="light">{t("profile.themeLight")}</option>
+              <option value="dark">{t("profile.themeDark")}</option>
+              <option value="system">{t("profile.themeSystem")}</option>
+            </select>
           </div>
         </div>
 
-        {/* Privacy / Data */}
         <div className="glass-card rounded-2xl p-6 mb-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -215,13 +264,12 @@ const Profile = () => {
                 <Shield className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h3 className="font-body text-sm font-medium text-foreground">Improvement Data</h3>
-                <p className="text-xs text-muted-foreground font-body max-w-xs">
-                  Allow anonymized data to help improve recommendations
-                </p>
+                <h3 className="font-body text-sm font-medium text-foreground">{t("profile.privacyTitle")}</h3>
+                <p className="text-xs text-muted-foreground font-body max-w-xs">{t("profile.privacyHint")}</p>
               </div>
             </div>
             <button
+              type="button"
               onClick={handleToggle}
               disabled={loadingSettings}
               className={`relative w-11 h-6 rounded-full transition-colors ${allowData ? "bg-primary" : "bg-muted"}`}
@@ -231,10 +279,9 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* Sign out */}
-        <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-destructive font-body transition-colors mt-4">
+        <button type="button" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-destructive font-body transition-colors mt-4">
           <LogOut className="w-4 h-4" />
-          Sign out
+          {t("profile.signOut")}
         </button>
       </div>
     </AppLayout>

@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { exchangeSpotifyCode } from "@/services/spotify";
 import { useSpotify } from "@/context/SpotifyContext";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
 
 const SpotifyCallback = () => {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { refresh } = useSpotify();
@@ -17,14 +19,14 @@ const SpotifyCallback = () => {
 
     if (err) {
       setStatus("error");
-      setError(err === "access_denied" ? "Access denied" : err);
+      setError(err === "access_denied" ? t("spotifyCallback.accessDenied") : err);
       setTimeout(() => navigate("/profile"), 2000);
       return;
     }
 
     if (!code) {
       setStatus("error");
-      setError("No authorization code received");
+      setError(t("spotifyCallback.noCode"));
       setTimeout(() => navigate("/profile"), 2000);
       return;
     }
@@ -43,7 +45,7 @@ const SpotifyCallback = () => {
       }
     }).catch(() => {
       setStatus("error");
-      setError("Connection failed");
+      setError(t("spotifyCallback.connectionFailed"));
       setTimeout(() => navigate("/profile"), 3000);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps -- esegui una sola volta al caricamento con ?code=
@@ -55,19 +57,19 @@ const SpotifyCallback = () => {
         {status === "loading" && (
           <>
             <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto mb-4" />
-            <p className="font-body text-foreground">Connecting Spotify…</p>
+            <p className="font-body text-foreground">{t("spotifyCallback.connecting")}</p>
           </>
         )}
         {status === "success" && (
           <>
             <CheckCircle className="w-8 h-8 text-primary mx-auto mb-4" />
-            <p className="font-body text-foreground">Connected! Redirecting…</p>
+            <p className="font-body text-foreground">{t("spotifyCallback.success")}</p>
           </>
         )}
         {status === "error" && (
           <>
             <XCircle className="w-8 h-8 text-destructive mx-auto mb-4" />
-            <p className="font-body text-foreground mb-1">Something went wrong</p>
+            <p className="font-body text-foreground mb-1">{t("spotifyCallback.error")}</p>
             <p className="text-xs text-muted-foreground font-body">{error}</p>
           </>
         )}

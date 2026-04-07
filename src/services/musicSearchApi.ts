@@ -5,6 +5,9 @@ export type MusicSearchMode = "search" | "lucky" | "memory_compact";
 
 export interface MusicSearchRequest {
   prompt?: string;
+  /** Base64 grezzo (senza prefisso data:) — usato con imageMimeType per vision */
+  imageBase64?: string;
+  imageMimeType?: string;
   descriptionLanguage?: string;
   mode?: MusicSearchMode;
   conversationMemory?: ConversationMemory | null;

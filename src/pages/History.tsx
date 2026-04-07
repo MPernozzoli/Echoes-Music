@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { useConversations } from "@/context/ConversationContext";
@@ -10,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const History = () => {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { conversations, deleteConversation, selectConversation } = useConversations();
   const { listenHistory, clearListenHistory } = useApp();
@@ -50,30 +52,28 @@ const History = () => {
       <div className="max-w-3xl mx-auto px-4 md:px-6 py-8 pb-20 md:pb-8">
         <Tabs defaultValue="chats" className="w-full">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-            <h1 className="font-display text-3xl font-bold">Storico</h1>
+            <h1 className="font-display text-3xl font-bold">{t("history.title")}</h1>
             <TabsList className="w-full sm:w-auto shrink-0">
               <TabsTrigger value="chats" className="gap-2 flex-1 sm:flex-initial">
                 <MessageSquare className="w-4 h-4" />
-                Chat
+                {t("history.tabChats")}
               </TabsTrigger>
               <TabsTrigger value="listens" className="gap-2 flex-1 sm:flex-initial">
                 <Headphones className="w-4 h-4" />
-                Ascolti
+                {t("history.tabListens")}
               </TabsTrigger>
             </TabsList>
           </div>
 
           <TabsContent value="chats" className="mt-0">
-            <p className="text-muted-foreground font-body text-sm mb-8">
-              Ogni conversazione ha la propria memoria emotiva; il profilo globale si affina con l&apos;uso.
-            </p>
+            <p className="text-muted-foreground font-body text-sm mb-8">{t("history.chatsHint")}</p>
 
             {sorted.length === 0 ? (
               <div className="text-center py-20">
                 <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground font-body">Nessuna chat ancora. Apri la chat musicale.</p>
+                <p className="text-muted-foreground font-body">{t("history.emptyChats")}</p>
                 <Button className="mt-6" variant="outline" onClick={() => navigate("/chat")}>
-                  Vai alla chat
+                  {t("history.goToChat")}
                 </Button>
               </div>
             ) : (
@@ -103,13 +103,13 @@ const History = () => {
                         </div>
                         <p className="text-xs text-muted-foreground font-body line-clamp-2 pl-6">{preview}</p>
                         <p className="text-xs text-muted-foreground font-body mt-2 pl-6">
-                          {new Date(c.updatedAt).toLocaleDateString("it-IT", {
+                          {new Date(c.updatedAt).toLocaleDateString(i18n.language, {
                             day: "numeric",
                             month: "long",
                             year: "numeric",
                           })}
                           {" · "}
-                          {c.messages.length} messaggi
+                          {t("history.messageCount", { count: c.messages.length })}
                         </p>
                         {c.conversationMemory?.standardAxes.dominantThemes &&
                           c.conversationMemory.standardAxes.dominantThemes.length > 0 && (
@@ -133,7 +133,7 @@ const History = () => {
                             navigate(`/chat?conversation=${c.id}`);
                           }}
                           className="p-2 rounded-lg text-muted-foreground hover:text-primary transition-colors"
-                          aria-label="Apri chat"
+                          aria-label={t("history.openChat")}
                         >
                           <ArrowRight className="w-4 h-4" />
                         </button>
@@ -141,7 +141,7 @@ const History = () => {
                           type="button"
                           onClick={() => deleteConversation(c.id)}
                           className="p-2 rounded-lg text-muted-foreground hover:text-destructive transition-colors"
-                          aria-label="Elimina chat"
+                          aria-label={t("history.deleteChat")}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -155,13 +155,10 @@ const History = () => {
 
           <TabsContent value="listens" className="mt-0">
             <div className="flex items-center justify-between gap-2 mb-8">
-              <p className="text-muted-foreground font-body text-sm flex-1">
-                Brani avviati da play (anteprima o Apple Music in app). Da qui riapri la chat che ha generato il
-                risultato.
-              </p>
+              <p className="text-muted-foreground font-body text-sm flex-1">{t("history.listensHint")}</p>
               {sortedListens.length > 0 && (
                 <Button variant="ghost" size="sm" className="shrink-0 text-muted-foreground" onClick={clearListenHistory}>
-                  Svuota
+                  {t("history.clearListens")}
                 </Button>
               )}
             </div>
@@ -169,9 +166,9 @@ const History = () => {
             {sortedListens.length === 0 ? (
               <div className="text-center py-20">
                 <Headphones className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground font-body">Nessun ascolto registrato. Premi play dalla chat.</p>
+                <p className="text-muted-foreground font-body">{t("history.emptyListens")}</p>
                 <Button className="mt-6" variant="outline" onClick={() => navigate("/chat")}>
-                  Vai alla chat
+                  {t("history.goToChat")}
                 </Button>
               </div>
             ) : (
@@ -179,7 +176,7 @@ const History = () => {
                 {sortedListens.map((e, i) => {
                   const chatExists = conversations.some((c) => c.id === e.conversationId);
                   const chatLabel =
-                    conversations.find((c) => c.id === e.conversationId)?.title ?? e.chatTitle ?? "Chat";
+                    conversations.find((c) => c.id === e.conversationId)?.title ?? e.chatTitle ?? t("history.chatLabel");
                   return (
                     <li
                       key={e.id}
@@ -199,13 +196,13 @@ const History = () => {
                           {e.song.artist} · {e.song.album}
                         </p>
                         <p className="text-[10px] text-muted-foreground font-body mt-1 truncate" title={chatLabel}>
-                          Chat: {chatLabel}
+                          {t("history.chatWithTitle", { title: chatLabel })}
                         </p>
                         <p className="text-[11px] text-muted-foreground font-body mt-0.5 line-clamp-1">
-                          Da: &quot;{e.prompt}&quot;
+                          {t("history.fromQuote", { prompt: e.prompt })}
                         </p>
                         <p className="text-[10px] text-muted-foreground font-body mt-0.5">
-                          {new Date(e.listenedAt).toLocaleString("it-IT", {
+                          {new Date(e.listenedAt).toLocaleString(i18n.language, {
                             day: "numeric",
                             month: "short",
                             hour: "2-digit",
@@ -220,10 +217,10 @@ const History = () => {
                           size="sm"
                           className="gap-1"
                           onClick={() => replayFromHistory(e)}
-                          title="Riproduci di nuovo"
+                          title={t("history.playAgain")}
                         >
                           <Play className="w-3.5 h-3.5" />
-                          Play
+                          {t("history.play")}
                         </Button>
                         <Button
                           type="button"
@@ -236,10 +233,10 @@ const History = () => {
                             selectConversation(e.conversationId);
                             navigate(`/chat?conversation=${encodeURIComponent(e.conversationId)}`);
                           }}
-                          title={!chatExists ? "Chat eliminata" : undefined}
+                          title={!chatExists ? t("history.chatDeleted") : undefined}
                         >
                           <MessageSquare className="w-3.5 h-3.5" />
-                          Chat
+                          {t("nav.chat")}
                         </Button>
                       </div>
                     </li>

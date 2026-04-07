@@ -1,23 +1,24 @@
 import { Link, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { MessageSquare, Clock, Heart, User, Home } from "lucide-react";
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
-const navItems = [
-  { label: "Chat", path: "/chat", icon: MessageSquare },
-  { label: "Storico", path: "/history", icon: Clock },
-  { label: "Favorites", path: "/favorites", icon: Heart },
-  { label: "Profile", path: "/profile", icon: User },
-];
-
 const AppLayout = ({ children }: AppLayoutProps) => {
   const location = useLocation();
+  const { t } = useTranslation();
+
+  const navItems = [
+    { labelKey: "nav.chat", path: "/chat", icon: MessageSquare },
+    { labelKey: "nav.history", path: "/history", icon: Clock },
+    { labelKey: "nav.favorites", path: "/favorites", icon: Heart },
+    { labelKey: "nav.profile", path: "/profile", icon: User },
+  ] as const;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Top nav */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="max-w-6xl mx-auto px-4 md:px-6 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
@@ -41,7 +42,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
                   }`}
                 >
                   <item.icon className="w-4 h-4" />
-                  {item.label}
+                  {t(item.labelKey)}
                 </Link>
               );
             })}
@@ -49,10 +50,8 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         </div>
       </header>
 
-      {/* Main content */}
       <main className="flex-1">{children}</main>
 
-      {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-border bg-background/90 backdrop-blur-xl">
         <div className="flex items-center justify-around h-14">
           {navItems.map((item) => {
@@ -66,7 +65,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
                 }`}
               >
                 <item.icon className="w-5 h-5" />
-                {item.label}
+                {t(item.labelKey)}
               </Link>
             );
           })}

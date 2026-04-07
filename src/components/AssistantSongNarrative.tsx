@@ -15,7 +15,6 @@ function spotifyTrackIdFromSong(song: Song): string | undefined {
   return u.replace(/^spotify:track:/i, "");
 }
 
-/** Quando manca narrativeReply dal modello (messaggi vecchi o errore). */
 export function fallbackNarrativeForResult(
   prompt: string,
   profile: EmotionalProfile,
@@ -27,7 +26,7 @@ export function fallbackNarrativeForResult(
 
   if (opts.lucky) {
     return [
-      `Ho messo insieme ${opts.songCount} brani come piccola “radiografia” del tuo gusto: un punto di partenza più centrale e qualche scoperta nello stesso quartiere emotivo.`,
+      `Ho messo insieme ${opts.songCount} brani come piccola "radiografia" del tuo gusto: un punto di partenza più centrale e qualche scoperta nello stesso quartiere emotivo.`,
       themeHint ? ` Temi che ricorrono: ${themeHint}.` : "",
       ` Il filo: ${moodClip(mood, 240)}`,
       ` I titoli sono qui sotto: apri ognuno per la scheda con la spiegazione sul singolo brano e i comandi per ascoltare o mettere in coda.`,
@@ -36,9 +35,9 @@ export function fallbackNarrativeForResult(
 
   return [
     `Ho cercato di tradurre «${prompt}» in un arco musicale coerente.`,
-    ` L’impasto emotivo: ${moodClip(mood, 260)}`,
+    ` L'impasto emotivo: ${moodClip(mood, 260)}`,
     themeHint ? ` Temi: ${themeHint}.` : "",
-    ` Scorri i brani qui sotto — in ogni titolo trovi perché quel pezzo c’entra e cosa puoi farci.`,
+    ` Scorri i brani qui sotto — in ogni titolo trovi perché quel pezzo c'entra e cosa puoi farci.`,
   ].join("");
 }
 
@@ -56,7 +55,6 @@ interface SongLinkPopoverProps {
   isFavorite: (id: string) => boolean;
   toggleFavorite: (song: Song) => void;
   tracking?: { searchId: string; resultIdsBySongId: Record<string, string> };
-  triggerVariant?: "link" | "chip";
 }
 
 function SongLinkPopover({
@@ -73,7 +71,6 @@ function SongLinkPopover({
   isFavorite,
   toggleFavorite,
   tracking,
-  triggerVariant = "link",
 }: SongLinkPopoverProps) {
   const [open, setOpen] = useState(false);
   const isCurrent = queue[currentIndex]?.id === song.id;
@@ -92,94 +89,121 @@ function SongLinkPopover({
     }
   };
 
-  const triggerClass =
-    triggerVariant === "chip"
-      ? cn(
-          "rounded-full border border-primary/30 bg-primary/8 px-2.5 py-1 text-xs font-body font-medium text-primary",
-          "hover:bg-primary/15 hover:border-primary/45 transition-colors",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-        )
-      : cn(
-          "inline font-medium text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-sm"
-        );
-
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button type="button" className={triggerClass}>
-          {triggerVariant === "chip" ? (
-            <span className="max-w-[14rem] truncate inline-block align-bottom">{song.title}</span>
+        <button
+          type="button"
+          className={cn(
+            "group inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-body font-medium transition-all duration-200",
+            "border-border/50 bg-card/60 text-foreground/85 shadow-[0_1px_2px_rgba(0,0,0,0.04)]",
+            "hover:border-primary/40 hover:bg-primary/[0.06] hover:text-foreground hover:shadow-sm",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+            playingHere && "border-primary/50 bg-primary/10 text-primary ring-1 ring-primary/20"
+          )}
+        >
+          {song.artwork ? (
+            <img
+              src={song.artwork}
+              alt=""
+              className="w-5 h-5 rounded-md object-cover shrink-0"
+            />
           ) : (
-            <>«{song.title}»</>
+            <div className="w-5 h-5 rounded-md bg-primary/10 shrink-0" />
+          )}
+          <span className="max-w-[12rem] truncate">{song.title}</span>
+          {playingHere && (
+            <span className="flex gap-0.5 items-end h-3 shrink-0" aria-label="In riproduzione">
+              <span className="w-0.5 h-2 bg-primary rounded-full animate-pulse" />
+              <span className="w-0.5 h-3 bg-primary rounded-full animate-pulse [animation-delay:150ms]" />
+              <span className="w-0.5 h-1.5 bg-primary rounded-full animate-pulse [animation-delay:300ms]" />
+            </span>
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-[min(100vw-2rem,20rem)] p-3" align="start" side="top">
-        <div className="space-y-3">
-          <div>
-            <p className="font-display text-sm font-semibold text-foreground leading-tight">{song.title}</p>
-            <p className="text-xs text-muted-foreground font-body truncate">{song.artist}</p>
-            <p className="text-[11px] text-muted-foreground font-body mt-1.5 leading-relaxed">{song.explanation}</p>
+      <PopoverContent
+        className="w-[min(100vw-1.5rem,22rem)] p-0 overflow-hidden rounded-2xl border border-border/60 shadow-xl"
+        align="start"
+        side="top"
+        sideOffset={8}
+      >
+        <div className="flex items-start gap-3 p-3.5 pb-3 bg-gradient-to-br from-card via-card to-primary/[0.03]">
+          {song.artwork ? (
+            <img
+              src={song.artwork}
+              alt=""
+              className="w-14 h-14 rounded-xl object-cover shrink-0 shadow-sm ring-1 ring-border/40"
+            />
+          ) : (
+            <div className="w-14 h-14 rounded-xl bg-primary/10 shrink-0" />
+          )}
+          <div className="flex-1 min-w-0 pt-0.5">
+            <p className="font-display text-sm font-semibold text-foreground leading-tight truncate">{song.title}</p>
+            <p className="text-xs text-muted-foreground font-body truncate mt-0.5">{song.artist}</p>
             <div className="flex flex-wrap gap-1 mt-2">
-              {song.emotionalTags.slice(0, 5).map((t) => (
-                <span key={t} className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-body">
+              {song.emotionalTags.slice(0, 4).map((t) => (
+                <span key={t} className="text-[10px] px-1.5 py-0.5 rounded-md bg-primary/8 text-primary/80 font-body font-medium">
                   {t}
                 </span>
               ))}
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              className="gap-1.5 font-body h-8"
-              onClick={() => {
-                if (playingHere) requestPlaybackToggle();
-                else playTrackFromResult(allSongs, songIndex, source);
-              }}
-            >
-              {playingHere ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-              {playingHere ? "Pausa" : "Play"}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="gap-1.5 font-body h-8"
-              onClick={() => appendToQueue([song], source)}
-            >
-              <ListPlus className="w-3.5 h-3.5" />
-              In coda
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              className="gap-1.5 font-body h-8"
-              onClick={() => insertAfterCurrent([song], source)}
-            >
-              <SkipForward className="w-3.5 h-3.5" />
-              Successivo
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={fav ? "default" : "outline"}
-              className="gap-1.5 font-body h-8 px-2.5"
-              onClick={onHeart}
-              aria-pressed={fav}
-            >
-              <Heart className={cn("w-3.5 h-3.5", fav && "fill-current")} />
-            </Button>
-          </div>
-          <StreamingLibraryActions
-            spotifyTrackId={spotifyTrackIdFromSong(song)}
-            appleMusicTrackId={song.appleMusicId}
-            compact
-            className="w-full border-t border-border/50 pt-2"
-          />
         </div>
+        {song.explanation && (
+          <p className="px-3.5 py-2.5 text-[11px] text-muted-foreground font-body leading-relaxed border-t border-border/30 bg-card/50">
+            {song.explanation}
+          </p>
+        )}
+        <div className="flex flex-wrap gap-1.5 px-3.5 py-3 border-t border-border/30">
+          <Button
+            type="button"
+            size="sm"
+            className="gap-1.5 font-body h-7 text-xs rounded-lg"
+            onClick={() => {
+              if (playingHere) requestPlaybackToggle();
+              else playTrackFromResult(allSongs, songIndex, source);
+            }}
+          >
+            {playingHere ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+            {playingHere ? "Pausa" : "Play"}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="gap-1.5 font-body h-7 text-xs rounded-lg"
+            onClick={() => appendToQueue([song], source)}
+          >
+            <ListPlus className="w-3 h-3" />
+            In coda
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="gap-1.5 font-body h-7 text-xs rounded-lg"
+            onClick={() => insertAfterCurrent([song], source)}
+          >
+            <SkipForward className="w-3 h-3" />
+            Dopo
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className={cn("gap-1 font-body h-7 text-xs rounded-lg px-2", fav && "text-primary")}
+            onClick={onHeart}
+            aria-pressed={fav}
+          >
+            <Heart className={cn("w-3 h-3", fav && "fill-current")} />
+          </Button>
+        </div>
+        <StreamingLibraryActions
+          spotifyTrackId={spotifyTrackIdFromSong(song)}
+          appleMusicTrackId={song.appleMusicId}
+          compact
+          className="w-full border-t border-border/30 px-3.5 py-2"
+        />
       </PopoverContent>
     </Popover>
   );
@@ -216,37 +240,34 @@ export function AssistantSongNarrative({
   tracking,
   className,
 }: AssistantSongNarrativeProps) {
-  const chips: ReactNode[] = [];
-  songs.forEach((song, index) => {
-    if (index > 0) chips.push(<span key={`sep-${song.id}`} className="text-muted-foreground text-xs px-0.5 select-none" aria-hidden>·</span>);
-    chips.push(
-      <SongLinkPopover
-        key={song.id}
-        song={song}
-        songIndex={index}
-        allSongs={songs}
-        source={source}
-        queue={queue}
-        currentIndex={currentIndex}
-        isGloballyPlaying={isGloballyPlaying}
-        playTrackFromResult={playTrackFromResult}
-        appendToQueue={appendToQueue}
-        insertAfterCurrent={insertAfterCurrent}
-        isFavorite={isFavorite}
-        toggleFavorite={toggleFavorite}
-        tracking={tracking}
-        triggerVariant="chip"
-      />
-    );
-  });
+  const chips: ReactNode[] = songs.map((song, index) => (
+    <SongLinkPopover
+      key={song.id}
+      song={song}
+      songIndex={index}
+      allSongs={songs}
+      source={source}
+      queue={queue}
+      currentIndex={currentIndex}
+      isGloballyPlaying={isGloballyPlaying}
+      playTrackFromResult={playTrackFromResult}
+      appendToQueue={appendToQueue}
+      insertAfterCurrent={insertAfterCurrent}
+      isFavorite={isFavorite}
+      toggleFavorite={toggleFavorite}
+      tracking={tracking}
+    />
+  ));
 
   return (
-    <div className={cn("space-y-3", className)}>
-      <p className="text-sm font-body text-foreground/95 leading-relaxed whitespace-pre-line">{narrative}</p>
+    <div className={cn("space-y-3.5", className)}>
+      <p className="text-[13px] font-body text-foreground/90 leading-[1.7] whitespace-pre-line">{narrative}</p>
       {songs.length > 0 && (
-        <div className="pt-2 border-t border-border/35">
-          <p className="text-[10px] font-body uppercase tracking-wider text-muted-foreground mb-2">Brani</p>
-          <div className="flex flex-wrap gap-y-2 gap-x-0.5 items-center">{chips}</div>
+        <div className="pt-3 border-t border-border/25">
+          <p className="text-[10px] font-body uppercase tracking-[0.12em] text-muted-foreground/60 mb-2.5 font-medium">
+            Brani selezionati
+          </p>
+          <div className="flex flex-wrap gap-1.5">{chips}</div>
         </div>
       )}
     </div>

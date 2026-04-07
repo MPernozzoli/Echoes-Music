@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { Sparkles, Clock, ListMusic, Headphones, Play, MessageSquare } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,7 @@ interface DiscoverDockPanelActionsProps {
 }
 
 const popoverContentClass =
-  "w-[min(100vw-1.5rem,22rem)] max-h-[min(72vh,30rem)] overflow-y-auto border-zinc-700 bg-zinc-950 p-0 text-zinc-100 shadow-2xl";
+  "w-[min(100vw-1.5rem,22rem)] max-h-[min(72vh,30rem)] overflow-y-auto border border-border bg-popover p-0 text-popover-foreground shadow-2xl";
 
 export function DiscoverDockPanelActions({
   dockPopover,
@@ -48,6 +49,7 @@ export function DiscoverDockPanelActions({
   onReplayHistoryEntry,
   onOpenHistoryChat,
 }: DiscoverDockPanelActionsProps) {
+  const { t, i18n } = useTranslation();
   const sortedListens = [...listenHistory].sort(
     (a, b) => new Date(b.listenedAt).getTime() - new Date(a.listenedAt).getTime()
   );
@@ -63,7 +65,7 @@ export function DiscoverDockPanelActions({
           <button
             type="button"
             className={cn(DOCK_ICON_BTN, !currentResult && "opacity-40 pointer-events-none")}
-            title="Profilo emotivo"
+            title={t("dock.emotionalProfile")}
             disabled={!currentResult}
           >
             <Sparkles className="w-4 h-4" />
@@ -72,19 +74,19 @@ export function DiscoverDockPanelActions({
         <PopoverContent side="top" align="end" sideOffset={10} className={popoverContentClass}>
           {currentResult && tagSong && (
             <div className="p-4 space-y-3">
-              <p className="text-xs font-body text-zinc-500 uppercase tracking-wider">Profilo emotivo</p>
+              <p className="text-xs font-body text-muted-foreground uppercase tracking-wider">{t("dock.emotionalProfile")}</p>
               <EmotionalProfileCard profile={currentResult.emotionalProfile} />
-              <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3">
+              <div className="rounded-xl border border-border bg-muted/40 p-3">
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xs font-body text-[hsl(141,73%,48%)] font-medium px-2 py-0.5 rounded-full bg-[hsl(141,73%,48%)]/15">
-                    {tagSong.relevanceScore}% match
+                    {t("chat.matchLabel", { score: tagSong.relevanceScore })}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {tagSong.emotionalTags.map((tag) => (
                     <span
                       key={tag}
-                      className="text-xs px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 font-body"
+                      className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-body"
                     >
                       {tag}
                     </span>
@@ -98,26 +100,26 @@ export function DiscoverDockPanelActions({
 
       <Popover open={dockPopover === "history"} onOpenChange={panelOpenChange("history")}>
         <PopoverTrigger asChild>
-          <button type="button" className={DOCK_ICON_BTN} title="Cronologia ascolti">
+          <button type="button" className={DOCK_ICON_BTN} title={t("dock.listenHistory")}>
             <Clock className="w-4 h-4" />
           </button>
         </PopoverTrigger>
         <PopoverContent side="top" align="end" sideOffset={10} className={popoverContentClass}>
-          <div className="p-3 border-b border-zinc-800 flex items-center justify-between gap-2">
+          <div className="p-3 border-b border-border flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
-              <Headphones className="w-4 h-4 text-zinc-500 shrink-0" />
-              <span className="text-sm font-body font-medium text-white truncate">Cronologia ascolti</span>
+              <Headphones className="w-4 h-4 text-muted-foreground shrink-0" />
+              <span className="text-sm font-body font-medium text-foreground truncate">{t("dock.listenHistory")}</span>
             </div>
-            <Button variant="ghost" size="sm" className="text-xs h-8 shrink-0 text-zinc-400 hover:text-white" asChild>
+            <Button variant="ghost" size="sm" className="text-xs h-8 shrink-0 text-muted-foreground hover:text-foreground" asChild>
               <Link to="/history" onClick={() => setDockPopover(null)}>
-                Tutto
+                {t("dock.seeAll")}
               </Link>
             </Button>
           </div>
           <div className="p-2 max-h-[min(60vh,22rem)] overflow-y-auto">
             {sortedListens.length === 0 ? (
-              <p className="text-xs text-zinc-500 font-body text-center py-8 px-2">
-                Nessun ascolto registrato. Avvia la riproduzione dalla chat.
+              <p className="text-xs text-muted-foreground font-body text-center py-8 px-2">
+                {t("dock.listenEmpty")}
               </p>
             ) : (
               <ul className="space-y-1">
@@ -126,21 +128,21 @@ export function DiscoverDockPanelActions({
                   return (
                     <li
                       key={e.id}
-                      className="flex gap-2 rounded-lg p-2 hover:bg-zinc-900/90 transition-colors text-left items-center"
+                      className="flex gap-2 rounded-lg p-2 hover:bg-muted/80 transition-colors text-left items-center"
                     >
                       <img
                         src={e.song.artwork}
                         alt=""
-                        className="w-10 h-10 rounded-md object-cover bg-zinc-800 shrink-0"
+                        className="w-10 h-10 rounded-md object-cover bg-muted shrink-0"
                         width={40}
                         height={40}
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium text-white truncate font-body">{e.song.title}</p>
-                        <p className="text-[11px] text-zinc-500 truncate font-body">{e.song.artist}</p>
-                        <p className="text-[10px] text-zinc-600 truncate font-body mt-0.5">&quot;{e.prompt}&quot;</p>
-                        <p className="text-[10px] text-zinc-600 font-body tabular-nums mt-0.5">
-                          {new Date(e.listenedAt).toLocaleString("it-IT", {
+                        <p className="text-xs font-medium text-foreground truncate font-body">{e.song.title}</p>
+                        <p className="text-[11px] text-muted-foreground truncate font-body">{e.song.artist}</p>
+                        <p className="text-[10px] text-muted-foreground/80 truncate font-body mt-0.5">&quot;{e.prompt}&quot;</p>
+                        <p className="text-[10px] text-muted-foreground font-body tabular-nums mt-0.5">
+                          {new Date(e.listenedAt).toLocaleString(i18n.language, {
                             day: "numeric",
                             month: "short",
                             hour: "2-digit",
@@ -151,22 +153,22 @@ export function DiscoverDockPanelActions({
                       <div className="flex flex-col gap-1 shrink-0">
                         <button
                           type="button"
-                          title="Riproduci"
+                          title={t("dock.replay")}
                           onClick={() => onReplayHistoryEntry(e)}
-                          className="p-1.5 rounded-lg text-zinc-500 hover:text-[hsl(141,73%,52%)] hover:bg-zinc-800/80 transition-colors"
+                          className="p-1.5 rounded-lg text-muted-foreground hover:text-[hsl(141,73%,52%)] hover:bg-muted transition-colors"
                         >
                           <Play className="w-4 h-4 fill-current" />
                         </button>
                         <button
                           type="button"
-                          title={chatOk ? "Apri chat" : "Chat non disponibile"}
+                          title={chatOk ? t("dock.openChat") : t("dock.chatUnavailable")}
                           disabled={!chatOk}
                           onClick={() => chatOk && onOpenHistoryChat(e)}
                           className={cn(
                             "p-1.5 rounded-lg transition-colors",
                             chatOk
-                              ? "text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800/80"
-                              : "text-zinc-700 cursor-not-allowed"
+                              ? "text-muted-foreground hover:text-foreground hover:bg-muted"
+                              : "text-muted-foreground/40 cursor-not-allowed"
                           )}
                         >
                           <MessageSquare className="w-4 h-4" />
@@ -186,16 +188,16 @@ export function DiscoverDockPanelActions({
           <button
             type="button"
             className={cn(DOCK_ICON_BTN, queue.length === 0 && "opacity-40 pointer-events-none")}
-            title="Coda"
+            title={t("dock.queue")}
             disabled={queue.length === 0}
           >
             <ListMusic className="w-4 h-4" />
           </button>
         </PopoverTrigger>
         <PopoverContent side="top" align="end" sideOffset={10} className={popoverContentClass}>
-          <div className="p-3 border-b border-zinc-800">
-            <p className="text-sm font-body font-medium text-white">Coda</p>
-            <p className="text-[11px] text-zinc-500 font-body">{queue.length} brani</p>
+          <div className="p-3 border-b border-border">
+            <p className="text-sm font-body font-medium text-foreground">{t("dock.queue")}</p>
+            <p className="text-[11px] text-muted-foreground font-body">{t("dock.queueCount", { count: queue.length })}</p>
           </div>
           <div className="p-2 max-h-[min(60vh,22rem)] overflow-y-auto">
             <TrackQueue

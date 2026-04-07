@@ -5,7 +5,57 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  .light {
+    --background: 40 28% 98%;
+    --foreground: 240 12% 14%;
+
+    --card: 40 22% 96%;
+    --card-foreground: 240 12% 14%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 12% 14%;
+
+    --primary: 32 88% 48%;
+    --primary-foreground: 40 30% 99%;
+
+    --secondary: 240 6% 94%;
+    --secondary-foreground: 240 10% 22%;
+
+    --muted: 240 8% 93%;
+    --muted-foreground: 240 6% 42%;
+
+    --accent: 35 55% 92%;
+    --accent-foreground: 240 12% 18%;
+
+    --destructive: 0 72% 48%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 8% 88%;
+    --input: 240 8% 90%;
+    --ring: 32 88% 48%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 40 25% 97%;
+    --sidebar-foreground: 240 10% 28%;
+    --sidebar-primary: 32 88% 48%;
+    --sidebar-primary-foreground: 40 30% 99%;
+    --sidebar-accent: 240 8% 92%;
+    --sidebar-accent-foreground: 240 10% 22%;
+    --sidebar-border: 240 8% 88%;
+    --sidebar-ring: 32 88% 48%;
+
+    --warm-glow: 32 88% 48%;
+    --warm-glow-muted: 35 45% 70%;
+    --surface-elevated: 0 0% 100%;
+    --surface-overlay: 40 22% 96%;
+    --text-subtle: 240 6% 48%;
+    --text-muted: 240 5% 52%;
+    --emotional-tag: 280 38% 42%;
+    --emotional-tag-foreground: 280 25% 98%;
+  }
+
+  .dark {
     --background: 240 10% 4%;
     --foreground: 40 20% 92%;
 
@@ -84,8 +134,19 @@
     background: linear-gradient(135deg, hsl(35 90% 55% / 0.15), hsl(280 40% 50% / 0.08));
   }
 
+  .light .gradient-warm {
+    background: linear-gradient(135deg, hsl(32 88% 48% / 0.12), hsl(280 38% 42% / 0.06));
+  }
+
   .gradient-warm-text {
     background: linear-gradient(135deg, hsl(35 90% 55%), hsl(40 80% 65%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .light .gradient-warm-text {
+    background: linear-gradient(135deg, hsl(32 88% 42%), hsl(28 75% 38%));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -95,14 +156,22 @@
     box-shadow: 0 0 40px hsl(35 90% 55% / 0.08), 0 0 80px hsl(35 90% 55% / 0.04);
   }
 
+  .light .glow-warm {
+    box-shadow: 0 0 32px hsl(32 88% 48% / 0.1), 0 0 64px hsl(32 88% 48% / 0.05);
+  }
+
   .glass-card {
-    background: hsl(240 8% 8% / 0.8);
+    background: hsl(var(--card) / 0.88);
     backdrop-filter: blur(20px);
-    border: 1px solid hsl(240 6% 16% / 0.6);
+    border: 1px solid hsl(var(--border) / 0.65);
   }
 
   .input-glow:focus-within {
     box-shadow: 0 0 0 1px hsl(35 90% 55% / 0.3), 0 0 20px hsl(35 90% 55% / 0.1);
+  }
+
+  .light .input-glow:focus-within {
+    box-shadow: 0 0 0 1px hsl(32 88% 48% / 0.35), 0 0 20px hsl(32 88% 48% / 0.12);
   }
 
   .animate-fade-up {
@@ -116,10 +185,39 @@
   .animate-pulse-soft {
     animation: pulseSoft 3s ease-in-out infinite;
   }
+
+  .animate-fade-slide-up {
+    animation: fadeSlideUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-fade-slide-down {
+    animation: fadeSlideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted) / 0.35) 25%,
+      hsl(var(--muted) / 0.55) 50%,
+      hsl(var(--muted) / 0.35) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s ease-in-out infinite;
+  }
 }
 
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeSlideDown {
+  from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -133,20 +231,24 @@
   50% { opacity: 1; }
 }
 
-/* Custom scrollbar */
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 ::-webkit-scrollbar {
   width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: hsl(240 10% 4%);
+  background: hsl(var(--muted) / 0.45);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(240 6% 20%);
+  background: hsl(var(--border));
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(240 6% 28%);
+  background: hsl(var(--muted-foreground) / 0.45);
 }
