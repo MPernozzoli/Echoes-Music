@@ -2,8 +2,9 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Play, Pause, SkipBack, SkipForward, Heart, Volume2, VolumeX, Info } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import type { Song } from "@/data/mockData";
-import { useSpotify } from "@/context/SpotifyContext";
 import { useAppleMusic } from "@/context/AppleMusicContext";
+import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
+import { AppleMusicTrackControls } from "@/components/AppleMusicTrackControls";
 
 interface FullPlayerProps {
   songs: Song[];
@@ -38,14 +39,15 @@ const FullPlayer = ({
   const [isMuted, setIsMuted] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
   const [useEmbed, setUseEmbed] = useState(false);
-  const spotify = useSpotify();
   const appleMusic = useAppleMusic();
+  const playbackMode = useStreamingPlaybackMode();
 
   // Determine playback source
   const previewUrl = song?.previewUrl;
   const spotifyTrackId = song?.spotifyUri?.replace("spotify:track:", "");
   const appleMusicId = song?.appleMusicId;
-  const canPlayNative = !!previewUrl;
+  const useApplePlayback =
+    playbackMode === "apple" && !!appleMusicId && appleMusic.isAvailable;
 
   // Reset state when song changes
   useEffect(() => {
@@ -58,6 +60,10 @@ const FullPlayer = ({
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.src = "";
+    }
+
+    if (useApplePlayback) {
+      return;
     }
 
     if (previewUrl) {
@@ -85,7 +91,7 @@ const FullPlayer = ({
       // No preview URL, use embed
       setUseEmbed(true);
     }
-  }, [song?.id]);
+  }, [song?.id, previewUrl, useApplePlayback]);
 
   // Volume sync
   useEffect(() => {
@@ -169,8 +175,31 @@ const FullPlayer = ({
         {song.explanation}
       </p>
 
+      {/* Apple Music (utente con MusicKit autorizzato) */}
+      {useApplePlayback && appleMusicId && (
+        <div className="w-full px-2 mb-4 space-y-3">
+          <AppleMusicTrackControls trackId={appleMusicId} trackKey={song.id} />
+          <div className="flex items-center justify-center gap-6">
+            <button
+              onClick={handlePrev}
+              disabled={currentIndex === 0}
+              className="p-2 rounded-full text-foreground hover:bg-muted transition-colors disabled:opacity-30"
+            >
+              <SkipBack className="w-5 h-5" />
+            </button>
+            <button
+              onClick={handleNext}
+              disabled={currentIndex === songs.length - 1}
+              className="p-2 rounded-full text-foreground hover:bg-muted transition-colors disabled:opacity-30"
+            >
+              <SkipForward className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Native audio controls */}
-      {!useEmbed && (
+      {!useApplePlayback && !useEmbed && (
         <>
           {/* Progress bar */}
           <div className="w-full px-2 mb-2">
@@ -240,8 +269,8 @@ const FullPlayer = ({
         </>
       )}
 
-      {/* Fallback: Spotify embed */}
-      {useEmbed && spotifyTrackId && (
+      {/* Fallback: Spotify embed (ospite o account Spotify) */}
+      {!useApplePlayback && useEmbed && spotifyTrackId && (
         <div className="w-full px-2 mt-2">
           <iframe
             src={`https://open.spotify.com/embed/track/${spotifyTrackId}?utm_source=generator&theme=0`}
@@ -266,7 +295,7 @@ const FullPlayer = ({
       )}
 
       {/* Fallback: no preview and no spotify */}
-      {useEmbed && !spotifyTrackId && (
+      {!useApplePlayback && useEmbed && !spotifyTrackId && (
         <div className="w-full px-2 mt-2 text-center">
           <p className="text-xs text-muted-foreground font-body py-4">
             Preview not available for this track
