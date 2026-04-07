@@ -15,6 +15,8 @@ export interface MusicSearchRequest {
 export interface MusicSearchResponse {
   emotionalProfile?: EmotionalProfile;
   songs?: Song[];
+  /** Risposta discorsiva; i titoli devono essere tra « » come in songSuggestions */
+  narrativeReply?: string;
   adjacentInterpretations?: string[];
   conversationMemoryUpdate?: {
     threadSummary?: string;

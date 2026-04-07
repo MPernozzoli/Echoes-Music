@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
+import { setPlaybackToggleHandler } from "@/lib/playbackToggleBridge";
 import { toast } from "sonner";
 import { Play, Pause, SkipBack, SkipForward, Heart, Volume2, VolumeX, Info } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
@@ -253,6 +254,52 @@ const FullPlayer = ({
     onChangeIndex(currentIndex + 1);
   }, [currentIndex, songs.length, onChangeIndex]);
 
+  const onDockPlayPause = useCallback(() => {
+    const s = songs[currentIndex];
+    if (!s) return;
+    const sp = s.spotifyUri?.replace("spotify:track:", "");
+    const am = s.appleMusicId;
+    const embedOnly =
+      isDock &&
+      ((!useApplePlayback && useEmbed && Boolean(sp)) ||
+        (useApplePlayback && Boolean(am) && !(appleMusic.isAuthorized && appleMusic.isAvailable)));
+    if (embedOnly) {
+      if (sp) window.open(`https://open.spotify.com/track/${sp}`, "_blank", "noopener,noreferrer");
+      else if (am) window.open(`https://music.apple.com/us/song/${am}`, "_blank", "noopener,noreferrer");
+      return;
+    }
+    if (useAppleKitPlayer) void kitPlayerRef.current?.togglePlay();
+    else void togglePlay();
+  }, [
+    songs,
+    currentIndex,
+    isDock,
+    useApplePlayback,
+    useEmbed,
+    useAppleKitPlayer,
+    appleMusic.isAuthorized,
+    appleMusic.isAvailable,
+    togglePlay,
+  ]);
+
+  const toggleGlobalPlayback = useCallback(() => {
+    if (isDock) onDockPlayPause();
+    else {
+      if (useAppleKitPlayer) void kitPlayerRef.current?.togglePlay();
+      else void togglePlay();
+    }
+  }, [isDock, onDockPlayPause, useAppleKitPlayer, togglePlay]);
+
+  useEffect(() => {
+    const s = songs[currentIndex];
+    if (!s) {
+      setPlaybackToggleHandler(null);
+      return;
+    }
+    setPlaybackToggleHandler(() => () => toggleGlobalPlayback());
+    return () => setPlaybackToggleHandler(null);
+  }, [songs, currentIndex, toggleGlobalPlayback]);
+
   if (!song) return null;
 
   const fav = isFavorite(song.id);
@@ -281,15 +328,6 @@ const FullPlayer = ({
       audioRef.current.currentTime = seconds;
       setCurrentTime(seconds);
     }
-  };
-
-  const onDockPlayPause = () => {
-    if (embedOnlyDock) {
-      openExternalStream();
-      return;
-    }
-    if (useAppleKitPlayer) void kitPlayerRef.current?.togglePlay();
-    else void togglePlay();
   };
 
   const dockSeekDisabled =

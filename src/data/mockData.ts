@@ -16,6 +16,12 @@ export interface Song {
   previewUrl?: string;
 }
 
+/** Dopo trackSearch/trackResults, per feedback sui singoli brani */
+export interface SearchResultTracking {
+  searchId: string;
+  resultIdsBySongId: Record<string, string>;
+}
+
 export interface SearchResult {
   id: string;
   prompt: string;
@@ -23,6 +29,9 @@ export interface SearchResult {
   emotionalProfile: EmotionalProfile;
   songs: Song[];
   adjacentInterpretations: string[];
+  /** Testo dell’assistente con titoli tra « » collegati ai brani */
+  narrativeReply?: string;
+  tracking?: SearchResultTracking;
   /** pick = lista con azioni coda; inline = avviata subito in coda globale */
   playbackPresentation?: "pick" | "inline";
 }

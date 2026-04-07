@@ -73,6 +73,11 @@ interface ConversationState {
   renameConversation: (id: string, title: string) => void;
   appendUserMessage: (conversationId: string, text: string) => void;
   appendAssistantResult: (conversationId: string, result: SearchResult) => void;
+  patchSearchResultTracking: (
+    conversationId: string,
+    searchResultId: string,
+    tracking: NonNullable<SearchResult["tracking"]>
+  ) => void;
   setConversationMemory: (conversationId: string, memory: ConversationMemory | null) => void;
   mergeConversationMemoryFromUpdate: (
     conversationId: string,
@@ -178,6 +183,27 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
     );
   }, []);
 
+  const patchSearchResultTracking = useCallback(
+    (conversationId: string, searchResultId: string, tracking: NonNullable<SearchResult["tracking"]>) => {
+      setConversations((prev) =>
+        prev.map((c) => {
+          if (c.id !== conversationId) return c;
+          return {
+            ...c,
+            messages: c.messages.map((m) => {
+              if (m.role !== "assistant" || m.searchResult.id !== searchResultId) return m;
+              return {
+                ...m,
+                searchResult: { ...m.searchResult, tracking },
+              };
+            }),
+          };
+        })
+      );
+    },
+    []
+  );
+
   const setConversationMemory = useCallback((conversationId: string, memory: ConversationMemory | null) => {
     setConversations((prev) =>
       prev.map((c) => (c.id === conversationId ? { ...c, conversationMemory: memory } : c))
@@ -217,6 +243,7 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
       renameConversation,
       appendUserMessage,
       appendAssistantResult,
+      patchSearchResultTracking,
       setConversationMemory,
       mergeConversationMemoryFromUpdate,
       mergeUserTasteFromUpdate,
@@ -232,6 +259,7 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
       renameConversation,
       appendUserMessage,
       appendAssistantResult,
+      patchSearchResultTracking,
       setConversationMemory,
       mergeConversationMemoryFromUpdate,
       mergeUserTasteFromUpdate,

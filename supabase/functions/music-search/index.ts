@@ -181,6 +181,8 @@ interface AIInterpretation {
     catharsis: string;
     emotionalTension: string;
   };
+  /** 2–6 frasi: argomenta le scelte citando OGNI brano con il titolo esatto tra « e » (es. «Let It Go»). */
+  narrativeReply: string;
   searchQueries: string[];
   adjacentInterpretations: string[];
   songSuggestions: Array<{ title: string; artist: string; emotionalTags: string[]; explanation: string; relevanceScore: number }>;
@@ -259,8 +261,9 @@ Given the user's message:
 2. Create an emotional profile analyzing themes, mood, energy, intimacy, catharsis, and emotional tension (rich text for UI).
 3. Generate 4-5 highly specific search queries optimized for Spotify/Apple Music search (use "artist name - song title" format when possible, or genre/mood keywords).
 4. Suggest 6-8 specific REAL songs with correct artists. Prioritize songs whose LYRICS match the user's intent. For each: emotional tags (3 words), a poetic explanation connecting the song's actual lyrical content to the prompt (1-2 sentences), and relevance score (0-100).
-5. Generate 2-3 adjacent interpretations — creative alternative readings of the prompt (or of the lucky pick).
-6. Fill conversationMemoryUpdate and userTasteProfileUpdate as described.
+5. Write **narrativeReply**: 2-6 sentences in the same language as the user. Argue organically why this set fits the prompt; weave in emotions and themes. You MUST mention **every** song from songSuggestions at least once using its **exact title** wrapped in French quotation marks « and » (example: «Circle of Life»). Do not use bullet lists.
+6. Generate 2-3 adjacent interpretations — creative alternative readings of the prompt (or of the lucky pick).
+7. Fill conversationMemoryUpdate and userTasteProfileUpdate as described.
 
 CRITICAL: Only suggest songs that actually exist. Use correct artist names and song titles. When the user asks about lyrical content, your explanation MUST reference actual lyrics or themes from the song.`;
 
@@ -299,6 +302,11 @@ CRITICAL: Only suggest songs that actually exist. Use correct artist names and s
               },
               searchQueries: { type: 'array', items: { type: 'string' }, description: 'Search queries to find matching songs on Spotify/Apple Music' },
               adjacentInterpretations: { type: 'array', items: { type: 'string' } },
+              narrativeReply: {
+                type: 'string',
+                description:
+                  '2-6 sentences; mention each song title exactly once in «French quotes» matching songSuggestions titles; same language as user',
+              },
               songSuggestions: {
                 type: 'array',
                 items: {
@@ -331,7 +339,14 @@ CRITICAL: Only suggest songs that actually exist. Use correct artist names and s
                 },
               },
             },
-            required: ['emotionalProfile', 'searchQueries', 'adjacentInterpretations', 'songSuggestions', 'conversationMemoryUpdate'],
+            required: [
+              'emotionalProfile',
+              'narrativeReply',
+              'searchQueries',
+              'adjacentInterpretations',
+              'songSuggestions',
+              'conversationMemoryUpdate',
+            ],
           },
         },
       }],
@@ -469,6 +484,9 @@ function sanitizeInterpretation(i: AIInterpretation): AIInterpretation {
     ut.userStandardAxes = normalizeStandardAxes(ut.userStandardAxes as Record<string, unknown>) as unknown as Record<string, unknown>;
   }
   if (ut?.globalSummary) ut.globalSummary = clampSummary(ut.globalSummary, 560);
+  if (typeof i.narrativeReply === 'string') {
+    i.narrativeReply = clampSummary(i.narrativeReply, 2800);
+  }
   return i;
 }
 
@@ -594,6 +612,7 @@ Deno.serve(async (req) => {
 
     const result = {
       emotionalProfile: interpretation.emotionalProfile,
+      narrativeReply: interpretation.narrativeReply || '',
       songs: enrichedSongs.slice(0, 8),
       adjacentInterpretations: interpretation.adjacentInterpretations,
       conversationMemoryUpdate: cm ? {

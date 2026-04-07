@@ -44,7 +44,7 @@ import { toast } from "sonner";
 import type { ChatMessage } from "@/types/conversation";
 import { cn } from "@/lib/utils";
 import { dedupeSongVersions } from "@/lib/dedupeSongs";
-import SearchResultTrackList from "@/components/SearchResultTrackList";
+import { AssistantSongNarrative, fallbackNarrativeForResult } from "@/components/AssistantSongNarrative";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 function buildSearchResult(
@@ -53,6 +53,7 @@ function buildSearchResult(
     emotionalProfile: SearchResult["emotionalProfile"];
     songs: SearchResult["songs"];
     adjacentInterpretations: string[];
+    narrativeReply?: string;
   },
   playbackPresentation?: SearchResult["playbackPresentation"]
 ): SearchResult {
@@ -63,6 +64,7 @@ function buildSearchResult(
     emotionalProfile: data.emotionalProfile,
     songs: data.songs,
     adjacentInterpretations: data.adjacentInterpretations || [],
+    ...(data.narrativeReply?.trim() ? { narrativeReply: data.narrativeReply.trim() } : {}),
     ...(playbackPresentation ? { playbackPresentation } : {}),
   };
 }
@@ -117,6 +119,7 @@ const Chat = () => {
     mergeConversationMemoryFromUpdate,
     mergeUserTasteFromUpdate,
     getConversation,
+    patchSearchResultTracking,
   } = useConversations();
 
   const completedSearchCount = useMemo(
@@ -251,6 +254,7 @@ const Chat = () => {
             emotionalProfile: data.emotionalProfile,
             songs,
             adjacentInterpretations: data.adjacentInterpretations || [],
+            narrativeReply: data.narrativeReply,
           },
           presentation
         );
@@ -288,6 +292,12 @@ const Chat = () => {
         if (searchId) {
           const map = await trackResults(searchId, result.songs);
           setResultIdMap(map);
+          if (Object.keys(map).length > 0) {
+            patchSearchResultTracking(conversationId, result.id, {
+              searchId,
+              resultIdsBySongId: map,
+            });
+          }
         }
       } catch (err) {
         console.error("Search error:", err);
@@ -300,6 +310,7 @@ const Chat = () => {
       descriptionLanguage,
       userTasteProfile,
       appendAssistantResult,
+      patchSearchResultTracking,
       mergeConversationMemoryFromUpdate,
       mergeUserTasteFromUpdate,
       isGloballyPlaying,
@@ -410,6 +421,7 @@ const Chat = () => {
         emotionalProfile: data.emotionalProfile!,
         songs: luckySongs,
         adjacentInterpretations: data.adjacentInterpretations || [],
+        narrativeReply: data.narrativeReply,
       },
       presentation
     );
@@ -440,6 +452,9 @@ const Chat = () => {
       if (searchId) {
         const map = await trackResults(searchId, result.songs);
         setResultIdMap(map);
+        if (Object.keys(map).length > 0) {
+          patchSearchResultTracking(id, result.id, { searchId, resultIdsBySongId: map });
+        }
       }
     })();
   }, [
@@ -447,6 +462,7 @@ const Chat = () => {
     createConversation,
     appendUserMessage,
     appendAssistantResult,
+    patchSearchResultTracking,
     mergeConversationMemoryFromUpdate,
     mergeUserTasteFromUpdate,
     navigate,
@@ -723,15 +739,12 @@ const Chat = () => {
                     }
                     const isLatest = m.id === latestAssistant?.id;
                     const r = m.searchResult;
-                    const isPick = isLatest && r.playbackPresentation === "pick";
                     const isInlineLatest = isLatest && r.playbackPresentation === "inline";
-                    const showLegacySnippet =
-                      isLatest && !isPick && !isInlineLatest && r.songs.length > 0;
                     return (
                       <div
                         key={m.id}
                         className={cn(
-                          "mr-auto max-w-[min(100%,560px)] rounded-2xl border border-border/45 bg-gradient-to-b from-card/70 to-card/40 p-4 md:p-5 backdrop-blur-md shadow-md",
+                          "mr-auto max-w-[min(100%,42rem)] rounded-2xl border border-border/45 bg-gradient-to-b from-card/70 to-card/40 p-4 md:p-5 backdrop-blur-md shadow-md",
                           isLatest && "ring-1 ring-primary/30 shadow-lg shadow-primary/[0.07]"
                         )}
                       >
@@ -742,40 +755,30 @@ const Chat = () => {
                           <div>
                             <p className="text-[11px] font-body font-medium text-foreground">Echoes</p>
                             <p className="text-[10px] text-muted-foreground font-body uppercase tracking-wider">
-                              Brani per la tua richiesta
+                              Risposta
                             </p>
                           </div>
                         </div>
-                        <p className="font-display text-sm font-semibold text-foreground mb-1 leading-snug pl-0.5">
-                          &quot;{r.prompt}&quot;
-                        </p>
-                        {isPick && r.songs.length > 0 && activeConversationId && (
-                          <SearchResultTrackList
-                            className="mt-2"
+                        {r.songs.length > 0 && activeConversationId ? (
+                          <AssistantSongNarrative
+                            narrative={r.narrativeReply?.trim() || fallbackNarrativeForResult(r.prompt, r.songs)}
                             songs={r.songs}
-                            onPlayNow={(_song, idx) =>
-                              playTrackFromResult(r.songs, idx, {
-                                conversationId: activeConversationId,
-                                searchResultId: r.id,
-                                prompt: r.prompt,
-                              })
-                            }
-                            onAddToQueue={(song) =>
-                              appendToQueue([song], {
-                                conversationId: activeConversationId,
-                                searchResultId: r.id,
-                                prompt: r.prompt,
-                              })
-                            }
-                            onPlayNext={(song) =>
-                              insertAfterCurrent([song], {
-                                conversationId: activeConversationId,
-                                searchResultId: r.id,
-                                prompt: r.prompt,
-                              })
-                            }
+                            source={{
+                              conversationId: activeConversationId,
+                              searchResultId: r.id,
+                              prompt: r.prompt,
+                            }}
+                            queue={queue}
+                            currentIndex={currentIndex}
+                            isGloballyPlaying={isGloballyPlaying}
+                            playTrackFromResult={playTrackFromResult}
+                            appendToQueue={appendToQueue}
+                            insertAfterCurrent={insertAfterCurrent}
+                            isFavorite={isFavorite}
+                            toggleFavorite={toggleFavorite}
+                            tracking={r.tracking}
                           />
-                        )}
+                        ) : null}
                         {isInlineLatest &&
                           r.playbackPresentation === "inline" &&
                           totalInlineAssistantTurns === 1 && (
@@ -787,21 +790,6 @@ const Chat = () => {
                               Usa il player qui sotto per ascoltare i brani di questo turno.
                             </p>
                           </>
-                        )}
-                        {showLegacySnippet && (
-                          <ul className="text-xs text-muted-foreground space-y-1 font-body">
-                            {r.songs.slice(0, 4).map((s) => (
-                              <li key={s.id}>
-                                {s.title} — {s.artist}
-                              </li>
-                            ))}
-                            {r.songs.length > 4 && <li>…</li>}
-                          </ul>
-                        )}
-                        {!isLatest && (
-                          <p className="text-xs text-muted-foreground font-body mb-2">
-                            {r.songs.length} brani
-                          </p>
                         )}
                       </div>
                     );
