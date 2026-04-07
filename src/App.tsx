@@ -4,12 +4,14 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider } from "@/context/AppContext";
+import { SpotifyProvider } from "@/context/SpotifyContext";
 import Landing from "./pages/Landing";
 import Discover from "./pages/Discover";
 import History from "./pages/History";
 import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
 import Insights from "./pages/Insights";
+import SpotifyCallback from "./pages/SpotifyCallback";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,15 +23,18 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AppProvider>
-          <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/discover" element={<Discover />} />
-            <Route path="/history" element={<History />} />
-            <Route path="/favorites" element={<Favorites />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/insights" element={<Insights />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <SpotifyProvider>
+            <Routes>
+              <Route path="/" element={<Landing />} />
+              <Route path="/discover" element={<Discover />} />
+              <Route path="/history" element={<History />} />
+              <Route path="/favorites" element={<Favorites />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/insights" element={<Insights />} />
+              <Route path="/spotify-callback" element={<SpotifyCallback />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </SpotifyProvider>
         </AppProvider>
       </BrowserRouter>
     </TooltipProvider>

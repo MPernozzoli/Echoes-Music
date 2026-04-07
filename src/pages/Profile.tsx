@@ -1,11 +1,15 @@
 import { useState, useEffect } from "react";
 import AppLayout from "@/components/AppLayout";
-import { User, Music, Palette, LogOut, ExternalLink, Shield } from "lucide-react";
+import { User, Music, Palette, LogOut, ExternalLink, Shield, Check, Loader2, X } from "lucide-react";
 import { getUserSettings, setAllowAnonymizedData } from "@/services/tracking";
+import { getSpotifyAuthUrl, disconnectSpotify } from "@/services/spotify";
+import { useSpotify } from "@/context/SpotifyContext";
 
 const Profile = () => {
   const [allowData, setAllowData] = useState(true);
   const [loadingSettings, setLoadingSettings] = useState(true);
+  const [connectingSpotify, setConnectingSpotify] = useState(false);
+  const { isConnected: spotifyConnected, displayName: spotifyName, isPremium, loading: spotifyLoading, setDisconnected } = useSpotify();
 
   useEffect(() => {
     getUserSettings().then((s) => {
@@ -18,6 +22,22 @@ const Profile = () => {
     const next = !allowData;
     setAllowData(next);
     await setAllowAnonymizedData(next);
+  };
+
+  const handleConnectSpotify = async () => {
+    setConnectingSpotify(true);
+    const redirectUri = `${window.location.origin}/spotify-callback`;
+    const url = await getSpotifyAuthUrl(redirectUri);
+    if (url) {
+      window.location.href = url;
+    } else {
+      setConnectingSpotify(false);
+    }
+  };
+
+  const handleDisconnectSpotify = async () => {
+    await disconnectSpotify();
+    setDisconnected();
   };
 
   return (
@@ -47,13 +67,45 @@ const Profile = () => {
               </div>
               <div>
                 <h3 className="font-body text-sm font-medium text-foreground">Spotify</h3>
-                <p className="text-xs text-muted-foreground font-body">Connect to save playlists</p>
+                {spotifyLoading ? (
+                  <p className="text-xs text-muted-foreground font-body">Checking…</p>
+                ) : spotifyConnected ? (
+                  <div>
+                    <p className="text-xs text-primary font-body flex items-center gap-1">
+                      <Check className="w-3 h-3" />
+                      {spotifyName}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground font-body">
+                      {isPremium ? "Premium — Full playback enabled" : "Free — Preview only"}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground font-body">Connect for playback</p>
+                )}
               </div>
             </div>
-            <button className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-border text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all">
-              Connect
-              <ExternalLink className="w-3 h-3" />
-            </button>
+            {spotifyConnected ? (
+              <button
+                onClick={handleDisconnectSpotify}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-destructive/30 text-sm font-body text-destructive/70 hover:text-destructive hover:border-destructive/50 transition-all"
+              >
+                <X className="w-3 h-3" />
+                Disconnect
+              </button>
+            ) : (
+              <button
+                onClick={handleConnectSpotify}
+                disabled={connectingSpotify}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-border text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all disabled:opacity-50"
+              >
+                {connectingSpotify ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <ExternalLink className="w-3 h-3" />
+                )}
+                Connect
+              </button>
+            )}
           </div>
         </div>
 

@@ -1,6 +1,7 @@
 import { Heart } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import ResultFeedback from "./ResultFeedback";
+import SpotifyPlayer from "./SpotifyPlayer";
 import { trackInteraction } from "@/services/tracking";
 
 interface SongCardProps {
@@ -18,6 +19,7 @@ interface SongCardProps {
   searchResultId?: string;
   searchId?: string;
   onTagClick?: (tag: string) => void;
+  showPlayer?: boolean;
 }
 
 const SongCard = ({
@@ -34,13 +36,13 @@ const SongCard = ({
   searchResultId,
   searchId,
   onTagClick,
+  showPlayer = true,
 }: SongCardProps) => {
   const [imgLoaded, setImgLoaded] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const impressionTracked = useRef(false);
 
-  // Track impression when card is visible
   useEffect(() => {
     if (!searchResultId || !searchId || impressionTracked.current) return;
     const observer = new IntersectionObserver(
@@ -149,6 +151,9 @@ const SongCard = ({
               </button>
             ))}
           </div>
+
+          {/* Spotify Player */}
+          {showPlayer && <SpotifyPlayer trackTitle={title} artistName={artist} />}
 
           {/* Inline feedback */}
           {searchResultId && searchId && (
