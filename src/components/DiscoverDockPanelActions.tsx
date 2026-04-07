@@ -18,6 +18,8 @@ interface DiscoverDockPanelActionsProps {
   queue: Song[];
   currentIndex: number;
   setCurrentIndex: (i: number) => void;
+  reorderQueue: (from: number, to: number) => void;
+  removeFromQueue: (index: number) => void;
   isFavorite: (id: string) => boolean;
   onToggleFavorite: (id: string) => void;
   listenHistory: ListenHistoryEntry[];
@@ -34,6 +36,8 @@ export function DiscoverDockPanelActions({
   queue,
   currentIndex,
   setCurrentIndex,
+  reorderQueue,
+  removeFromQueue,
   isFavorite,
   onToggleFavorite,
   listenHistory,
@@ -162,6 +166,7 @@ export function DiscoverDockPanelActions({
           </div>
           <div className="p-2 max-h-[min(60vh,22rem)] overflow-y-auto">
             <TrackQueue
+              variant="dock"
               songs={queue}
               currentIndex={currentIndex}
               onSelect={(i) => {
@@ -170,6 +175,8 @@ export function DiscoverDockPanelActions({
               }}
               isFavorite={isFavorite}
               onToggleFavorite={onToggleFavorite}
+              onReorder={reorderQueue}
+              onRemove={removeFromQueue}
             />
           </div>
         </PopoverContent>

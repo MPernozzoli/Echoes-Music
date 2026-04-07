@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
 import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import PromptInput from "@/components/PromptInput";
@@ -10,7 +10,7 @@ import {
 } from "@/components/DiscoverDockPanelActions";
 import TrackQueue from "@/components/TrackQueue";
 import EmotionalProfileCard from "@/components/EmotionalProfile";
-import LoadingSkeleton from "@/components/LoadingSkeleton";
+import MusicSearchThinking from "@/components/MusicSearchThinking";
 import SearchFeedback from "@/components/SearchFeedback";
 import { pickDiscoverPromptSuggestions } from "@/lib/discoverPromptSuggestions";
 import type { SearchResult } from "@/data/mockData";
@@ -27,6 +27,7 @@ import { normalizeStandardAxes } from "@/lib/memoryMerge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
+  Bot,
   Lightbulb,
   RefreshCw,
   ListMusic,
@@ -80,6 +81,10 @@ const Chat = () => {
   const [dockPopover, setDockPopover] = useState<DockPopoverId | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [conversationsPanelOpen, setConversationsPanelOpen] = useState(true);
+  const desktopChatFooterRef = useRef<HTMLDivElement>(null);
+  const mobileChatFooterRef = useRef<HTMLDivElement>(null);
+  const [desktopFooterInset, setDesktopFooterInset] = useState(0);
+  const [mobileFooterInset, setMobileFooterInset] = useState(0);
 
   const isMobile = useIsMobile();
   const {
@@ -95,6 +100,8 @@ const Chat = () => {
     playTrackFromResult,
     appendToQueue,
     insertAfterCurrent,
+    reorderQueue,
+    removeFromQueue,
   } = usePlaybackQueue();
 
   const { toggleFavorite, isFavorite, descriptionLanguage, recordListen, listenHistory } = useApp();
@@ -142,10 +149,57 @@ const Chat = () => {
   );
   const latestAssistant = assistantTurns?.[assistantTurns.length - 1];
   const currentResult = latestAssistant?.searchResult ?? null;
+
+  const totalInlineAssistantTurns = useMemo(
+    () =>
+      conversations.reduce(
+        (n, c) =>
+          n +
+          c.messages.filter(
+            (m) =>
+              m.role === "assistant" &&
+              m.searchResult?.playbackPresentation === "inline"
+          ).length,
+        0
+      ),
+    [conversations]
+  );
   const currentSong = queue[currentIndex] ?? currentResult?.songs[0] ?? null;
   const hasAnyMessage = (activeConversation?.messages.length ?? 0) > 0;
   const showDockPlayer = queue.length > 0 && !isMobile;
   const showMobilePlayer = queue.length > 0 && isMobile;
+
+  useLayoutEffect(() => {
+    if (!showDockPlayer) {
+      setDesktopFooterInset(0);
+      return;
+    }
+    const node = desktopChatFooterRef.current;
+    if (!node) return;
+    const ro = new ResizeObserver(() => setDesktopFooterInset(node.getBoundingClientRect().height));
+    ro.observe(node);
+    setDesktopFooterInset(node.getBoundingClientRect().height);
+    return () => ro.disconnect();
+  }, [showDockPlayer, dbSearchId, isLoading]);
+
+  useLayoutEffect(() => {
+    if (!isMobile) {
+      setMobileFooterInset(0);
+      return;
+    }
+    const node = mobileChatFooterRef.current;
+    if (!node) return;
+    const ro = new ResizeObserver(() => setMobileFooterInset(node.getBoundingClientRect().height));
+    ro.observe(node);
+    setMobileFooterInset(node.getBoundingClientRect().height);
+    return () => ro.disconnect();
+  }, [isMobile, dbSearchId, isLoading]);
+
+  const scrollPadBottom = isMobile
+    ? Math.max(mobileFooterInset + 16, 112)
+    : showDockPlayer
+      ? Math.max(desktopFooterInset + 16, 132)
+      : 16;
 
   const runSearch = useCallback(
     async (conversationId: string, prompt: string) => {
@@ -533,8 +587,7 @@ const Chat = () => {
       <div
         className={cn(
           "relative flex flex-col md:flex-row w-full max-w-[1600px] mx-auto min-h-[calc(100vh-3.5rem)]",
-          "pb-24 md:pb-6",
-          showDockPlayer && "md:pb-[11rem]"
+          "pb-24 md:pb-0"
         )}
       >
         <aside
@@ -596,10 +649,8 @@ const Chat = () => {
           <div className="flex-1 flex flex-col lg:flex-row min-h-0 gap-0">
             <div className="flex-1 flex flex-col min-h-0 min-w-0">
               <div
-                className={cn(
-                  "flex-1 overflow-y-auto overscroll-contain px-4 md:px-5 py-4 space-y-5",
-                  "pb-28 md:pb-4"
-                )}
+                className="flex-1 overflow-y-auto overscroll-contain px-4 md:px-5 py-4 space-y-5"
+                style={{ paddingBottom: scrollPadBottom }}
               >
               {!hasAnyMessage && !isLoading && (
                 <>
@@ -622,13 +673,18 @@ const Chat = () => {
               )}
 
               {hasAnyMessage && (
-                <div className="max-w-3xl mx-auto w-full space-y-5">
+                <div className="max-w-3xl mx-auto w-full space-y-6">
                   {activeConversation?.messages.map((m) => {
                     if (m.role === "user") {
                       return (
                         <div key={m.id} className="flex justify-end">
-                          <div className="max-w-[88%] rounded-2xl rounded-br-md bg-primary/12 border border-primary/15 px-4 py-2.5 text-sm font-body text-foreground shadow-sm">
-                            {m.text}
+                          <div className="max-w-[min(88%,520px)]">
+                            <p className="text-[10px] font-body uppercase tracking-wider text-muted-foreground text-right mb-1 pr-1">
+                              Tu
+                            </p>
+                            <div className="rounded-2xl rounded-br-md bg-gradient-to-br from-primary/18 to-primary/8 border border-primary/20 px-4 py-3 text-sm font-body text-foreground leading-relaxed shadow-sm">
+                              {m.text}
+                            </div>
                           </div>
                         </div>
                       );
@@ -643,12 +699,24 @@ const Chat = () => {
                       <div
                         key={m.id}
                         className={cn(
-                          "rounded-2xl border border-border/50 p-4 md:p-5 bg-card/50 backdrop-blur-sm shadow-sm",
-                          isLatest && "ring-1 ring-primary/25 shadow-md shadow-primary/5"
+                          "mr-auto max-w-[min(100%,560px)] rounded-2xl border border-border/45 bg-gradient-to-b from-card/70 to-card/40 p-4 md:p-5 backdrop-blur-md shadow-md",
+                          isLatest && "ring-1 ring-primary/30 shadow-lg shadow-primary/[0.07]"
                         )}
                       >
-                        <p className="text-xs text-muted-foreground font-body uppercase tracking-wider mb-1">Risultati per</p>
-                        <p className="font-display text-sm font-semibold mb-3">&quot;{r.prompt}&quot;</p>
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/12 ring-1 ring-primary/15">
+                            <Bot className="h-4 w-4 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-[11px] font-body font-medium text-foreground">Echoes</p>
+                            <p className="text-[10px] text-muted-foreground font-body uppercase tracking-wider">
+                              Brani per la tua richiesta
+                            </p>
+                          </div>
+                        </div>
+                        <p className="font-display text-sm font-semibold text-foreground mb-1 leading-snug pl-0.5">
+                          &quot;{r.prompt}&quot;
+                        </p>
                         {isPick && r.songs.length > 0 && activeConversationId && (
                           <SearchResultTrackList
                             className="mt-2"
@@ -676,12 +744,14 @@ const Chat = () => {
                             }
                           />
                         )}
-                        {isInlineLatest && (
+                        {isInlineLatest &&
+                          r.playbackPresentation === "inline" &&
+                          totalInlineAssistantTurns === 1 && (
                           <>
-                            <p className="text-xs text-muted-foreground font-body hidden md:block">
+                            <p className="text-xs text-muted-foreground font-body mt-3 hidden md:block leading-relaxed">
                               Riproduzione avviata nel player in basso. Puoi cambiare chat: la coda resta attiva.
                             </p>
-                            <p className="text-xs text-muted-foreground font-body md:hidden">
+                            <p className="text-xs text-muted-foreground font-body mt-3 md:hidden leading-relaxed">
                               Usa il player qui sotto per ascoltare i brani di questo turno.
                             </p>
                           </>
@@ -709,10 +779,7 @@ const Chat = () => {
 
               {isLoading && (
                 <div className="max-w-3xl mx-auto w-full">
-                  <p className="text-sm text-muted-foreground font-body mb-4 animate-pulse-soft">
-                    Interpreto quello che senti…
-                  </p>
-                  <LoadingSkeleton />
+                  <MusicSearchThinking active />
                 </div>
               )}
 
@@ -771,18 +838,14 @@ const Chat = () => {
                                 onSelect={setCurrentIndex}
                                 isFavorite={isFavorite}
                                 onToggleFavorite={handleToggleFavorite}
+                                onReorder={reorderQueue}
+                                onRemove={removeFromQueue}
                               />
                             </div>
                           )}
                         </div>
                       )}
                     </>
-                  )}
-
-                  {dbSearchId && (
-                    <div className="w-full max-w-lg mx-auto pt-4 border-t border-border/40">
-                      <SearchFeedback searchId={dbSearchId} />
-                    </div>
                   )}
 
                   {currentResult.adjacentInterpretations.length > 0 && (
@@ -825,14 +888,21 @@ const Chat = () => {
               )}
               </div>
 
-              <div className="hidden md:block shrink-0 border-t border-border/50 bg-background/95 backdrop-blur-xl px-5 py-3">
-                <div className="max-w-3xl w-full mx-auto">
-                  <PromptInput {...composerProps} />
+              {!showDockPlayer && (
+                <div className="hidden md:block shrink-0 border-t border-border/50 bg-background/95 backdrop-blur-xl px-5 py-3">
+                  <div className="max-w-3xl w-full mx-auto space-y-2">
+                    {dbSearchId && <SearchFeedback searchId={dbSearchId} />}
+                    <PromptInput {...composerProps} />
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="md:hidden fixed inset-x-0 bottom-14 z-[45] px-4 pb-2 pointer-events-none">
-                <div className="pointer-events-auto max-w-lg mx-auto">
+              <div
+                ref={mobileChatFooterRef}
+                className="md:hidden fixed inset-x-0 bottom-14 z-[45] px-4 pb-2 flex flex-col gap-2 pointer-events-none"
+              >
+                <div className="pointer-events-auto max-w-lg mx-auto w-full space-y-2">
+                  {dbSearchId && <SearchFeedback searchId={dbSearchId} />}
                   <PromptInput {...composerProps} />
                 </div>
               </div>
@@ -882,33 +952,48 @@ const Chat = () => {
     </AppLayout>
 
     {showDockPlayer && (
-      <div className="hidden md:flex fixed bottom-0 left-0 right-0 z-40 flex-col border-t border-zinc-800/90 bg-[#121212]/98 backdrop-blur-xl shadow-[0_-12px_40px_-12px_rgba(0,0,0,0.45)]">
-        <div className="max-w-6xl w-full mx-auto px-3 md:px-6 pt-2 pb-2">
-          <FullPlayer
-            variant="dock"
-            songs={queue}
-            currentIndex={currentIndex}
-            onChangeIndex={setCurrentIndex}
-            isFavorite={isFavorite}
-            onToggleFavorite={handleToggleFavorite}
-            autoplay={pendingAutoplay}
-            onAutoplayConsumed={() => setPendingAutoplay(false)}
-            onPlaybackStateChange={handlePlayerPlaybackChange}
-            dockPanelActions={
-              <DiscoverDockPanelActions
-                dockPopover={dockPopover}
-                setDockPopover={setDockPopover}
-                currentResult={currentResult}
-                tagSong={tagSong}
+      <div
+        ref={desktopChatFooterRef}
+        className="hidden md:flex fixed bottom-0 left-0 right-0 z-40 flex-col border-t border-border/60 bg-background shadow-[0_-8px_32px_-8px_rgba(0,0,0,0.35)]"
+      >
+        <div className="border-b border-border/50 bg-background/95 backdrop-blur-xl px-4 md:px-6 py-2.5">
+          <div className="max-w-[1600px] w-full mx-auto space-y-2">
+            <div className="max-w-3xl w-full mx-auto space-y-2">
+              {dbSearchId && <SearchFeedback searchId={dbSearchId} />}
+              <PromptInput {...composerProps} />
+            </div>
+          </div>
+        </div>
+        <div className="border-t border-zinc-800/90 bg-[#121212]/98 backdrop-blur-xl">
+          <div className="max-w-[1600px] w-full mx-auto px-3 md:px-6 pt-2 pb-2">
+            <FullPlayer
+              variant="dock"
+              songs={queue}
+              currentIndex={currentIndex}
+              onChangeIndex={setCurrentIndex}
+              isFavorite={isFavorite}
+              onToggleFavorite={handleToggleFavorite}
+              autoplay={pendingAutoplay}
+              onAutoplayConsumed={() => setPendingAutoplay(false)}
+              onPlaybackStateChange={handlePlayerPlaybackChange}
+              dockPanelActions={
+                <DiscoverDockPanelActions
+                  dockPopover={dockPopover}
+                  setDockPopover={setDockPopover}
+                  currentResult={currentResult}
+                  tagSong={tagSong}
                 queue={queue}
                 currentIndex={currentIndex}
                 setCurrentIndex={setCurrentIndex}
+                reorderQueue={reorderQueue}
+                removeFromQueue={removeFromQueue}
                 isFavorite={isFavorite}
                 onToggleFavorite={handleToggleFavorite}
                 listenHistory={listenHistory}
               />
-            }
-          />
+              }
+            />
+          </div>
         </div>
       </div>
     )}

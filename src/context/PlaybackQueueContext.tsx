@@ -41,6 +41,10 @@ interface PlaybackQueueState {
   /** Coda = tutti i brani del risultato, riproduzione da `songIndex` */
   playTrackFromResult: (allSongs: Song[], songIndex: number, source: QueueListenSource) => void;
   clearQueue: () => void;
+  /** Sposta il brano da `from` a `to` (indici nella coda risultante) */
+  reorderQueue: (from: number, to: number) => void;
+  /** Rimuove il brano all’indice indicato e aggiorna l’indice in riproduzione */
+  removeFromQueue: (index: number) => void;
 }
 
 const PlaybackQueueContext = createContext<PlaybackQueueState | null>(null);
@@ -52,9 +56,17 @@ export const PlaybackQueueProvider = ({ children }: { children: ReactNode }) => 
   const [isGloballyPlaying, setIsGloballyPlaying] = useState(false);
   const [pendingAutoplay, setPendingAutoplay] = useState(false);
   const indexRef = useRef(0);
+  const queueRef = useRef<Song[]>([]);
+  const queueSourcesRef = useRef<(QueueListenSource | null)[]>([]);
   useEffect(() => {
     indexRef.current = currentIndex;
   }, [currentIndex]);
+  useEffect(() => {
+    queueRef.current = queue;
+  }, [queue]);
+  useEffect(() => {
+    queueSourcesRef.current = queueSources;
+  }, [queueSources]);
 
   const setGlobalPlaying = useCallback((playing: boolean) => {
     setIsGloballyPlaying(playing);
@@ -113,6 +125,45 @@ export const PlaybackQueueProvider = ({ children }: { children: ReactNode }) => 
     setIsGloballyPlaying(false);
   }, []);
 
+  const reorderQueue = useCallback((from: number, to: number) => {
+    const q = queueRef.current;
+    const s = queueSourcesRef.current;
+    const ci = indexRef.current;
+    if (from === to || from < 0 || to < 0 || from >= q.length || to >= q.length) return;
+    const newQ = [...q];
+    const newS = [...s];
+    const [song] = newQ.splice(from, 1);
+    const [src] = newS.splice(from, 1);
+    newQ.splice(to, 0, song);
+    newS.splice(to, 0, src);
+    let newCi = ci;
+    if (ci === from) newCi = to;
+    else if (from < ci && to >= ci) newCi = ci - 1;
+    else if (from > ci && to <= ci) newCi = ci + 1;
+    setQueue(newQ);
+    setQueueSources(newS);
+    setCurrentIndex(newCi);
+  }, []);
+
+  const removeFromQueue = useCallback((index: number) => {
+    const q = queueRef.current;
+    const src = queueSourcesRef.current;
+    const ci = indexRef.current;
+    if (index < 0 || index >= q.length) return;
+    const newQ = q.filter((_, i) => i !== index);
+    const newS = src.filter((_, i) => i !== index);
+    let newCi = ci;
+    if (newQ.length === 0) {
+      newCi = 0;
+      setPendingAutoplay(false);
+      setIsGloballyPlaying(false);
+    } else if (index < ci) newCi = ci - 1;
+    else if (index === ci) newCi = Math.min(ci, newQ.length - 1);
+    setQueue(newQ);
+    setQueueSources(newS);
+    setCurrentIndex(newCi);
+  }, []);
+
   const value = useMemo(
     () => ({
       queue,
@@ -128,6 +179,8 @@ export const PlaybackQueueProvider = ({ children }: { children: ReactNode }) => 
       insertAfterCurrent,
       playTrackFromResult,
       clearQueue,
+      reorderQueue,
+      removeFromQueue,
     }),
     [
       queue,
@@ -141,6 +194,8 @@ export const PlaybackQueueProvider = ({ children }: { children: ReactNode }) => 
       insertAfterCurrent,
       playTrackFromResult,
       clearQueue,
+      reorderQueue,
+      removeFromQueue,
     ]
   );
 

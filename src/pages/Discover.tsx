@@ -101,6 +101,8 @@ const Chat = () => {
     playTrackFromResult,
     appendToQueue,
     insertAfterCurrent,
+    reorderQueue,
+    removeFromQueue,
   } = usePlaybackQueue();
 
   const { toggleFavorite, isFavorite, descriptionLanguage, recordListen, listenHistory } = useApp();
@@ -793,6 +795,8 @@ const Chat = () => {
                                 onSelect={setCurrentIndex}
                                 isFavorite={isFavorite}
                                 onToggleFavorite={handleToggleFavorite}
+                                onReorder={reorderQueue}
+                                onRemove={removeFromQueue}
                               />
                             </div>
                           )}
@@ -925,6 +929,8 @@ const Chat = () => {
                 queue={queue}
                 currentIndex={currentIndex}
                 setCurrentIndex={setCurrentIndex}
+                reorderQueue={reorderQueue}
+                removeFromQueue={removeFromQueue}
                 isFavorite={isFavorite}
                 onToggleFavorite={handleToggleFavorite}
                 listenHistory={listenHistory}
