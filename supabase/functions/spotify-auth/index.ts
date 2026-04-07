@@ -18,7 +18,7 @@ type SpotifyConn = {
 };
 
 async function getValidAccessToken(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   session_id: string,
   clientId: string,
   clientSecret: string,

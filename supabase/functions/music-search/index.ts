@@ -606,11 +606,12 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-  } catch (err) {
+  } catch (err: unknown) {
     console.error('music-search error:', err);
-    const status = err.message?.includes('Rate limited') ? 429
-      : err.message?.includes('credits') ? 402 : 500;
-    return new Response(JSON.stringify({ error: err.message }), {
+    const message = err instanceof Error ? err.message : String(err);
+    const status = message?.includes('Rate limited') ? 429
+      : message?.includes('credits') ? 402 : 500;
+    return new Response(JSON.stringify({ error: message }), {
       status,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
