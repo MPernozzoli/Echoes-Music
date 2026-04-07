@@ -1,5 +1,9 @@
-import { corsHeaders } from '@supabase/supabase-js/cors';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 const SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token';
 const SPOTIFY_ME_URL = 'https://api.spotify.com/v1/me';
