@@ -99,8 +99,8 @@ Deno.serve(async (req) => {
       const playlists: { id: string; name: string }[] = [];
       let nextUrl: string | null = 'https://api.music.apple.com/v1/me/library/playlists?limit=100';
       for (let page = 0; page < 30 && nextUrl; page++) {
-        const appleRes = await fetch(nextUrl, { headers: appleHeaders });
-        const data = await appleRes.json().catch(() => ({}));
+        const appleRes: Response = await fetch(nextUrl, { headers: appleHeaders });
+        const data: Record<string, unknown> = await appleRes.json().catch(() => ({}));
         if (!appleRes.ok) {
           const errText =
             typeof data === 'object' && data && 'errors' in data
@@ -129,8 +129,8 @@ Deno.serve(async (req) => {
       const PLAYLIST_NAME = 'Echoes';
       let nextUrl: string | null = 'https://api.music.apple.com/v1/me/library/playlists?limit=100';
       for (let page = 0; page < 30 && nextUrl; page++) {
-        const appleRes = await fetch(nextUrl, { headers: appleHeaders });
-        const data = await appleRes.json().catch(() => ({}));
+        const appleRes: Response = await fetch(nextUrl, { headers: appleHeaders });
+        const data: Record<string, unknown> = await appleRes.json().catch(() => ({}));
         if (!appleRes.ok) {
           const errText =
             typeof data === 'object' && data && 'errors' in data
@@ -216,8 +216,8 @@ Deno.serve(async (req) => {
         `https://api.music.apple.com/v1/me/library/playlists/${encodeURIComponent(playlist_id)}/tracks?include=catalog&limit=100`;
 
       for (let page = 0; page < 50 && tracksUrl; page++) {
-        const trRes = await fetch(tracksUrl, { headers: appleHeaders });
-        const trData = await trRes.json().catch(() => ({}));
+        const trRes: Response = await fetch(tracksUrl, { headers: appleHeaders });
+        const trData: Record<string, unknown> = await trRes.json().catch(() => ({}));
         if (!trRes.ok) {
           const errText =
             typeof trData === 'object' && trData && 'errors' in trData

@@ -356,6 +356,7 @@ export type Database = {
           anonymous_session_id: string | null
           created_at: string
           id: string
+          sync_favorites_echoes_playlist: boolean
           updated_at: string
           user_id: string | null
         }
@@ -364,6 +365,7 @@ export type Database = {
           anonymous_session_id?: string | null
           created_at?: string
           id?: string
+          sync_favorites_echoes_playlist?: boolean
           updated_at?: string
           user_id?: string | null
         }
@@ -372,6 +374,7 @@ export type Database = {
           anonymous_session_id?: string | null
           created_at?: string
           id?: string
+          sync_favorites_echoes_playlist?: boolean
           updated_at?: string
           user_id?: string | null
         }
