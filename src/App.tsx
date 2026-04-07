@@ -13,6 +13,7 @@ import { PlaybackQueueProvider } from "@/context/PlaybackQueueContext";
 import Landing from "./pages/Landing";
 import Chat from "./pages/Chat";
 import Auth from "./pages/Auth";
+import Pricing from "./pages/Pricing";
 
 const DiscoverRedirect = () => {
   const { search } = useLocation();
@@ -43,6 +44,7 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/pricing" element={<Pricing />} />
                 <Route path="/chat" element={<Chat />} />
                 <Route path="/discover" element={<DiscoverRedirect />} />
                 <Route path="/history" element={<History />} />
