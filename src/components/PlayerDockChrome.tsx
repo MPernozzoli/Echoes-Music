@@ -9,14 +9,22 @@ import {
   Pause,
   Mic2,
   ListMusic,
-  MonitorSpeaker,
   Maximize2,
   Heart,
   Volume2,
   VolumeX,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
+
+function AirPlayIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <path d="M6 22h12l-6-6-6 6zm6-8.17L6.46 17h11.08L12 13.83zm0-11.66L3.74 16h16.52L12 2.17z" />
+    </svg>
+  );
+}
 
 export type DockRepeatMode = "off" | "all" | "one";
 
@@ -51,7 +59,13 @@ interface PlayerDockChromeProps {
   onDetails?: () => void;
   onOpenQueue?: () => void;
   /** Se impostato, sostituisce mic + coda (es. Popover profilo / cronologia / coda) */
-  dockPanelActions?: React.ReactNode;
+  dockPanelActions?: ReactNode;
+  /** iOS/macOS Safari: sostituisce il blocco volume con AirPlay */
+  airPlayOnClick?: () => void;
+  /** false su Apple UI quando si usa solo AirPlay al posto del volume */
+  showVolumeControl?: boolean;
+  /** + libreria / playlist prima del cuore */
+  trackExtraActions?: ReactNode;
 }
 
 function formatDockTime(seconds: number): string {
@@ -97,6 +111,9 @@ export function PlayerDockChrome({
   onDetails,
   onOpenQueue,
   dockPanelActions,
+  airPlayOnClick,
+  showVolumeControl = true,
+  trackExtraActions,
 }: PlayerDockChromeProps) {
   const [volOpen, setVolOpen] = useState(false);
   const maxT = duration > 0 ? duration : 1;
@@ -122,6 +139,7 @@ export function PlayerDockChrome({
             <p className="text-xs text-zinc-400 truncate">{subtitle}</p>
           </div>
           <div className="flex items-center gap-0.5 shrink-0 pb-1">
+            {trackExtraActions}
             {libraryButton ?? (
               <button
                 type="button"
@@ -213,28 +231,36 @@ export function PlayerDockChrome({
               )}
             </>
           )}
-          <button type="button" className={cn(dockBtn, "hidden sm:inline-flex")} title="Dispositivo (in arrivo)" disabled>
-            <MonitorSpeaker className="w-4 h-4 opacity-40" />
-          </button>
-          <div
-            className="hidden sm:flex items-center gap-1 max-w-[140px] group/vol"
-            onMouseEnter={() => setVolOpen(true)}
-            onMouseLeave={() => setVolOpen(false)}
-          >
-            <button type="button" className={dockBtn} onClick={onMuteToggle} title="Volume">
-              {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          {airPlayOnClick ? (
+            <button
+              type="button"
+              className={cn(dockBtn, "inline-flex")}
+              onClick={airPlayOnClick}
+              title="AirPlay"
+            >
+              <AirPlayIcon className="w-4 h-4" />
             </button>
-            <div className={cn("w-0 overflow-hidden transition-all group-hover/vol:w-24", volOpen && "w-24")}>
-              <Slider
-                value={[isMuted ? 0 : volume]}
-                min={0}
-                max={100}
-                step={1}
-                onValueChange={(v) => onVolumeChange(v[0])}
-                className="[&_[role=slider]]:h-2.5 [&_[role=slider]]:w-2.5 [&_[role=slider]]:bg-white"
-              />
+          ) : showVolumeControl ? (
+            <div
+              className="hidden sm:flex items-center gap-1 max-w-[140px] group/vol"
+              onMouseEnter={() => setVolOpen(true)}
+              onMouseLeave={() => setVolOpen(false)}
+            >
+              <button type="button" className={dockBtn} onClick={onMuteToggle} title="Volume">
+                {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              </button>
+              <div className={cn("w-0 overflow-hidden transition-all group-hover/vol:w-24", volOpen && "w-24")}>
+                <Slider
+                  value={[isMuted ? 0 : volume]}
+                  min={0}
+                  max={100}
+                  step={1}
+                  onValueChange={(v) => onVolumeChange(v[0])}
+                  className="[&_[role=slider]]:h-2.5 [&_[role=slider]]:w-2.5 [&_[role=slider]]:bg-white"
+                />
+              </div>
             </div>
-          </div>
+          ) : null}
           <button type="button" className={cn(dockBtn, "hidden md:inline-flex")} title="Schermo intero (in arrivo)" disabled>
             <Maximize2 className="w-4 h-4 opacity-40" />
           </button>

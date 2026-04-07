@@ -21,13 +21,7 @@ import {
   memoryOrFromProfile,
 } from "@/context/ConversationContext";
 import { callMusicSearch } from "@/services/musicSearchApi";
-import {
-  trackSearch,
-  trackResults,
-  trackInteraction,
-  trackResultFeedback,
-  maybeCreateTrainingEvent,
-} from "@/services/tracking";
+import { trackSearch, trackResults, trackInteraction, maybeCreateTrainingEvent } from "@/services/tracking";
 import { emotionalProfileToAxes } from "@/types/conversation";
 import { normalizeStandardAxes } from "@/lib/memoryMerge";
 import { Button } from "@/components/ui/button";
@@ -429,23 +423,7 @@ const Chat = () => {
   const handleToggleFavorite = (songId: string) => {
     const song =
       queue.find((s) => s.id === songId) ?? currentResult?.songs.find((s) => s.id === songId);
-    if (!song) return;
-    const adding = !isFavorite(songId);
-    toggleFavorite(song);
-    if (!adding || !dbSearchId) return;
-    const searchResultId = resultIdMap[songId];
-    if (!searchResultId) return;
-    void trackInteraction({
-      searchResultId,
-      searchId: dbSearchId,
-      interactionType: "favorite_positive",
-      metadata: { trackId: songId },
-    });
-    void trackResultFeedback({
-      searchResultId,
-      searchId: dbSearchId,
-      label: "positive_favorite",
-    });
+    if (song) toggleFavorite(song);
   };
 
   const sidebar = (

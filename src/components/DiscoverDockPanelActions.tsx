@@ -107,7 +107,7 @@ export function DiscoverDockPanelActions({
           <div className="p-2 max-h-[min(60vh,22rem)] overflow-y-auto">
             {sortedListens.length === 0 ? (
               <p className="text-xs text-zinc-500 font-body text-center py-8 px-2">
-                Nessun ascolto registrato. Avvia la riproduzione da Discover.
+                Nessun ascolto registrato. Avvia la riproduzione dalla chat.
               </p>
             ) : (
               <ul className="space-y-1">

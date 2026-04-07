@@ -68,14 +68,15 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { song_id, music_user_token } = await req.json();
+    const body = await req.json();
+    const action =
+      typeof body.action === 'string'
+        ? body.action
+        : body.song_id && body.music_user_token
+          ? 'add_to_library'
+          : '';
+    const music_user_token = body.music_user_token;
 
-    if (!song_id || typeof song_id !== 'string') {
-      return new Response(JSON.stringify({ error: 'song_id required' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
     if (!music_user_token || typeof music_user_token !== 'string') {
       return new Response(JSON.stringify({ error: 'music_user_token required' }), {
         status: 400,
@@ -89,12 +90,91 @@ Deno.serve(async (req) => {
       APPLE_MUSIC_TEAM_ID,
     );
 
+    const appleHeaders = {
+      Authorization: `Bearer ${devToken}`,
+      'Music-User-Token': music_user_token,
+    };
+
+    if (action === 'list_playlists') {
+      const appleRes = await fetch('https://api.music.apple.com/v1/me/library/playlists?limit=100', {
+        headers: appleHeaders,
+      });
+      const data = await appleRes.json().catch(() => ({}));
+      if (!appleRes.ok) {
+        const errText =
+          typeof data === 'object' && data && 'errors' in data
+            ? JSON.stringify((data as { errors: unknown }).errors)
+            : `Apple API ${appleRes.status}`;
+        return new Response(JSON.stringify({ error: errText }), {
+          status: appleRes.status === 401 || appleRes.status === 403 ? appleRes.status : 502,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const items = (data.data ?? []) as Array<{
+        id: string;
+        attributes?: { name?: string };
+      }>;
+      const playlists = items.map((p) => ({
+        id: p.id,
+        name: p.attributes?.name ?? 'Playlist',
+      }));
+      return new Response(JSON.stringify({ playlists }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'add_to_playlist') {
+      const playlist_id = body.playlist_id;
+      const song_id = body.song_id;
+      if (!playlist_id || typeof playlist_id !== 'string' || !song_id || typeof song_id !== 'string') {
+        return new Response(JSON.stringify({ error: 'playlist_id and song_id required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const appleRes = await fetch(
+        `https://api.music.apple.com/v1/me/library/playlists/${encodeURIComponent(playlist_id)}/tracks`,
+        {
+          method: 'POST',
+          headers: {
+            ...appleHeaders,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            data: [{ id: song_id, type: 'songs' }],
+          }),
+        },
+      );
+      if (appleRes.status === 201 || appleRes.status === 204) {
+        return new Response(JSON.stringify({ ok: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const errText = await appleRes.text();
+      return new Response(JSON.stringify({ error: errText || `Apple API ${appleRes.status}` }), {
+        status: appleRes.status === 401 || appleRes.status === 403 ? appleRes.status : 502,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action !== 'add_to_library') {
+      return new Response(JSON.stringify({ error: 'unknown action' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const song_id = body.song_id;
+    if (!song_id || typeof song_id !== 'string') {
+      return new Response(JSON.stringify({ error: 'song_id required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const appleRes = await fetch(`https://api.music.apple.com/v1/me/library?ids[songs]=${song_id}`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${devToken}`,
-        'Music-User-Token': music_user_token,
-      },
+      headers: appleHeaders,
     });
 
     if (appleRes.status === 202 || appleRes.status === 204) {

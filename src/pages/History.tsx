@@ -45,9 +45,9 @@ const History = () => {
             {sorted.length === 0 ? (
               <div className="text-center py-20">
                 <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground font-body">Nessuna chat ancora. Inizia da Discover.</p>
-                <Button className="mt-6" variant="outline" onClick={() => navigate("/discover")}>
-                  Vai a Discover
+                <p className="text-muted-foreground font-body">Nessuna chat ancora. Apri la chat musicale.</p>
+                <Button className="mt-6" variant="outline" onClick={() => navigate("/chat")}>
+                  Vai alla chat
                 </Button>
               </div>
             ) : (
@@ -65,7 +65,7 @@ const History = () => {
                         type="button"
                         onClick={() => {
                           selectConversation(c.id);
-                          navigate(`/discover?conversation=${c.id}`);
+                          navigate(`/chat?conversation=${c.id}`);
                         }}
                         className="flex-1 min-w-0 text-left"
                       >
@@ -104,7 +104,7 @@ const History = () => {
                           type="button"
                           onClick={() => {
                             selectConversation(c.id);
-                            navigate(`/discover?conversation=${c.id}`);
+                            navigate(`/chat?conversation=${c.id}`);
                           }}
                           className="p-2 rounded-lg text-muted-foreground hover:text-primary transition-colors"
                           aria-label="Apri chat"
@@ -143,9 +143,9 @@ const History = () => {
             {sortedListens.length === 0 ? (
               <div className="text-center py-20">
                 <Headphones className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground font-body">Nessun ascolto registrato. Premi play su Discover.</p>
-                <Button className="mt-6" variant="outline" onClick={() => navigate("/discover")}>
-                  Vai a Discover
+                <p className="text-muted-foreground font-body">Nessun ascolto registrato. Premi play dalla chat.</p>
+                <Button className="mt-6" variant="outline" onClick={() => navigate("/chat")}>
+                  Vai alla chat
                 </Button>
               </div>
             ) : (
@@ -196,7 +196,7 @@ const History = () => {
                         onClick={() => {
                           if (!chatExists) return;
                           selectConversation(e.conversationId);
-                          navigate(`/discover?conversation=${e.conversationId}`);
+                          navigate(`/chat?conversation=${e.conversationId}`);
                         }}
                         title={!chatExists ? "Chat eliminata" : undefined}
                       >

@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Sparkles, Search, Music, Wand2 } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
 import PromptInput from "@/components/PromptInput";
 import SongCard from "@/components/SongCard";
-import { examplePrompts, mockSongs } from "@/data/mockData";
+import { mockSongs } from "@/data/mockData";
+import { pickDiscoverPromptSuggestions } from "@/lib/discoverPromptSuggestions";
 import { useApp } from "@/context/AppContext";
 import { useConversations } from "@/context/ConversationContext";
 import { callMusicSearch } from "@/services/musicSearchApi";
@@ -14,11 +15,25 @@ import { toast } from "sonner";
 const Landing = () => {
   const navigate = useNavigate();
   const { descriptionLanguage } = useApp();
-  const { userTasteProfile } = useConversations();
+  const { userTasteProfile, conversations } = useConversations();
   const [luckyLoading, setLuckyLoading] = useState(false);
 
+  const landingPrompts = useMemo(() => {
+    const completedSearchCount = conversations.reduce(
+      (acc, c) => acc + c.messages.filter((m) => m.role === "assistant").length,
+      0
+    );
+    return pickDiscoverPromptSuggestions({
+      userTasteProfile,
+      completedSearchCount,
+      descriptionLanguage,
+      count: 3,
+      sessionKey: "landing",
+    });
+  }, [conversations, userTasteProfile, descriptionLanguage]);
+
   const handlePromptSubmit = (value: string) => {
-    navigate(`/discover?q=${encodeURIComponent(value)}`);
+    navigate(`/chat?q=${encodeURIComponent(value)}`);
   };
 
   const handleLucky = async () => {
@@ -39,7 +54,7 @@ const Landing = () => {
         toast.error("Nessun brano trovato. Prova dopo qualche ricerca per affinare il profilo.");
         return;
       }
-      navigate("/discover", { state: { luckyPayload: data } });
+      navigate("/chat", { state: { luckyPayload: data } });
     } catch {
       toast.error("Qualcosa è andato storto");
     } finally {
@@ -100,7 +115,7 @@ const Landing = () => {
           </div>
 
           <div className="flex flex-wrap justify-center gap-2 animate-fade-up" style={{ animationDelay: "300ms" }}>
-            {examplePrompts.slice(0, 3).map((prompt) => (
+            {landingPrompts.map((prompt) => (
               <button
                 key={prompt}
                 onClick={() => handlePromptSubmit(prompt)}
@@ -157,7 +172,7 @@ const Landing = () => {
 
           <div className="text-center mt-12">
             <Link
-              to="/discover"
+              to="/chat"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-body font-medium hover:opacity-90 transition-opacity"
             >
               Enter Echoes

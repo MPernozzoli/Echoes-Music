@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
+import { toast } from "sonner";
 import { Play, Pause, SkipBack, SkipForward, Heart, Volume2, VolumeX, Info } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import type { Song } from "@/data/mockData";
@@ -7,7 +8,9 @@ import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
 import { AppleMusicEmbed } from "@/components/AppleMusicEmbed";
 import { AppleMusicKitPlayer, type AppleMusicKitPlayerHandle } from "@/components/AppleMusicKitPlayer";
 import { StreamingLibraryActions } from "@/components/StreamingLibraryActions";
+import { DockStreamingActions } from "@/components/DockStreamingActions";
 import { PlayerDockChrome, type DockRepeatMode } from "@/components/PlayerDockChrome";
+import { canUseWebKitAirPlayPicker, isAppleUserAgent, showWebKitAirPlayPicker } from "@/lib/airPlay";
 
 interface FullPlayerProps {
   songs: Song[];
@@ -295,6 +298,13 @@ const FullPlayer = ({
 
   const dockPlayDisabled = !embedOnlyDock && !useAppleKitPlayer && !audioReady;
 
+  const dockAirPlayUi = isAppleUserAgent() && canUseWebKitAirPlayPicker();
+  const handleDockAirPlay = useCallback(() => {
+    const el = audioRef.current;
+    if (showWebKitAirPlayPicker(el)) return;
+    toast.info("Per AirPlay con Apple Music usa Controllo centro o il menu volume di sistema.");
+  }, []);
+
   if (isDock) {
     return (
       <>
@@ -319,6 +329,9 @@ const FullPlayer = ({
             artworkOverlapClassName="w-[5.75rem] h-[5.75rem] md:w-[6.75rem] md:h-[6.75rem] -translate-y-8 md:-translate-y-9"
             isFavorite={fav}
             onToggleFavorite={() => onToggleFavorite(song.id)}
+            trackExtraActions={
+              <DockStreamingActions spotifyTrackId={spotifyTrackId} appleMusicTrackId={appleMusicId} />
+            }
             shuffleOn={dockShuffle}
             onShuffleToggle={() => setDockShuffle((s) => !s)}
             repeatMode={dockRepeat}
@@ -351,12 +364,8 @@ const FullPlayer = ({
             dockPanelActions={dockPanelActions}
             onDetails={dockPanelActions ? undefined : onShowDetails}
             onOpenQueue={dockPanelActions ? undefined : onOpenQueue}
-          />
-          <StreamingLibraryActions
-            spotifyTrackId={spotifyTrackId}
-            appleMusicTrackId={appleMusicId}
-            className="px-3 pt-2 pb-1 border-t border-zinc-800/80 justify-center"
-            compact
+            airPlayOnClick={dockAirPlayUi ? handleDockAirPlay : undefined}
+            showVolumeControl={!dockAirPlayUi}
           />
         </div>
       </>

@@ -47,14 +47,7 @@ export interface EmotionalProfile {
   emotionalTension: string;
 }
 
-export const examplePrompts = [
-  "Songs about past friendships that ended without a fight",
-  "A song that feels like missing someone without wanting them back",
-  "Music for walking alone in a city at night",
-  "Songs that sound like emotional relief after a difficult time",
-  "Something that captures gentle hope after heartbreak",
-  "Music that feels like nostalgia without regret",
-];
+export { examplePrompts } from "@/lib/discoverPromptSuggestions";
 
 const artworks = [
   "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop",

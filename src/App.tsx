@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,7 +9,12 @@ import { SpotifyProvider } from "@/context/SpotifyContext";
 import { AppleMusicProvider } from "@/context/AppleMusicContext";
 import { PlaybackQueueProvider } from "@/context/PlaybackQueueContext";
 import Landing from "./pages/Landing";
-import Discover from "./pages/Discover";
+import Chat from "./pages/Chat";
+
+const DiscoverRedirect = () => {
+  const { search } = useLocation();
+  return <Navigate to={`/chat${search}`} replace />;
+};
 import History from "./pages/History";
 import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
@@ -32,7 +37,8 @@ const App = () => (
             <PlaybackQueueProvider>
               <Routes>
                 <Route path="/" element={<Landing />} />
-                <Route path="/discover" element={<Discover />} />
+                <Route path="/chat" element={<Chat />} />
+                <Route path="/discover" element={<DiscoverRedirect />} />
                 <Route path="/history" element={<History />} />
                 <Route path="/favorites" element={<Favorites />} />
                 <Route path="/profile" element={<Profile />} />

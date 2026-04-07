@@ -1,13 +1,13 @@
 import { Link, useLocation } from "react-router-dom";
-import { Search, Clock, Heart, User, Home } from "lucide-react";
+import { MessageSquare, Clock, Heart, User, Home } from "lucide-react";
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
 const navItems = [
-  { label: "Discover", path: "/discover", icon: Search },
-  { label: "Chat", path: "/history", icon: Clock },
+  { label: "Chat", path: "/chat", icon: MessageSquare },
+  { label: "Storico", path: "/history", icon: Clock },
   { label: "Favorites", path: "/favorites", icon: Heart },
   { label: "Profile", path: "/profile", icon: User },
 ];
