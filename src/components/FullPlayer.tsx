@@ -161,9 +161,21 @@ const FullPlayer = ({
       const onEnded = () => {
         const i = indexRef.current;
         const len = songsLenRef.current;
+        const repeat = dockRepeatRef.current;
+        if (repeat === "one") {
+          // Replay same track from the start
+          if (audio) {
+            audio.currentTime = 0;
+            audio.play().catch(() => {});
+          }
+          return;
+        }
         if (i < len - 1) {
           queueContinueAfterLoad.current = true;
           onChangeIndexRef.current(i + 1);
+        } else if (repeat === "all" && len > 0) {
+          queueContinueAfterLoad.current = true;
+          onChangeIndexRef.current(0);
         } else {
           playbackCbRef.current?.(false);
         }
