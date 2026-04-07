@@ -72,6 +72,7 @@ serve(async (req: Request) => {
       metadata: { plan_key, user_id: user.id, tokens: plan.tokens?.toString() ?? "" },
       line_items: [{ price: plan.price_id, quantity: 1 }],
       mode: plan.mode,
+      allow_promotion_codes: true,
       success_url: `${origin}/profile?checkout=success&plan=${plan_key}`,
       cancel_url: `${origin}/profile?checkout=cancelled`,
     });
