@@ -15,12 +15,10 @@ import MusicSearchThinking from "@/components/MusicSearchThinking";
 import SearchFeedback from "@/components/SearchFeedback";
 import { pickDiscoverPromptSuggestions } from "@/lib/discoverPromptSuggestions";
 import type { ListenHistoryEntry, SearchResult } from "@/data/mockData";
-import { useApp } from "@/context/AppContext";
-import { usePlaybackQueue } from "@/context/PlaybackQueueContext";
-import {
-  useConversations,
-  memoryOrFromProfile,
-} from "@/context/ConversationContext";
+import { useApp } from "@/context/useApp";
+import { usePlaybackQueue } from "@/context/usePlaybackQueue";
+import { useConversations } from "@/context/useConversations";
+import { memoryOrFromProfile } from "@/lib/conversationMemory";
 import { callMusicSearch } from "@/services/musicSearchApi";
 import { trackSearch, trackResults, trackInteraction, maybeCreateTrainingEvent } from "@/services/tracking";
 import { emotionalProfileToAxes } from "@/types/conversation";
@@ -45,7 +43,8 @@ import { toast } from "sonner";
 import type { ChatMessage } from "@/types/conversation";
 import { cn } from "@/lib/utils";
 import { dedupeSongVersions } from "@/lib/dedupeSongs";
-import { AssistantSongNarrative, fallbackNarrativeForResult } from "@/components/AssistantSongNarrative";
+import { AssistantSongNarrative } from "@/components/AssistantSongNarrative";
+import { fallbackNarrativeForResult } from "@/lib/assistantNarrative";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { isLuckyPrompt } from "@/constants/luckyPrompt";
 

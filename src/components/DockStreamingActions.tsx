@@ -4,8 +4,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { DOCK_ICON_BTN } from "@/components/PlayerDockChrome";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useAppleMusic } from "@/context/AppleMusicContext";
-import { useSpotify } from "@/context/SpotifyContext";
+import { useAppleMusic } from "@/context/useAppleMusic";
+import { useSpotify } from "@/context/useSpotify";
 import {
   addAppleMusicSongToLibrary,
   addAppleMusicSongToPlaylist,

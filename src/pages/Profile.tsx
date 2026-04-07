@@ -5,9 +5,9 @@ import AppLayout from "@/components/AppLayout";
 import { User, Music, Palette, LogOut, ExternalLink, Shield, Check, Loader2, X, Globe } from "lucide-react";
 import { getUserSettings, setAllowAnonymizedData } from "@/services/tracking";
 import { getSpotifyAuthUrl, disconnectSpotify } from "@/services/spotify";
-import { useSpotify } from "@/context/SpotifyContext";
-import { useAppleMusic } from "@/context/AppleMusicContext";
-import { useApp } from "@/context/AppContext";
+import { useSpotify } from "@/context/useSpotify";
+import { useAppleMusic } from "@/context/useAppleMusic";
+import { useApp } from "@/context/useApp";
 import { SUPPORTED_UI_LANGS, type SupportedUiLang } from "@/i18n/config";
 
 const DESCRIPTION_LANGS: { value: string; label: string }[] = [

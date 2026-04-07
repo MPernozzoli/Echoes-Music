@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Play, Pause, Volume2 } from "lucide-react";
-import { useSpotify } from "@/context/SpotifyContext";
+import { useSpotify } from "@/context/useSpotify";
 
 interface SpotifyPlayerProps {
   trackTitle: string;

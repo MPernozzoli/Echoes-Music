@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from "react";
 import { Play, Pause } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
-import { useAppleMusic } from "@/context/AppleMusicContext";
+import { useAppleMusic } from "@/context/useAppleMusic";
 
 type MKInstance = {
   pause: () => Promise<void>;
