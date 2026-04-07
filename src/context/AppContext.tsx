@@ -1,6 +1,7 @@
 /* @refresh skip */
 import { createContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import type { Song, SearchResult, ListenHistoryEntry } from "@/data/mockData";
+import { getUserSettings, setSyncFavoritesEchoesPlaylist as persistSyncFavoritesEchoesPlaylist } from "@/services/tracking";
 import i18n, {
   UI_LANG_KEY,
   resolveUiLanguage,
@@ -13,6 +14,8 @@ interface AppState {
   listenHistory: ListenHistoryEntry[];
   descriptionLanguage: string;
   uiLanguage: SupportedUiLang;
+  syncFavoritesEchoesPlaylist: boolean;
+  setSyncFavoritesEchoesPlaylist: (enabled: boolean) => Promise<void>;
   toggleFavorite: (song: Song) => void;
   isFavorite: (songId: string) => boolean;
   addToHistory: (result: SearchResult) => void;
@@ -70,6 +73,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   );
   const [descriptionLanguage, setDescriptionLanguage] = useState<string>(() => localStorage.getItem(LANGUAGE_KEY) || "auto");
   const [uiLanguage, setUiLanguageState] = useState<SupportedUiLang>(() => resolveUiLanguage(localStorage.getItem(UI_LANG_KEY)));
+  const [syncFavoritesEchoesPlaylist, setSyncFavoritesEchoesPlaylistState] = useState(false);
+
+  useEffect(() => {
+    void getUserSettings().then((s) => {
+      if (s && typeof s.sync_favorites_echoes_playlist === "boolean") {
+        setSyncFavoritesEchoesPlaylistState(s.sync_favorites_echoes_playlist);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
@@ -99,6 +111,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const setUiLanguage = useCallback((lang: SupportedUiLang) => {
     setUiLanguageState(lang);
+  }, []);
+
+  const setSyncFavoritesEchoesPlaylist = useCallback(async (enabled: boolean) => {
+    setSyncFavoritesEchoesPlaylistState(enabled);
+    await persistSyncFavoritesEchoesPlaylist(enabled);
   }, []);
 
   const toggleFavorite = useCallback((song: Song) => {
@@ -147,6 +164,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         listenHistory,
         descriptionLanguage,
         uiLanguage,
+        syncFavoritesEchoesPlaylist,
+        setSyncFavoritesEchoesPlaylist,
         toggleFavorite,
         isFavorite,
         addToHistory,

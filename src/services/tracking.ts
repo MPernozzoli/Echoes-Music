@@ -142,6 +142,22 @@ export async function setAllowAnonymizedData(allow: boolean) {
   }
 }
 
+export async function setSyncFavoritesEchoesPlaylist(enabled: boolean) {
+  const existing = await getUserSettings();
+  if (existing) {
+    await supabase
+      .from("user_settings")
+      .update({ sync_favorites_echoes_playlist: enabled })
+      .eq("id", existing.id);
+  } else {
+    await supabase.from("user_settings").insert({
+      anonymous_session_id: sessionId,
+      allow_anonymized_improvement_data: true,
+      sync_favorites_echoes_playlist: enabled,
+    });
+  }
+}
+
 // --- ANONYMIZED TRAINING EVENT ---
 export async function maybeCreateTrainingEvent(params: {
   searchId: string;

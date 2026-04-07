@@ -104,3 +104,35 @@ export async function spotifyAddTrackToPlaylist(
   if (!res.ok) return { error: typeof data.error === "string" ? data.error : "Spotify: errore" };
   return { ok: true };
 }
+
+export async function spotifyEnsureEchoesPlaylist(): Promise<{ playlist_id: string } | { error: string }> {
+  const res = await fetch(functionsUrl("spotify-auth"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+    body: JSON.stringify({ action: "ensure_echoes_playlist", session_id: SESSION_ID }),
+  });
+  const data = await res.json();
+  if (!res.ok) return { error: typeof data.error === "string" ? data.error : "Spotify: errore" };
+  const id = data.playlist_id;
+  if (typeof id !== "string" || !id) return { error: "Spotify: playlist Echoes non disponibile" };
+  return { playlist_id: id };
+}
+
+export async function spotifyReplacePlaylistTracks(
+  playlistId: string,
+  trackIds: string[],
+): Promise<{ ok: true } | { error: string }> {
+  const res = await fetch(functionsUrl("spotify-auth"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+    body: JSON.stringify({
+      action: "replace_playlist_tracks",
+      session_id: SESSION_ID,
+      playlist_id: playlistId,
+      track_ids: trackIds,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) return { error: typeof data.error === "string" ? data.error : "Spotify: errore" };
+  return { ok: true };
+}

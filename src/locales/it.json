@@ -57,6 +57,8 @@
     "themeSystem": "Sistema",
     "privacyTitle": "Dati di miglioramento",
     "privacyHint": "Consenti dati anonimi per migliorare i consigli",
+    "favoritesPlaylistTitle": "Playlist Echoes su Spotify / Apple Music",
+    "favoritesPlaylistHint": "Mantieni una playlist «Echoes» allineata ai preferiti (serve account collegato; solo brani con id sul servizio).",
     "signOut": "Esci"
   },
   "favorites": {
@@ -238,7 +240,8 @@
     "spotifySavedAllTracks": "{{count}} brani salvati su Spotify",
     "appleAddedAllLibrary": "{{count}} brani aggiunti alla libreria Apple Music",
     "searchPlaylists": "Cerca playlist…",
-    "noPlaylistsMatch": "Nessuna playlist trovata"
+    "noPlaylistsMatch": "Nessuna playlist trovata",
+    "echoesPlaylistSyncFailed": "Sincronizzazione playlist Echoes non riuscita"
   },
   "narrative": {
     "selectedTracks": "Brani selezionati",

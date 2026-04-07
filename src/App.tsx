@@ -10,6 +10,8 @@ import { ConversationProvider } from "@/context/ConversationContext";
 import { SpotifyProvider } from "@/context/SpotifyContext";
 import { AppleMusicProvider } from "@/context/AppleMusicContext";
 import { PlaybackQueueProvider } from "@/context/PlaybackQueueContext";
+import { FavoritesEchoesPlaylistSync } from "@/components/FavoritesEchoesPlaylistSync";
+import { ThemeFaviconSync } from "@/components/AppLogo";
 import Landing from "./pages/Landing";
 import Chat from "./pages/Chat";
 import Auth from "./pages/Auth";
@@ -31,6 +33,7 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="echoes-theme">
+    <ThemeFaviconSync />
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -41,6 +44,7 @@ const App = () => (
           <SpotifyProvider>
             <AppleMusicProvider>
             <PlaybackQueueProvider>
+              <FavoritesEchoesPlaylistSync />
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/auth" element={<Auth />} />

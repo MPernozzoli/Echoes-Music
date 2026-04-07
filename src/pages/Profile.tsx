@@ -3,7 +3,11 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
+<<<<<<< Updated upstream
 import { User, Music, Palette, LogOut, ExternalLink, Shield, Check, Loader2, X, Globe, LogIn, Coins } from "lucide-react";
+=======
+import { User, Music, Palette, LogOut, ExternalLink, Shield, Check, Loader2, X, Globe, ListMusic } from "lucide-react";
+>>>>>>> Stashed changes
 import { getUserSettings, setAllowAnonymizedData } from "@/services/tracking";
 import { getSpotifyAuthUrl, disconnectSpotify } from "@/services/spotify";
 import { useSpotify } from "@/context/useSpotify";
@@ -40,8 +44,19 @@ const Profile = () => {
   const [allowData, setAllowData] = useState(true);
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [connectingSpotify, setConnectingSpotify] = useState(false);
+<<<<<<< Updated upstream
   const { descriptionLanguage, setDescriptionLanguage, uiLanguage, setUiLanguage } = useApp();
   const { user, tokenBalance, plan, signOut } = useAuth();
+=======
+  const {
+    descriptionLanguage,
+    setDescriptionLanguage,
+    uiLanguage,
+    setUiLanguage,
+    syncFavoritesEchoesPlaylist,
+    setSyncFavoritesEchoesPlaylist,
+  } = useApp();
+>>>>>>> Stashed changes
   const { isConnected: spotifyConnected, displayName: spotifyName, isPremium, loading: spotifyLoading, setDisconnected } = useSpotify();
   const { isAvailable: appleMusicAvailable, isAuthorized: appleMusicAuthorized, loading: appleMusicLoading, authorize: authorizeApple, unauthorize: unauthorizeApple } = useAppleMusic();
 
@@ -225,6 +240,29 @@ const Profile = () => {
                 {t("profile.connect")}
               </button>
             ) : null}
+          </div>
+        </div>
+
+        <div className="glass-card rounded-2xl p-6 mb-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <ListMusic className="w-5 h-5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-body text-sm font-medium text-foreground">{t("profile.favoritesPlaylistTitle")}</h3>
+                <p className="text-xs text-muted-foreground font-body">{t("profile.favoritesPlaylistHint")}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => void setSyncFavoritesEchoesPlaylist(!syncFavoritesEchoesPlaylist)}
+              className={`relative shrink-0 w-11 h-6 rounded-full transition-colors ${syncFavoritesEchoesPlaylist ? "bg-primary" : "bg-muted"}`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-primary-foreground transition-transform ${syncFavoritesEchoesPlaylist ? "translate-x-5" : "translate-x-0"}`}
+              />
+            </button>
           </div>
         </div>
 

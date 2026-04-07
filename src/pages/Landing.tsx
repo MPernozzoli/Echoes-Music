@@ -11,6 +11,7 @@ import { useApp } from "@/context/useApp";
 import { useConversations } from "@/context/useConversations";
 import { callMusicSearch } from "@/services/musicSearchApi";
 import { Button } from "@/components/ui/button";
+import { AppLogo } from "@/components/AppLogo";
 import { toast } from "sonner";
 
 const Landing = () => {
@@ -199,7 +200,10 @@ const Landing = () => {
       </section>
 
       <footer className="py-12 px-6 text-center">
-        <p className="font-display text-lg gradient-warm-text mb-2">Echoes</p>
+        <div className="flex flex-col items-center gap-2 mb-2">
+          <AppLogo size={40} className="rounded-xl" />
+          <p className="font-display text-lg gradient-warm-text">Echoes</p>
+        </div>
         <p className="text-xs text-muted-foreground font-body">{t("landing.footerTagline")}</p>
       </footer>
     </div>

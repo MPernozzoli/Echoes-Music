@@ -175,8 +175,8 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      const created = (createdData.data ?? []) as Array<{ id: string }>;
-      const pid = created[0]?.id;
+      const raw = createdData.data as { id?: string } | { id?: string }[] | undefined;
+      const pid = Array.isArray(raw) ? raw[0]?.id : raw?.id;
       if (!pid) {
         return new Response(JSON.stringify({ error: 'Apple: playlist create returned no id' }), {
           status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
