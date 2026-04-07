@@ -91,7 +91,9 @@ const FullPlayer = ({
   const kitPlayerRef = useRef<AppleMusicKitPlayerHandle>(null);
   const [kitTelemetry, setKitTelemetry] = useState({ current: 0, duration: 0, isPlaying: false });
   const [dockShuffle, setDockShuffle] = useState(false);
-  const [dockRepeat, setDockRepeat] = useState<DockRepeatMode>("off");
+  const [dockRepeat, setDockRepeat] = useState<DockRepeatMode>("all");
+  const dockRepeatRef = useRef<DockRepeatMode>(dockRepeat);
+  dockRepeatRef.current = dockRepeat;
 
   useEffect(() => {
     setKitTelemetry({ current: 0, duration: 0, isPlaying: false });
@@ -109,12 +111,21 @@ const FullPlayer = ({
   const handleKitTrackEnded = useCallback(() => {
     const i = indexRef.current;
     const len = songsLenRef.current;
-    if (i >= len - 1) {
-      playbackCbRef.current?.(false);
+    const repeat = dockRepeatRef.current;
+    if (repeat === "one") {
+      // Replay same track
+      setKitAutoplayNonce((n) => n + 1);
       return;
     }
-    setKitAutoplayNonce((n) => n + 1);
-    onChangeIndexRef.current(i + 1);
+    if (i < len - 1) {
+      setKitAutoplayNonce((n) => n + 1);
+      onChangeIndexRef.current(i + 1);
+    } else if (repeat === "all" && len > 0) {
+      setKitAutoplayNonce((n) => n + 1);
+      onChangeIndexRef.current(0);
+    } else {
+      playbackCbRef.current?.(false);
+    }
   }, []);
 
   const onKitQueueAutoplayConsumed = useCallback(() => {
@@ -150,9 +161,21 @@ const FullPlayer = ({
       const onEnded = () => {
         const i = indexRef.current;
         const len = songsLenRef.current;
+        const repeat = dockRepeatRef.current;
+        if (repeat === "one") {
+          // Replay same track from the start
+          if (audio) {
+            audio.currentTime = 0;
+            audio.play().catch(() => {});
+          }
+          return;
+        }
         if (i < len - 1) {
           queueContinueAfterLoad.current = true;
           onChangeIndexRef.current(i + 1);
+        } else if (repeat === "all" && len > 0) {
+          queueContinueAfterLoad.current = true;
+          onChangeIndexRef.current(0);
         } else {
           playbackCbRef.current?.(false);
         }
@@ -250,11 +273,16 @@ const FullPlayer = ({
   }, [currentIndex, onChangeIndex]);
 
   const handleNext = useCallback(() => {
-    if (currentIndex >= songs.length - 1) return;
-    queueContinueAfterLoad.current = true;
-    setKitAutoplayNonce((n) => n + 1);
-    onChangeIndex(currentIndex + 1);
-  }, [currentIndex, songs.length, onChangeIndex]);
+    if (currentIndex < songs.length - 1) {
+      queueContinueAfterLoad.current = true;
+      setKitAutoplayNonce((n) => n + 1);
+      onChangeIndex(currentIndex + 1);
+    } else if (dockRepeat === "all" && songs.length > 0) {
+      queueContinueAfterLoad.current = true;
+      setKitAutoplayNonce((n) => n + 1);
+      onChangeIndex(0);
+    }
+  }, [currentIndex, songs.length, onChangeIndex, dockRepeat]);
 
   const onDockPlayPause = useCallback(() => {
     const s = songs[currentIndex];
@@ -379,7 +407,7 @@ const FullPlayer = ({
             onPrev={handlePrev}
             onNext={handleNext}
             prevDisabled={currentIndex === 0}
-            nextDisabled={currentIndex === songs.length - 1}
+            nextDisabled={currentIndex === songs.length - 1 && dockRepeat !== "all"}
             isPlaying={useAppleKitPlayer ? kitTelemetry.isPlaying : isPlaying}
             onPlayPause={onDockPlayPause}
             playDisabled={dockPlayDisabled}
