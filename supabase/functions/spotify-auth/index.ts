@@ -293,7 +293,7 @@ Deno.serve(async (req) => {
       const PLAYLIST_NAME = 'Echoes';
       let url: string | null = `${SPOTIFY_API}/me/playlists?limit=50`;
       while (url) {
-        const res = await fetch(url, {
+        const res: Response = await fetch(url, {
           headers: { Authorization: `Bearer ${auth.access_token}` },
         });
         if (!res.ok) {
@@ -303,7 +303,7 @@ Deno.serve(async (req) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
-        const data = await res.json();
+        const data: Record<string, unknown> = await res.json();
         const items = (data.items ?? []) as { id: string; name: string }[];
         const found = items.find((p) => p.name === PLAYLIST_NAME);
         if (found) {
