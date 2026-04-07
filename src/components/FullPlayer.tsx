@@ -91,7 +91,7 @@ const FullPlayer = ({
   const kitPlayerRef = useRef<AppleMusicKitPlayerHandle>(null);
   const [kitTelemetry, setKitTelemetry] = useState({ current: 0, duration: 0, isPlaying: false });
   const [dockShuffle, setDockShuffle] = useState(false);
-  const [dockRepeat, setDockRepeat] = useState<DockRepeatMode>("off");
+  const [dockRepeat, setDockRepeat] = useState<DockRepeatMode>("all");
   const dockRepeatRef = useRef<DockRepeatMode>(dockRepeat);
   dockRepeatRef.current = dockRepeat;
 
