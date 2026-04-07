@@ -1,5 +1,7 @@
 import { Heart } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import ResultFeedback from "./ResultFeedback";
+import { trackInteraction } from "@/services/tracking";
 
 interface SongCardProps {
   id: string;
@@ -13,6 +15,9 @@ interface SongCardProps {
   isFavorite?: boolean;
   onToggleFavorite?: (id: string) => void;
   index?: number;
+  searchResultId?: string;
+  searchId?: string;
+  onTagClick?: (tag: string) => void;
 }
 
 const SongCard = ({
@@ -26,11 +31,59 @@ const SongCard = ({
   isFavorite = false,
   onToggleFavorite,
   index = 0,
+  searchResultId,
+  searchId,
+  onTagClick,
 }: SongCardProps) => {
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const impressionTracked = useRef(false);
+
+  // Track impression when card is visible
+  useEffect(() => {
+    if (!searchResultId || !searchId || impressionTracked.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !impressionTracked.current) {
+          impressionTracked.current = true;
+          trackInteraction({ searchResultId, searchId, interactionType: "impression" });
+        }
+      },
+      { threshold: 0.5 }
+    );
+    if (cardRef.current) observer.observe(cardRef.current);
+    return () => observer.disconnect();
+  }, [searchResultId, searchId]);
+
+  const handleClick = () => {
+    if (searchResultId && searchId) {
+      trackInteraction({ searchResultId, searchId, interactionType: "click" });
+    }
+  };
+
+  const handleExpand = () => {
+    setExpanded(!expanded);
+    if (!expanded && searchResultId && searchId) {
+      trackInteraction({ searchResultId, searchId, interactionType: "expand_explanation" });
+    }
+  };
+
+  const handleFavorite = () => {
+    onToggleFavorite?.(id);
+    if (searchResultId && searchId) {
+      trackInteraction({
+        searchResultId,
+        searchId,
+        interactionType: isFavorite ? "unfavorite" : "favorite",
+      });
+    }
+  };
 
   return (
     <div
+      ref={cardRef}
+      onClick={handleClick}
       className="group glass-card rounded-2xl p-5 hover:border-primary/20 transition-all duration-500 animate-fade-up"
       style={{ animationDelay: `${index * 100}ms`, animationFillMode: "backwards" }}
     >
@@ -61,7 +114,7 @@ const SongCard = ({
                 {relevanceScore}%
               </span>
               <button
-                onClick={() => onToggleFavorite?.(id)}
+                onClick={(e) => { e.stopPropagation(); handleFavorite(); }}
                 className="p-1.5 rounded-full hover:bg-muted transition-colors"
               >
                 <Heart
@@ -73,20 +126,36 @@ const SongCard = ({
             </div>
           </div>
 
-          <p className="text-sm text-secondary-foreground/70 mt-2 leading-relaxed line-clamp-2">
-            {explanation}
-          </p>
+          <button
+            onClick={(e) => { e.stopPropagation(); handleExpand(); }}
+            className="text-left w-full"
+          >
+            <p className={`text-sm text-secondary-foreground/70 mt-2 leading-relaxed ${expanded ? "" : "line-clamp-2"}`}>
+              {explanation}
+            </p>
+          </button>
 
           <div className="flex flex-wrap gap-1.5 mt-3">
             {emotionalTags.map((tag) => (
-              <span
+              <button
                 key={tag}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTagClick?.(tag);
+                }}
                 className="text-xs px-2.5 py-0.5 rounded-full bg-emotional-tag/15 text-emotional-tag-foreground/80 font-body cursor-pointer hover:bg-emotional-tag/25 transition-colors"
               >
                 {tag}
-              </span>
+              </button>
             ))}
           </div>
+
+          {/* Inline feedback */}
+          {searchResultId && searchId && (
+            <div className="mt-3 pt-2 border-t border-border/40">
+              <ResultFeedback searchResultId={searchResultId} searchId={searchId} />
+            </div>
+          )}
         </div>
       </div>
     </div>
