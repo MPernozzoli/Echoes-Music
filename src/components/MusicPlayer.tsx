@@ -4,6 +4,7 @@ import { useAppleMusic } from "@/context/AppleMusicContext";
 import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
 import { AppleMusicEmbed } from "@/components/AppleMusicEmbed";
 import { AppleMusicKitPlayer } from "@/components/AppleMusicKitPlayer";
+import { StreamingLibraryActions } from "@/components/StreamingLibraryActions";
 
 interface MusicPlayerProps {
   trackTitle: string;
@@ -35,6 +36,11 @@ const MusicPlayer = ({ trackTitle, artistName, spotifyTrackId, appleMusicTrackId
         ) : (
           <AppleMusicEmbed trackId={appleMusicTrackId!} trackTitle={trackTitle} height={175} />
         )}
+        <StreamingLibraryActions
+          spotifyTrackId={spotifyTrackId}
+          appleMusicTrackId={appleMusicTrackId}
+          className="mt-2"
+        />
       </div>
     );
   }
@@ -58,6 +64,11 @@ const MusicPlayer = ({ trackTitle, artistName, spotifyTrackId, appleMusicTrackId
             Riproduzione completa disponibile
           </p>
         )}
+        <StreamingLibraryActions
+          spotifyTrackId={spotifyTrackId}
+          appleMusicTrackId={appleMusicTrackId}
+          className="mt-2"
+        />
       </div>
     );
   }
@@ -75,6 +86,11 @@ const MusicPlayer = ({ trackTitle, artistName, spotifyTrackId, appleMusicTrackId
         ) : (
           <AppleMusicEmbed trackId={appleMusicTrackId!} trackTitle={trackTitle} height={175} />
         )}
+        <StreamingLibraryActions
+          spotifyTrackId={spotifyTrackId}
+          appleMusicTrackId={appleMusicTrackId}
+          className="mt-2"
+        />
       </div>
     );
   }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Play, Pause } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { useAppleMusic } from "@/context/AppleMusicContext";
@@ -25,6 +25,11 @@ interface AppleMusicKitPlayerProps {
   title?: string;
   artist?: string;
   compact?: boolean;
+  onPlaybackStateChange?: (playing: boolean) => void;
+  onTrackEnded?: () => void;
+  /** Incrementato dal parent per far partire il brano dopo avanzamento coda (>0). */
+  queueAutoplayNonce?: number;
+  onQueueAutoplayConsumed?: () => void;
 }
 
 function formatTime(seconds: number): string {
@@ -37,16 +42,34 @@ function formatTime(seconds: number): string {
 /**
  * Riproduzione tramite MusicKit: usa developer token + sessione autorizzata in app (nessun re-login).
  */
-export function AppleMusicKitPlayer({ trackId, trackKey, title, artist, compact }: AppleMusicKitPlayerProps) {
+export function AppleMusicKitPlayer({
+  trackId,
+  trackKey,
+  title,
+  artist,
+  compact,
+  onPlaybackStateChange,
+  onTrackEnded,
+  queueAutoplayNonce = 0,
+  onQueueAutoplayConsumed,
+}: AppleMusicKitPlayerProps) {
   const { isAuthorized, isAvailable } = useAppleMusic();
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const wasPlayingRef = useRef(false);
+  const onEndedRef = useRef(onTrackEnded);
+  onEndedRef.current = onTrackEnded;
+
+  useEffect(() => {
+    onPlaybackStateChange?.(isPlaying);
+  }, [isPlaying, onPlaybackStateChange]);
 
   useEffect(() => {
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);
+    wasPlayingRef.current = false;
   }, [trackKey, trackId]);
 
   useEffect(() => {
@@ -59,8 +82,18 @@ export function AppleMusicKitPlayer({ trackId, trackKey, title, artist, compact 
       setCurrentTime(m.currentPlaybackTime);
       setDuration(m.currentPlaybackDuration || 0);
       const ps = (m as unknown as { playbackState?: number }).playbackState;
-      if (ps === 2) setIsPlaying(true);
-      else if (ps === 0 || ps === 3 || ps === 10) setIsPlaying(false);
+      if (ps === 2) {
+        setIsPlaying(true);
+        wasPlayingRef.current = true;
+      } else if (ps === 0 || ps === 3) {
+        setIsPlaying(false);
+      } else if (ps === 10) {
+        setIsPlaying(false);
+        if (wasPlayingRef.current) {
+          wasPlayingRef.current = false;
+          onEndedRef.current?.();
+        }
+      }
     };
 
     mk.addEventListener("playbackStateDidChange", sync);
@@ -70,6 +103,33 @@ export function AppleMusicKitPlayer({ trackId, trackKey, title, artist, compact 
       mk.removeEventListener?.("playbackTimeDidChange", sync);
     };
   }, []);
+
+  useEffect(() => {
+    if (queueAutoplayNonce < 1 || !isAuthorized || !isAvailable) return;
+    const mk = getMK();
+    if (!mk) {
+      onQueueAutoplayConsumed?.();
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        await mk.setQueue({ songs: [trackId] });
+        await mk.play();
+        if (!cancelled) {
+          setIsPlaying(true);
+          wasPlayingRef.current = true;
+        }
+      } catch (err) {
+        console.error("MusicKit queue autoplay:", err);
+      } finally {
+        if (!cancelled) onQueueAutoplayConsumed?.();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [trackId, trackKey, queueAutoplayNonce, isAuthorized, isAvailable, onQueueAutoplayConsumed]);
 
   const togglePlay = useCallback(async () => {
     const mk = getMK();
@@ -158,9 +218,6 @@ export function AppleMusicKitPlayer({ trackId, trackKey, title, artist, compact 
           {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
         </button>
       </div>
-      <p className="text-[10px] text-center text-muted-foreground font-body">
-        Riproduzione con la sessione Apple Music delle impostazioni
-      </p>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Heart } from "lucide-react";
 import type { Song } from "@/data/mockData";
 
@@ -10,11 +11,18 @@ interface TrackQueueProps {
 }
 
 const TrackQueue = ({ songs, currentIndex, onSelect, isFavorite, onToggleFavorite }: TrackQueueProps) => {
+  const activeRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [currentIndex]);
+
   return (
-    <div className="space-y-1">
+    <div className="max-h-[min(50vh,22rem)] overflow-y-auto overflow-x-hidden pr-1 space-y-1 scroll-smooth">
       {songs.map((song, i) => (
         <button
           key={song.id}
+          ref={i === currentIndex ? activeRef : undefined}
           onClick={() => onSelect(i)}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left group ${
             i === currentIndex

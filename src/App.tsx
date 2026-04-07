@@ -7,6 +7,7 @@ import { AppProvider } from "@/context/AppContext";
 import { ConversationProvider } from "@/context/ConversationContext";
 import { SpotifyProvider } from "@/context/SpotifyContext";
 import { AppleMusicProvider } from "@/context/AppleMusicContext";
+import { PlaybackQueueProvider } from "@/context/PlaybackQueueContext";
 import Landing from "./pages/Landing";
 import Discover from "./pages/Discover";
 import History from "./pages/History";
@@ -28,6 +29,7 @@ const App = () => (
           <ConversationProvider>
           <SpotifyProvider>
             <AppleMusicProvider>
+            <PlaybackQueueProvider>
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/discover" element={<Discover />} />
@@ -38,6 +40,7 @@ const App = () => (
                 <Route path="/spotify-callback" element={<SpotifyCallback />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
+            </PlaybackQueueProvider>
             </AppleMusicProvider>
           </SpotifyProvider>
           </ConversationProvider>

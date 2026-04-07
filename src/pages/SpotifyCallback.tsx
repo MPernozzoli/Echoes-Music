@@ -7,7 +7,7 @@ import { Loader2, CheckCircle, XCircle } from "lucide-react";
 const SpotifyCallback = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { setConnected } = useSpotify();
+  const { refresh } = useSpotify();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [error, setError] = useState("");
 
@@ -31,14 +31,14 @@ const SpotifyCallback = () => {
 
     const redirectUri = `${window.location.origin}/spotify-callback`;
 
-    exchangeSpotifyCode(code, redirectUri).then((data) => {
+    exchangeSpotifyCode(code, redirectUri).then(async (data) => {
       if (data.error) {
         setStatus("error");
         setError(data.error);
         setTimeout(() => navigate("/profile"), 3000);
       } else {
         setStatus("success");
-        setConnected({ displayName: data.display_name, product: data.product });
+        await refresh();
         setTimeout(() => navigate("/profile"), 1500);
       }
     }).catch(() => {
@@ -46,6 +46,7 @@ const SpotifyCallback = () => {
       setError("Connection failed");
       setTimeout(() => navigate("/profile"), 3000);
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- esegui una sola volta al caricamento con ?code=
   }, []);
 
   return (

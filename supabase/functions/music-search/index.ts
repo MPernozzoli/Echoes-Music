@@ -85,6 +85,13 @@ interface TrackResult {
   previewUrl?: string;
   spotifyUri?: string;
   appleMusicId?: string;
+  releaseYear?: number;
+}
+
+function releaseYearFromDateString(d: string | undefined): number | undefined {
+  if (!d || typeof d !== 'string') return undefined;
+  const y = parseInt(d.slice(0, 4), 10);
+  return y >= 1900 && y <= 2100 ? y : undefined;
 }
 
 async function searchSpotify(query: string, limit = 5): Promise<TrackResult[]> {
@@ -104,6 +111,7 @@ async function searchSpotify(query: string, limit = 5): Promise<TrackResult[]> {
     provider: 'spotify' as const,
     previewUrl: t.preview_url || undefined,
     spotifyUri: t.uri,
+    releaseYear: releaseYearFromDateString(t.album?.release_date),
   }));
 }
 
@@ -124,6 +132,7 @@ async function searchAppleMusic(query: string, limit = 5): Promise<TrackResult[]
     provider: 'apple_music' as const,
     previewUrl: s.attributes.previews?.[0]?.url || undefined,
     appleMusicId: s.id,
+    releaseYear: releaseYearFromDateString(s.attributes.releaseDate),
   }));
 }
 
@@ -565,6 +574,7 @@ Deno.serve(async (req) => {
         title: track.title,
         artist: track.artist,
         album: track.album,
+        ...(track.releaseYear != null ? { releaseYear: track.releaseYear } : {}),
         artwork: track.artworkUrl,
         emotionalTags: aiMatch?.emotionalTags || interpretation.emotionalProfile.themes.slice(0, 3),
         explanation: aiMatch?.explanation || `This track resonates with the ${interpretation.emotionalProfile.mood.toLowerCase()} mood of your search.`,

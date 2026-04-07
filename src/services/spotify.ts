@@ -59,3 +59,48 @@ export async function searchSpotifyTrack(query: string): Promise<string | null> 
   // For preview playback, we use Spotify's oEmbed which doesn't need auth
   return `https://open.spotify.com/embed/track/${encodeURIComponent(query)}`;
 }
+
+export async function spotifySaveTracks(
+  trackIds: string[],
+): Promise<{ ok: true } | { error: string }> {
+  const res = await fetch(functionsUrl("spotify-auth"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+    body: JSON.stringify({ action: "save_tracks", session_id: SESSION_ID, track_ids: trackIds }),
+  });
+  const data = await res.json();
+  if (!res.ok) return { error: typeof data.error === "string" ? data.error : "Spotify: errore" };
+  return { ok: true };
+}
+
+export async function spotifyListPlaylists(): Promise<
+  { playlists: { id: string; name: string }[] } | { error: string }
+> {
+  const res = await fetch(functionsUrl("spotify-auth"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+    body: JSON.stringify({ action: "list_playlists", session_id: SESSION_ID }),
+  });
+  const data = await res.json();
+  if (!res.ok) return { error: typeof data.error === "string" ? data.error : "Spotify: errore" };
+  return { playlists: data.playlists ?? [] };
+}
+
+export async function spotifyAddTrackToPlaylist(
+  playlistId: string,
+  trackId: string,
+): Promise<{ ok: true } | { error: string }> {
+  const res = await fetch(functionsUrl("spotify-auth"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
+    body: JSON.stringify({
+      action: "add_to_playlist",
+      session_id: SESSION_ID,
+      playlist_id: playlistId,
+      track_id: trackId,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) return { error: typeof data.error === "string" ? data.error : "Spotify: errore" };
+  return { ok: true };
+}

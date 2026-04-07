@@ -11,6 +11,7 @@ import SearchFeedback from "@/components/SearchFeedback";
 import { examplePrompts } from "@/data/mockData";
 import type { SearchResult } from "@/data/mockData";
 import { useApp } from "@/context/AppContext";
+import { usePlaybackQueue } from "@/context/PlaybackQueueContext";
 import {
   useConversations,
   memoryOrFromProfile,
@@ -35,12 +36,19 @@ import {
 import { toast } from "sonner";
 import type { ChatMessage } from "@/types/conversation";
 import { cn } from "@/lib/utils";
+import { dedupeSongVersions } from "@/lib/dedupeSongs";
+import SearchResultTrackList from "@/components/SearchResultTrackList";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-function buildSearchResult(prompt: string, data: {
-  emotionalProfile: SearchResult["emotionalProfile"];
-  songs: SearchResult["songs"];
-  adjacentInterpretations: string[];
-}): SearchResult {
+function buildSearchResult(
+  prompt: string,
+  data: {
+    emotionalProfile: SearchResult["emotionalProfile"];
+    songs: SearchResult["songs"];
+    adjacentInterpretations: string[];
+  },
+  playbackPresentation?: SearchResult["playbackPresentation"]
+): SearchResult {
   return {
     id: `sr-${Date.now()}`,
     prompt,
@@ -48,6 +56,7 @@ function buildSearchResult(prompt: string, data: {
     emotionalProfile: data.emotionalProfile,
     songs: data.songs,
     adjacentInterpretations: data.adjacentInterpretations || [],
+    ...(playbackPresentation ? { playbackPresentation } : {}),
   };
 }
 
@@ -58,13 +67,27 @@ const Discover = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [dbSearchId, setDbSearchId] = useState<string | null>(null);
   const [resultIdMap, setResultIdMap] = useState<Record<string, string>>({});
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [showQueue, setShowQueue] = useState(false);
   const [showEmotionalProfile, setShowEmotionalProfile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [luckyAutoplay, setLuckyAutoplay] = useState(false);
 
-  const { toggleFavorite, isFavorite, descriptionLanguage } = useApp();
+  const isMobile = useIsMobile();
+  const {
+    queue,
+    queueSources,
+    currentIndex,
+    setCurrentIndex,
+    isGloballyPlaying,
+    pendingAutoplay,
+    setPendingAutoplay,
+    setGlobalPlaying,
+    playNowReplace,
+    playTrackFromResult,
+    appendToQueue,
+    insertAfterCurrent,
+  } = usePlaybackQueue();
+
+  const { toggleFavorite, isFavorite, descriptionLanguage, recordListen } = useApp();
   const {
     conversations,
     activeConversationId,
@@ -88,8 +111,10 @@ const Discover = () => {
   );
   const latestAssistant = assistantTurns?.[assistantTurns.length - 1];
   const currentResult = latestAssistant?.searchResult ?? null;
-  const currentSong = currentResult?.songs[currentTrackIndex];
+  const currentSong = queue[currentIndex] ?? currentResult?.songs[0] ?? null;
   const hasAnyMessage = (activeConversation?.messages.length ?? 0) > 0;
+  const showDockPlayer = queue.length > 0 && !isMobile;
+  const showMobilePlayer = queue.length > 0 && isMobile;
 
   const runSearch = useCallback(
     async (conversationId: string, prompt: string) => {
@@ -97,7 +122,6 @@ const Discover = () => {
       if (!conv) return;
 
       setIsLoading(true);
-      setCurrentTrackIndex(0);
       setShowQueue(false);
       setShowEmotionalProfile(false);
       setDbSearchId(null);
@@ -127,13 +151,33 @@ const Discover = () => {
           return;
         }
 
-        const result = buildSearchResult(prompt, {
-          emotionalProfile: data.emotionalProfile,
-          songs: data.songs,
-          adjacentInterpretations: data.adjacentInterpretations || [],
-        });
+        const songs = dedupeSongVersions(data.songs);
+        if (!songs.length) {
+          toast.error("Nessun risultato");
+          setIsLoading(false);
+          return;
+        }
+
+        const presentation: SearchResult["playbackPresentation"] = isGloballyPlaying ? "pick" : "inline";
+        const result = buildSearchResult(
+          prompt,
+          {
+            emotionalProfile: data.emotionalProfile,
+            songs,
+            adjacentInterpretations: data.adjacentInterpretations || [],
+          },
+          presentation
+        );
 
         appendAssistantResult(conversationId, result);
+
+        if (!isGloballyPlaying) {
+          playNowReplace(songs, 0, true, {
+            conversationId,
+            searchResultId: result.id,
+            prompt: result.prompt,
+          });
+        }
 
         if (data.conversationMemoryUpdate?.standardAxes) {
           mergeConversationMemoryFromUpdate(conversationId, {
@@ -172,6 +216,8 @@ const Discover = () => {
       appendAssistantResult,
       mergeConversationMemoryFromUpdate,
       mergeUserTasteFromUpdate,
+      isGloballyPlaying,
+      playNowReplace,
     ]
   );
 
@@ -267,16 +313,28 @@ const Discover = () => {
     const st = location.state as { luckyPayload?: import("@/services/musicSearchApi").MusicSearchResponse } | undefined;
     if (!st?.luckyPayload?.emotionalProfile || !st.luckyPayload.songs?.length) return;
     luckyProcessed.current = true;
-    setLuckyAutoplay(true);
     const id = createConversation();
     appendUserMessage(id, "Sorprendimi");
     const data = st.luckyPayload;
-    const result = buildSearchResult("Sorprendimi", {
-      emotionalProfile: data.emotionalProfile!,
-      songs: data.songs!,
-      adjacentInterpretations: data.adjacentInterpretations || [],
-    });
+    const luckySongs = dedupeSongVersions(data.songs!);
+    const presentation: SearchResult["playbackPresentation"] = isGloballyPlaying ? "pick" : "inline";
+    const result = buildSearchResult(
+      "Sorprendimi",
+      {
+        emotionalProfile: data.emotionalProfile!,
+        songs: luckySongs,
+        adjacentInterpretations: data.adjacentInterpretations || [],
+      },
+      presentation
+    );
     appendAssistantResult(id, result);
+    if (!isGloballyPlaying) {
+      playNowReplace(luckySongs, 0, true, {
+        conversationId: id,
+        searchResultId: result.id,
+        prompt: result.prompt,
+      });
+    }
     if (data.conversationMemoryUpdate?.standardAxes) {
       mergeConversationMemoryFromUpdate(id, {
         threadSummary: data.conversationMemoryUpdate.threadSummary ?? "",
@@ -306,6 +364,8 @@ const Discover = () => {
     mergeConversationMemoryFromUpdate,
     mergeUserTasteFromUpdate,
     navigate,
+    isGloballyPlaying,
+    playNowReplace,
   ]);
 
   useEffect(() => {
@@ -328,12 +388,9 @@ const Discover = () => {
     };
   }, [dbSearchId, currentResult]);
 
-  useEffect(() => {
-    setCurrentTrackIndex(0);
-  }, [currentResult?.id]);
-
   const handleToggleFavorite = (songId: string) => {
-    const song = currentResult?.songs.find((s) => s.id === songId);
+    const song =
+      queue.find((s) => s.id === songId) ?? currentResult?.songs.find((s) => s.id === songId);
     if (song) toggleFavorite(song);
   };
 
@@ -391,9 +448,56 @@ const Discover = () => {
   const memorySummary = activeConversation?.conversationMemory?.threadSummary;
   const standardAxes = activeConversation?.conversationMemory?.standardAxes;
 
+  const tagSong = currentSong ?? currentResult?.songs[0];
+
+  const handlePlayerPlaybackChange = useCallback(
+    (playing: boolean) => {
+      setGlobalPlaying(playing);
+      if (!playing || !queue.length) return;
+      const song = queue[currentIndex];
+      if (!song) return;
+      const tagged = queueSources[currentIndex];
+      const fallback =
+        activeConversationId && currentResult?.songs.some((s) => s.id === song.id)
+          ? {
+              conversationId: activeConversationId,
+              searchResultId: currentResult.id,
+              prompt: currentResult.prompt,
+            }
+          : null;
+      const src = tagged ?? fallback;
+      if (!src) return;
+      const conv = getConversation(src.conversationId);
+      recordListen({
+        conversationId: src.conversationId,
+        searchResultId: src.searchResultId,
+        prompt: src.prompt,
+        chatTitle: conv?.title,
+        song,
+      });
+    },
+    [
+      setGlobalPlaying,
+      queue,
+      queueSources,
+      currentIndex,
+      activeConversationId,
+      currentResult,
+      getConversation,
+      recordListen,
+    ]
+  );
+
   return (
+    <>
     <AppLayout>
-      <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 pb-24 md:pb-8 flex flex-col md:flex-row gap-6 min-h-[calc(100vh-3.5rem)]">
+      <div
+        className={cn(
+          "max-w-6xl mx-auto px-4 md:px-6 py-6 flex flex-col md:flex-row gap-6 min-h-[calc(100vh-3.5rem)]",
+          "pb-24 md:pb-8",
+          showDockPlayer && "md:pb-32"
+        )}
+      >
         <aside className="hidden md:flex w-56 shrink-0 flex-col border-r border-border/60 pr-4">{sidebar}</aside>
 
         <div className="flex-1 flex flex-col min-w-0 min-h-0">
@@ -453,6 +557,10 @@ const Discover = () => {
                     }
                     const isLatest = m.id === latestAssistant?.id;
                     const r = m.searchResult;
+                    const isPick = isLatest && r.playbackPresentation === "pick";
+                    const isInlineLatest = isLatest && r.playbackPresentation === "inline";
+                    const showLegacySnippet =
+                      isLatest && !isPick && !isInlineLatest && r.songs.length > 0;
                     return (
                       <div
                         key={m.id}
@@ -463,12 +571,44 @@ const Discover = () => {
                       >
                         <p className="text-xs text-muted-foreground font-body uppercase tracking-wider mb-1">Risultati per</p>
                         <p className="font-display text-sm font-semibold mb-3">&quot;{r.prompt}&quot;</p>
-                        {!isLatest && (
-                          <p className="text-xs text-muted-foreground font-body mb-2">
-                            {r.songs.length} brani — il player qui sotto si riferisce all&apos;ultimo turno
-                          </p>
+                        {isPick && r.songs.length > 0 && activeConversationId && (
+                          <SearchResultTrackList
+                            className="mt-2"
+                            songs={r.songs}
+                            onPlayNow={(_song, idx) =>
+                              playTrackFromResult(r.songs, idx, {
+                                conversationId: activeConversationId,
+                                searchResultId: r.id,
+                                prompt: r.prompt,
+                              })
+                            }
+                            onAddToQueue={(song) =>
+                              appendToQueue([song], {
+                                conversationId: activeConversationId,
+                                searchResultId: r.id,
+                                prompt: r.prompt,
+                              })
+                            }
+                            onPlayNext={(song) =>
+                              insertAfterCurrent([song], {
+                                conversationId: activeConversationId,
+                                searchResultId: r.id,
+                                prompt: r.prompt,
+                              })
+                            }
+                          />
                         )}
-                        {isLatest && r.songs.length > 0 && (
+                        {isInlineLatest && (
+                          <>
+                            <p className="text-xs text-muted-foreground font-body hidden md:block">
+                              Riproduzione avviata nel player in basso. Puoi cambiare chat: la coda resta attiva.
+                            </p>
+                            <p className="text-xs text-muted-foreground font-body md:hidden">
+                              Usa il player qui sotto per ascoltare i brani di questo turno.
+                            </p>
+                          </>
+                        )}
+                        {showLegacySnippet && (
                           <ul className="text-xs text-muted-foreground space-y-1 font-body">
                             {r.songs.slice(0, 4).map((s) => (
                               <li key={s.id}>
@@ -477,6 +617,11 @@ const Discover = () => {
                             ))}
                             {r.songs.length > 4 && <li>…</li>}
                           </ul>
+                        )}
+                        {!isLatest && (
+                          <p className="text-xs text-muted-foreground font-body mb-2">
+                            {r.songs.length} brani
+                          </p>
                         )}
                       </div>
                     );
@@ -493,20 +638,9 @@ const Discover = () => {
                 </div>
               )}
 
-              {currentResult && !isLoading && currentSong && (
+              {currentResult && !isLoading && (
                 <div className="mt-auto border-t border-border/40 pt-6 space-y-6 shrink-0">
-                  <FullPlayer
-                    songs={currentResult.songs}
-                    currentIndex={currentTrackIndex}
-                    onChangeIndex={setCurrentTrackIndex}
-                    isFavorite={isFavorite}
-                    onToggleFavorite={handleToggleFavorite}
-                    onShowDetails={() => setShowEmotionalProfile(!showEmotionalProfile)}
-                    autoplay={luckyAutoplay}
-                    onAutoplayConsumed={() => setLuckyAutoplay(false)}
-                  />
-
-                  {showEmotionalProfile && (
+                  {showEmotionalProfile && tagSong && currentResult && (
                     <div className="w-full max-w-lg mx-auto animate-fade-in relative">
                       <button
                         type="button"
@@ -519,11 +653,11 @@ const Discover = () => {
                       <div className="glass-card rounded-2xl p-4 mt-3">
                         <div className="flex items-center gap-2 mb-2">
                           <span className="text-xs font-body text-primary font-medium px-3 py-1 rounded-full bg-primary/10">
-                            {currentSong.relevanceScore}% match
+                            {tagSong.relevanceScore}% match
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
-                          {currentSong.emotionalTags.map((tag) => (
+                          {tagSong.emotionalTags.map((tag) => (
                             <span
                               key={tag}
                               className="text-xs px-2.5 py-0.5 rounded-full bg-emotional-tag/15 text-emotional-tag-foreground/80 font-body"
@@ -536,7 +670,7 @@ const Discover = () => {
                     </div>
                   )}
 
-                  {currentResult.songs.length > 1 && (
+                  {queue.length > 1 && (
                     <div className="w-full max-w-lg mx-auto">
                       <button
                         type="button"
@@ -545,16 +679,16 @@ const Discover = () => {
                       >
                         <ListMusic className="w-4 h-4" />
                         <span>
-                          {showQueue ? "Nascondi" : "Mostra"} coda ({currentResult.songs.length} brani)
+                          {showQueue ? "Nascondi" : "Mostra"} coda ({queue.length} brani)
                         </span>
                         {showQueue ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </button>
                       {showQueue && (
                         <div className="mt-4 glass-card rounded-2xl p-4 animate-fade-in">
                           <TrackQueue
-                            songs={currentResult.songs}
-                            currentIndex={currentTrackIndex}
-                            onSelect={setCurrentTrackIndex}
+                            songs={queue}
+                            currentIndex={currentIndex}
+                            onSelect={setCurrentIndex}
                             isFavorite={isFavorite}
                             onToggleFavorite={handleToggleFavorite}
                           />
@@ -591,6 +725,22 @@ const Discover = () => {
                   )}
                 </div>
               )}
+
+              {showMobilePlayer && (
+                <div className="md:hidden mt-auto pt-4 border-t border-border/40 shrink-0">
+                  <FullPlayer
+                    songs={queue}
+                    currentIndex={currentIndex}
+                    onChangeIndex={setCurrentIndex}
+                    isFavorite={isFavorite}
+                    onToggleFavorite={handleToggleFavorite}
+                    onShowDetails={() => setShowEmotionalProfile(!showEmotionalProfile)}
+                    autoplay={pendingAutoplay}
+                    onAutoplayConsumed={() => setPendingAutoplay(false)}
+                        onPlaybackStateChange={handlePlayerPlaybackChange}
+                      />
+                    </div>
+                  )}
             </div>
 
             {activeConversation && (memorySummary || standardAxes || activeConversation.conversationProfile) && (
@@ -635,6 +785,26 @@ const Discover = () => {
         </div>
       </div>
     </AppLayout>
+
+    {showDockPlayer && (
+      <div className="hidden md:flex fixed bottom-0 left-0 right-0 z-40 flex-col border-t border-border bg-background/95 backdrop-blur-md shadow-[0_-8px_32px_-8px_rgba(0,0,0,0.12)]">
+        <div className="max-w-6xl w-full mx-auto px-4 md:px-6 py-3">
+          <FullPlayer
+            variant="dock"
+            songs={queue}
+            currentIndex={currentIndex}
+            onChangeIndex={setCurrentIndex}
+            isFavorite={isFavorite}
+            onToggleFavorite={handleToggleFavorite}
+            onShowDetails={() => setShowEmotionalProfile(!showEmotionalProfile)}
+            autoplay={pendingAutoplay}
+            onAutoplayConsumed={() => setPendingAutoplay(false)}
+            onPlaybackStateChange={handlePlayerPlaybackChange}
+          />
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 

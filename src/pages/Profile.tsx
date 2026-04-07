@@ -94,6 +94,9 @@ const Profile = () => {
                     <p className="text-[10px] text-muted-foreground font-body">
                       {isPremium ? "Premium — Full playback enabled" : "Free — Preview only"}
                     </p>
+                    <p className="text-[10px] text-muted-foreground font-body mt-1 max-w-[220px]">
+                      Libreria e playlist: se non funzionano, disconnetti e ricollega per aggiornare i permessi.
+                    </p>
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground font-body">Connect for playback</p>

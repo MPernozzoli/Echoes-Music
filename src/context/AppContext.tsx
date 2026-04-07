@@ -1,14 +1,17 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
-import type { Song, SearchResult } from "@/data/mockData";
+import type { Song, SearchResult, ListenHistoryEntry } from "@/data/mockData";
 
 interface AppState {
   favorites: Song[];
   history: SearchResult[];
+  listenHistory: ListenHistoryEntry[];
   descriptionLanguage: string;
   toggleFavorite: (song: Song) => void;
   isFavorite: (songId: string) => boolean;
   addToHistory: (result: SearchResult) => void;
   clearHistory: () => void;
+  recordListen: (entry: Omit<ListenHistoryEntry, "id" | "listenedAt">) => void;
+  clearListenHistory: () => void;
   setDescriptionLanguage: (lang: string) => void;
 }
 
@@ -16,7 +19,9 @@ const AppContext = createContext<AppState | null>(null);
 
 const FAVORITES_KEY = "echoes_favorites";
 const HISTORY_KEY = "echoes_history";
+const LISTEN_HISTORY_KEY = "echoes_listen_history";
 const LANGUAGE_KEY = "echoes_description_language";
+const LISTEN_DEDUPE_MS = 90_000;
 
 function loadJSON<T>(key: string, fallback: T): T {
   try {
@@ -27,9 +32,34 @@ function loadJSON<T>(key: string, fallback: T): T {
   }
 }
 
+function parseListenHistory(raw: unknown): ListenHistoryEntry[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter(
+      (e): e is ListenHistoryEntry =>
+        e != null &&
+        typeof e === "object" &&
+        typeof (e as ListenHistoryEntry).id === "string" &&
+        typeof (e as ListenHistoryEntry).listenedAt === "string" &&
+        typeof (e as ListenHistoryEntry).conversationId === "string" &&
+        typeof (e as ListenHistoryEntry).searchResultId === "string" &&
+        typeof (e as ListenHistoryEntry).prompt === "string" &&
+        typeof (e as ListenHistoryEntry).song === "object" &&
+        (e as ListenHistoryEntry).song != null &&
+        typeof (e as ListenHistoryEntry).song.id === "string"
+    )
+    .map((e) => ({
+      ...e,
+      song: { ...(e as ListenHistoryEntry).song },
+    }));
+}
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [favorites, setFavorites] = useState<Song[]>(() => loadJSON(FAVORITES_KEY, []));
   const [history, setHistory] = useState<SearchResult[]>(() => loadJSON(HISTORY_KEY, []));
+  const [listenHistory, setListenHistory] = useState<ListenHistoryEntry[]>(() =>
+    parseListenHistory(loadJSON(LISTEN_HISTORY_KEY, []))
+  );
   const [descriptionLanguage, setDescriptionLanguage] = useState<string>(() => localStorage.getItem(LANGUAGE_KEY) || "auto");
 
   useEffect(() => {
@@ -39,6 +69,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
   }, [history]);
+
+  useEffect(() => {
+    localStorage.setItem(LISTEN_HISTORY_KEY, JSON.stringify(listenHistory));
+  }, [listenHistory]);
 
   useEffect(() => {
     localStorage.setItem(LANGUAGE_KEY, descriptionLanguage);
@@ -62,8 +96,42 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const clearHistory = useCallback(() => setHistory([]), []);
 
+  const recordListen = useCallback((entry: Omit<ListenHistoryEntry, "id" | "listenedAt">) => {
+    const now = new Date().toISOString();
+    setListenHistory((prev) => {
+      const [head, ...tail] = prev;
+      if (
+        head &&
+        head.conversationId === entry.conversationId &&
+        head.searchResultId === entry.searchResultId &&
+        head.song.id === entry.song.id &&
+        Date.now() - new Date(head.listenedAt).getTime() < LISTEN_DEDUPE_MS
+      ) {
+        return [{ ...head, listenedAt: now }, ...tail];
+      }
+      const id = `lh-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      return [{ ...entry, id, listenedAt: now }, ...prev].slice(0, 150);
+    });
+  }, []);
+
+  const clearListenHistory = useCallback(() => setListenHistory([]), []);
+
   return (
-    <AppContext.Provider value={{ favorites, history, descriptionLanguage, toggleFavorite, isFavorite, addToHistory, clearHistory, setDescriptionLanguage }}>
+    <AppContext.Provider
+      value={{
+        favorites,
+        history,
+        listenHistory,
+        descriptionLanguage,
+        toggleFavorite,
+        isFavorite,
+        addToHistory,
+        clearHistory,
+        recordListen,
+        clearListenHistory,
+        setDescriptionLanguage,
+      }}
+    >
       {children}
     </AppContext.Provider>
   );

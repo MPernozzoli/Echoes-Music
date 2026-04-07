@@ -3,6 +3,8 @@ export interface Song {
   title: string;
   artist: string;
   album: string;
+  /** Anno di pubblicazione del brano/album se noto (API) */
+  releaseYear?: number;
   artwork: string;
   emotionalTags: string[];
   explanation: string;
@@ -21,6 +23,19 @@ export interface SearchResult {
   emotionalProfile: EmotionalProfile;
   songs: Song[];
   adjacentInterpretations: string[];
+  /** pick = lista con azioni coda; inline = avviata subito in coda globale */
+  playbackPresentation?: "pick" | "inline";
+}
+
+/** Voce cronologia ascolti, legata alla chat che ha generato il risultato */
+export interface ListenHistoryEntry {
+  id: string;
+  listenedAt: string;
+  conversationId: string;
+  searchResultId: string;
+  prompt: string;
+  chatTitle?: string;
+  song: Song;
 }
 
 export interface EmotionalProfile {
