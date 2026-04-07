@@ -1,17 +1,15 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Sparkles, Search, Music } from "lucide-react";
-import { useState } from "react";
 import heroBg from "@/assets/hero-bg.jpg";
 import PromptInput from "@/components/PromptInput";
 import SongCard from "@/components/SongCard";
 import { examplePrompts, mockSongs } from "@/data/mockData";
 
 const Landing = () => {
-  const [, setPrompt] = useState("");
+  const navigate = useNavigate();
 
   const handlePromptSubmit = (value: string) => {
-    setPrompt(value);
-    window.location.href = `/discover?q=${encodeURIComponent(value)}`;
+    navigate(`/discover?q=${encodeURIComponent(value)}`);
   };
 
   return (
@@ -69,21 +67,9 @@ const Landing = () => {
 
           <div className="grid md:grid-cols-3 gap-8">
             {[
-              {
-                icon: Sparkles,
-                title: "Describe your feeling",
-                desc: "Type anything — a memory, an emotion, a moment. No keywords needed.",
-              },
-              {
-                icon: Search,
-                title: "AI interprets your intent",
-                desc: "Echoes reads the emotional texture of your words and maps them to music.",
-              },
-              {
-                icon: Music,
-                title: "Discover your songs",
-                desc: "Get curated recommendations with deep explanations of why each song fits.",
-              },
+              { icon: Sparkles, title: "Describe your feeling", desc: "Type anything — a memory, an emotion, a moment. No keywords needed." },
+              { icon: Search, title: "AI interprets your intent", desc: "Echoes reads the emotional texture of your words and maps them to music." },
+              { icon: Music, title: "Discover your songs", desc: "Get curated recommendations with deep explanations of why each song fits." },
             ].map((step, i) => (
               <div key={i} className="glass-card rounded-2xl p-6 text-center">
                 <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
