@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import AppLayout from "@/components/AppLayout";
 import SongCard from "@/components/SongCard";
-import { useApp } from "@/context/AppContext";
+import { useApp } from "@/context/useApp";
 import { Heart } from "lucide-react";
 
 const Favorites = () => {
