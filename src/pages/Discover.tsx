@@ -47,7 +47,7 @@ import {
 import { toast } from "sonner";
 import type { ChatMessage } from "@/types/conversation";
 import { cn } from "@/lib/utils";
-import { dedupeSongVersions } from "@/lib/dedupeSongs";
+import { dedupeSongVersions, filterSongsByMinRelevance } from "@/lib/dedupeSongs";
 import SearchResultTrackList from "@/components/SearchResultTrackList";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -191,7 +191,7 @@ const Chat = () => {
           return;
         }
 
-        const songs = dedupeSongVersions(data.songs);
+        const songs = filterSongsByMinRelevance(dedupeSongVersions(data.songs));
         if (!songs.length) {
           toast.error("Nessun risultato");
           setIsLoading(false);
@@ -352,12 +352,13 @@ const Chat = () => {
     if (luckyProcessed.current) return;
     const st = location.state as { luckyPayload?: import("@/services/musicSearchApi").MusicSearchResponse } | undefined;
     if (!st?.luckyPayload?.emotionalProfile || !st.luckyPayload.songs?.length) return;
+    const data = st.luckyPayload;
+    const luckySongs = filterSongsByMinRelevance(dedupeSongVersions(data.songs!));
+    if (!luckySongs.length) return;
     luckyProcessed.current = true;
     const id = createConversation();
     const surpriseLabel = t("chat.surpriseMe");
     appendUserMessage(id, surpriseLabel);
-    const data = st.luckyPayload;
-    const luckySongs = dedupeSongVersions(data.songs!);
     const presentation: SearchResult["playbackPresentation"] = isGloballyPlaying ? "pick" : "inline";
     const result = buildSearchResult(
       surpriseLabel,

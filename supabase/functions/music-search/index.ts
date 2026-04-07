@@ -171,6 +171,15 @@ function clampSummary(s: string, max: number): string {
   return t.length <= max ? t : t.slice(0, max - 1) + '…';
 }
 
+/** Sotto questa soglia il brano non va in UI né in coda (allineato al client). */
+const MIN_RELEVANCE_SCORE = 65;
+
+function clampRelevance(n: unknown): number {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return 0;
+  return Math.min(100, Math.max(0, Math.round(x)));
+}
+
 // --- AI interpretation ---
 interface AIInterpretation {
   emotionalProfile: {
@@ -258,6 +267,10 @@ The user included a **photo**. You can see it in the same user turn. Use visual 
 - **Era & period**: Understand decades and musical eras (80s synth-pop, 90s grunge, 2000s indie, etc.).
 - **Complex concepts**: Handle metaphors, abstract ideas, cultural references, literary allusions, and synesthetic descriptions ("music that tastes like rain", "songs that feel like velvet").
 - **Instrumentation & production**: Understand lo-fi, acoustic, orchestral, electronic, analog, etc.
+- **Single-word and very short prompts**: If the user writes only one word (or a tiny fragment), do **not** treat it as "find songs whose title contains this substring" by default. First **interpret** what the word likely means in context: mood, emotion, metaphor, genre tag, artist name, or a **specific song title** the user is naming outright.
+  - If it reads like an **emotion or abstract state** (e.g. nostalgia, rage, peace, longing, euphoria, grief, "malinconia", "euforia"), expand into **themes, lyrical angles, and sonic mood**. Pick songs that match the **meaning and felt experience**, not merely titles that spell the same word.
+  - If it is plausibly the **exact or well-known title** of a real song (or unmistakable shorthand for it), then prioritize **that** track and close variants — the user is asking for that song.
+  - When ambiguous, lean toward **semantic/emotional fit** and use **searchQueries** that describe mood/theme/artist direction, not only the raw token.
 
 ## Language for descriptions:
 ${languageInstruction}
@@ -269,7 +282,7 @@ Given the user's message${params.image ? ' (and attached image)' : ''}:
 1. Detect the language of the active prompt (if any). If it's not English, respond with song suggestions primarily in that language unless the prompt explicitly asks for another language.
 2. Create an emotional profile analyzing themes, mood, energy, intimacy, catharsis, and emotional tension (rich text for UI).
 3. Generate 4-5 highly specific search queries optimized for Spotify/Apple Music search (use "artist name - song title" format when possible, or genre/mood keywords).
-4. Suggest 6-8 specific REAL songs with correct artists. Prioritize songs whose LYRICS match the user's intent. **Avoid suggesting multiple storefront variants of the same work** (e.g. same song as studio + remaster + remix + live) unless the user clearly wants versions; prefer one canonical cut per song. For each suggestion: emotional tags (3 words), a **distinct** poetic explanation tied to that song's lyrics or identity (never copy the same sentence across songs), and relevance score (0-100).
+4. Suggest 6-8 specific REAL songs with correct artists. Prioritize songs whose LYRICS match the user's intent. **Avoid suggesting multiple storefront variants of the same work** (e.g. same song as studio + remaster + remix + live) unless the user clearly wants versions; prefer one canonical cut per song. For each suggestion: emotional tags (3 words), a **distinct** poetic explanation tied to that song's lyrics or identity (never copy the same sentence across songs), and **relevanceScore** (0-100). **Score honestly**: weak or tangential fits must be **below 65**. Only strong, clearly justified picks should be **65 or above**. Do not inflate scores to fill the list.
 5. Write **narrativeReply**: 2-5 sentences, same language as the user. One flowing paragraph: why this **cluster** fits the request emotionally (themes, arc, intent). Sound human and specific. **Do not** list every song, **do not** use «guillemets» or track-by-track blurbs — per-track reasoning lives only in each song's **explanation** field. You may name at most one anchor track if it feels natural; otherwise no titles. No bullet lists.
 6. Generate 2-3 adjacent interpretations — creative alternative readings of the prompt (or of the lucky pick).
 7. Fill conversationMemoryUpdate and userTasteProfileUpdate as described.
@@ -342,7 +355,11 @@ CRITICAL: Only suggest songs that actually exist. Use correct artist names and s
                     artist: { type: 'string' },
                     emotionalTags: { type: 'array', items: { type: 'string' } },
                     explanation: { type: 'string' },
-                    relevanceScore: { type: 'number' },
+                    relevanceScore: {
+                      type: 'number',
+                      description:
+                        'How well this track fits the user request (0-100). Must be honest: below 65 if the fit is weak or forced; 65+ only for clearly strong matches. The app hides sub-65 picks.',
+                    },
                   },
                   required: ['title', 'artist', 'emotionalTags', 'explanation', 'relevanceScore'],
                 },
@@ -648,12 +665,13 @@ Deno.serve(async (req) => {
     ];
     const explPool = preferItFallback ? explPoolIt : explPoolEn;
 
-    // Enrich tracks with AI suggestions' emotional data
+    // Enrich tracks with AI suggestions' emotional data (no fake-high scores for unrelated search hits)
     const enrichedSongs = uniqueTracks.map((track, i) => {
       const aiMatch = interpretation.songSuggestions.find(
         s => s.title.toLowerCase() === track.title.toLowerCase() ||
              track.title.toLowerCase().includes(s.title.toLowerCase())
       );
+      const scored = aiMatch != null ? clampRelevance(aiMatch.relevanceScore) : 55;
       return {
         id: `${track.provider}-${track.trackId}`,
         title: track.title,
@@ -663,7 +681,7 @@ Deno.serve(async (req) => {
         artwork: track.artworkUrl,
         emotionalTags: aiMatch?.emotionalTags || interpretation.emotionalProfile.themes.slice(0, 3),
         explanation: aiMatch?.explanation || explPool[i % explPool.length],
-        relevanceScore: aiMatch?.relevanceScore || Math.max(60, 95 - i * 5),
+        relevanceScore: scored,
         provider: track.provider,
         spotifyUri: track.spotifyUri,
         appleMusicId: track.appleMusicId,
@@ -671,8 +689,8 @@ Deno.serve(async (req) => {
       };
     });
 
-    // Sort by relevance
-    enrichedSongs.sort((a, b) => b.relevanceScore - a.relevanceScore);
+    const passed = enrichedSongs.filter((s) => s.relevanceScore >= MIN_RELEVANCE_SCORE);
+    passed.sort((a, b) => b.relevanceScore - a.relevanceScore);
 
     const cm = interpretation.conversationMemoryUpdate;
     const ut = interpretation.userTasteProfileUpdate;
@@ -680,7 +698,7 @@ Deno.serve(async (req) => {
     const result = {
       emotionalProfile: interpretation.emotionalProfile,
       narrativeReply: interpretation.narrativeReply || '',
-      songs: enrichedSongs.slice(0, 8),
+      songs: passed.slice(0, 8),
       adjacentInterpretations: interpretation.adjacentInterpretations,
       conversationMemoryUpdate: cm ? {
         threadSummary: cm.threadSummary,

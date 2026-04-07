@@ -1,5 +1,12 @@
 import type { Song } from "@/data/mockData";
 
+/** Allineato a `MIN_RELEVANCE_SCORE` in `supabase/functions/music-search/index.ts`. */
+export const MIN_RELEVANCE_SCORE = 65;
+
+export function filterSongsByMinRelevance(songs: Song[]): Song[] {
+  return songs.filter((s) => s.relevanceScore >= MIN_RELEVANCE_SCORE);
+}
+
 /** Primo artista principale (prima di feat./,&). */
 function normalizeArtist(artist: string): string {
   return artist

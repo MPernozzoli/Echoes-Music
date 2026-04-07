@@ -3,7 +3,7 @@ import { Trans, useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Sparkles, Search, Music, Wand2 } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
-import PromptInput from "@/components/PromptInput";
+import PromptInput, { type PromptSubmitPayload } from "@/components/PromptInput";
 import SongCard from "@/components/SongCard";
 import { mockSongs } from "@/data/mockData";
 import { pickDiscoverPromptSuggestions } from "@/lib/discoverPromptSuggestions";
@@ -35,8 +35,24 @@ const Landing = () => {
     });
   }, [conversations, userTasteProfile, descriptionLanguage]);
 
-  const handlePromptSubmit = (value: string) => {
-    navigate(`/chat?q=${encodeURIComponent(value)}`);
+  const handlePromptSubmit = (payload: PromptSubmitPayload) => {
+    const text = payload.text.trim();
+    const hasImg = Boolean(payload.imageBase64 && payload.imageMimeType);
+    if (!text && !hasImg) return;
+    if (hasImg) {
+      navigate("/chat", {
+        state: {
+          landingSearch: {
+            text: payload.text,
+            ...(payload.imageBase64 && payload.imageMimeType
+              ? { imageBase64: payload.imageBase64, imageMimeType: payload.imageMimeType }
+              : {}),
+          },
+        },
+      });
+      return;
+    }
+    navigate(`/chat?q=${encodeURIComponent(text)}`);
   };
 
   const handleLucky = async () => {
@@ -103,10 +119,8 @@ const Landing = () => {
 
           <div className="max-w-2xl mx-auto mb-4 animate-fade-up" style={{ animationDelay: "200ms" }}>
             <PromptInput
-              onSubmit={(p) => {
-                const text = p.text.trim();
-                if (text) handlePromptSubmit(text);
-              }}
+              onSubmit={handlePromptSubmit}
+              allowImageAttachment
               size="hero"
               placeholder={t("promptInput.placeholderDefault")}
             />
@@ -137,7 +151,7 @@ const Landing = () => {
               <button
                 key={prompt}
                 type="button"
-                onClick={() => handlePromptSubmit(prompt)}
+                onClick={() => handlePromptSubmit({ text: prompt })}
                 className="text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all font-body"
               >
                 {prompt}

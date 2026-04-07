@@ -42,7 +42,7 @@ import {
 import { toast } from "sonner";
 import type { ChatMessage } from "@/types/conversation";
 import { cn } from "@/lib/utils";
-import { dedupeSongVersions } from "@/lib/dedupeSongs";
+import { dedupeSongVersions, filterSongsByMinRelevance } from "@/lib/dedupeSongs";
 import { AssistantSongNarrative } from "@/components/AssistantSongNarrative";
 import { fallbackNarrativeForResult } from "@/lib/assistantNarrative";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -144,6 +144,7 @@ const Chat = () => {
   );
 
   const qProcessed = useRef(false);
+  const landingFromHomeProcessed = useRef(false);
   const luckyProcessed = useRef(false);
 
   const activeConversation = getConversation(activeConversationId) ?? null;
@@ -232,7 +233,7 @@ const Chat = () => {
           return;
         }
 
-        const songs = dedupeSongVersions(data.songs);
+        const songs = filterSongsByMinRelevance(dedupeSongVersions(data.songs));
         if (!songs.length) {
           toast.error(t("chat.toastNoResults"));
           setIsLoading(false);
@@ -384,6 +385,13 @@ const Chat = () => {
 
   useEffect(() => {
     if (searchParams.get("q")) return;
+    const landingSt = location.state as { landingSearch?: PromptSubmitPayload } | undefined;
+    const ls = landingSt?.landingSearch;
+    if (ls) {
+      const t0 = (ls.text || "").trim();
+      const hasImg = Boolean(ls.imageBase64 && ls.imageMimeType);
+      if (t0 || hasImg) return;
+    }
     if (!activeConversationId) {
       if (conversations.length > 0) {
         selectConversation(conversations[0].id);
@@ -404,7 +412,35 @@ const Chat = () => {
     selectConversation,
     searchParams,
     setSearchParams,
+    location.state,
   ]);
+
+  useEffect(() => {
+    const landingSt = location.state as { landingSearch?: PromptSubmitPayload } | undefined;
+    const ls = landingSt?.landingSearch;
+    if (!ls) {
+      landingFromHomeProcessed.current = false;
+      return;
+    }
+    if (landingFromHomeProcessed.current) return;
+    const text = (ls.text || "").trim();
+    const hasImg = Boolean(ls.imageBase64 && ls.imageMimeType);
+    if (!text && !hasImg) return;
+    landingFromHomeProcessed.current = true;
+    const id = createConversation();
+    navigate(`${CHAT_PATH}?conversation=${encodeURIComponent(id)}`, { replace: true, state: {} });
+    const displayText = text || t("chat.imageSearchLabel");
+    const previewUrl =
+      hasImg && ls.imageMimeType && ls.imageBase64
+        ? `data:${ls.imageMimeType};base64,${ls.imageBase64}`
+        : undefined;
+    appendUserMessage(id, displayText, previewUrl ? { imagePreviewUrl: previewUrl } : undefined);
+    const media =
+      hasImg && ls.imageBase64 && ls.imageMimeType
+        ? { imageBase64: ls.imageBase64, imageMimeType: ls.imageMimeType }
+        : undefined;
+    setTimeout(() => void runSearch(id, text, media), 0);
+  }, [location.state, t, createConversation, navigate, appendUserMessage, runSearch]);
 
   useEffect(() => {
     if (qProcessed.current) return;
@@ -421,12 +457,13 @@ const Chat = () => {
     if (luckyProcessed.current) return;
     const st = location.state as { luckyPayload?: import("@/services/musicSearchApi").MusicSearchResponse } | undefined;
     if (!st?.luckyPayload?.emotionalProfile || !st.luckyPayload.songs?.length) return;
+    const data = st.luckyPayload;
+    const luckySongs = filterSongsByMinRelevance(dedupeSongVersions(data.songs!));
+    if (!luckySongs.length) return;
     luckyProcessed.current = true;
     const id = createConversation();
     const surpriseLabel = t("chat.surpriseMe");
     appendUserMessage(id, surpriseLabel);
-    const data = st.luckyPayload;
-    const luckySongs = dedupeSongVersions(data.songs!);
     const presentation: SearchResult["playbackPresentation"] = isGloballyPlaying ? "pick" : "inline";
     const result = buildSearchResult(
       surpriseLabel,

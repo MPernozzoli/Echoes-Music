@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Song } from "@/data/mockData";
+import { filterSongsByMinRelevance } from "@/lib/dedupeSongs";
 
 /** Provenienza del brano in coda (chat + turno assistente) */
 export interface QueueListenSource {
@@ -74,10 +75,13 @@ export const PlaybackQueueProvider = ({ children }: { children: ReactNode }) => 
 
   const playNowReplace = useCallback(
     (songs: Song[], startAt = 0, autoplay = false, source: QueueListenSource | null = null) => {
-      if (!songs.length) return;
-      const i = Math.min(Math.max(0, startAt), songs.length - 1);
-      setQueue(songs);
-      setQueueSources(Array.from({ length: songs.length }, () => source));
+      const filtered = filterSongsByMinRelevance(songs);
+      if (!filtered.length) return;
+      const orig = songs[Math.min(Math.max(0, startAt), songs.length - 1)];
+      const idx = orig ? filtered.findIndex((s) => s.id === orig.id) : -1;
+      const i = idx >= 0 ? idx : 0;
+      setQueue(filtered);
+      setQueueSources(Array.from({ length: filtered.length }, () => source));
       setCurrentIndex(i);
       setPendingAutoplay(autoplay);
     },
@@ -85,20 +89,22 @@ export const PlaybackQueueProvider = ({ children }: { children: ReactNode }) => 
   );
 
   const appendToQueue = useCallback((songs: Song[], source: QueueListenSource | null = null) => {
-    if (!songs.length) return;
-    const added = Array.from({ length: songs.length }, () => source);
-    setQueue((q) => (q.length === 0 ? [...songs] : [...q, ...songs]));
+    const filtered = filterSongsByMinRelevance(songs);
+    if (!filtered.length) return;
+    const added = Array.from({ length: filtered.length }, () => source);
+    setQueue((q) => (q.length === 0 ? [...filtered] : [...q, ...filtered]));
     setQueueSources((s) => (s.length === 0 ? added : [...s, ...added]));
   }, []);
 
   const insertAfterCurrent = useCallback((songs: Song[], source: QueueListenSource | null = null) => {
-    if (!songs.length) return;
-    const added = Array.from({ length: songs.length }, () => source);
+    const filtered = filterSongsByMinRelevance(songs);
+    if (!filtered.length) return;
+    const added = Array.from({ length: filtered.length }, () => source);
     setQueue((q) => {
-      if (q.length === 0) return [...songs];
+      if (q.length === 0) return [...filtered];
       const idx = Math.min(indexRef.current, q.length - 1);
       const next = [...q];
-      next.splice(idx + 1, 0, ...songs);
+      next.splice(idx + 1, 0, ...filtered);
       return next;
     });
     setQueueSources((s) => {
@@ -112,7 +118,11 @@ export const PlaybackQueueProvider = ({ children }: { children: ReactNode }) => 
 
   const playTrackFromResult = useCallback(
     (allSongs: Song[], songIndex: number, source: QueueListenSource) => {
-      playNowReplace(allSongs, songIndex, true, source);
+      const filtered = filterSongsByMinRelevance(allSongs);
+      if (!filtered.length) return;
+      const orig = allSongs[Math.min(Math.max(0, songIndex), allSongs.length - 1)];
+      const idx = orig ? filtered.findIndex((s) => s.id === orig.id) : -1;
+      playNowReplace(filtered, idx >= 0 ? idx : 0, true, source);
     },
     [playNowReplace]
   );
