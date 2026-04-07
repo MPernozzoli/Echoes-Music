@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ChevronDown, ChevronUp, GripVertical, Heart, Trash2 } from "lucide-react";
 import type { Song } from "@/data/mockData";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,7 @@ const TrackQueue = ({
   onRemove,
   variant = "default",
 }: TrackQueueProps) => {
+  const { t } = useTranslation();
   const activeRef = useRef<HTMLDivElement | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
@@ -82,7 +84,7 @@ const TrackQueue = ({
         const rowActive = isDock
           ? isActive
             ? "bg-[hsl(141,73%,48%)]/12 border border-[hsl(141,73%,48%)]/25"
-            : "hover:bg-zinc-900/80 border border-transparent"
+            : "hover:bg-muted/80 border border-transparent"
           : isActive
             ? "bg-primary/10 border border-primary/20"
             : "hover:bg-muted/60 border border-transparent";
@@ -90,7 +92,7 @@ const TrackQueue = ({
         const titleClass = isDock
           ? isActive
             ? "text-[hsl(141,73%,52%)]"
-            : "text-zinc-100"
+            : "text-foreground"
           : isActive
             ? "text-primary"
             : "text-foreground";
@@ -98,7 +100,7 @@ const TrackQueue = ({
         const posClass = isDock
           ? isActive
             ? "text-[hsl(141,73%,52%)] font-semibold"
-            : "text-zinc-500"
+            : "text-muted-foreground"
           : isActive
             ? "text-primary font-semibold"
             : "text-muted-foreground";
@@ -125,7 +127,7 @@ const TrackQueue = ({
               <div className="flex flex-col shrink-0 gap-0">
                 <button
                   type="button"
-                  title="Sposta su"
+                  title={t("trackQueue.moveUp")}
                   disabled={i === 0}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -133,14 +135,14 @@ const TrackQueue = ({
                   }}
                   className={cn(
                     "p-0.5 rounded-md disabled:opacity-25 disabled:pointer-events-none",
-                    isDock ? "text-zinc-500 hover:text-zinc-200" : "text-muted-foreground hover:text-foreground"
+                    isDock ? "text-muted-foreground hover:text-foreground" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <ChevronUp className="w-3.5 h-3.5" />
                 </button>
                 <button
                   type="button"
-                  title="Sposta giù"
+                  title={t("trackQueue.moveDown")}
                   disabled={i === songs.length - 1}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -148,7 +150,7 @@ const TrackQueue = ({
                   }}
                   className={cn(
                     "p-0.5 rounded-md disabled:opacity-25 disabled:pointer-events-none",
-                    isDock ? "text-zinc-500 hover:text-zinc-200" : "text-muted-foreground hover:text-foreground"
+                    isDock ? "text-muted-foreground hover:text-foreground" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <ChevronDown className="w-3.5 h-3.5" />
@@ -161,12 +163,12 @@ const TrackQueue = ({
                 type="button"
                 draggable
                 onDragStart={(e) => handleDragStart(e, i)}
-                title="Trascina per riordinare"
+                title={t("trackQueue.dragReorder")}
                 className={cn(
                   "touch-none p-1 rounded-md cursor-grab active:cursor-grabbing shrink-0",
-                  isDock ? "text-zinc-600 hover:text-zinc-400" : "text-muted-foreground/70 hover:text-muted-foreground"
+                  isDock ? "text-muted-foreground/80 hover:text-muted-foreground" : "text-muted-foreground/70 hover:text-muted-foreground"
                 )}
-                aria-label="Trascina per riordinare"
+                aria-label={t("trackQueue.dragReorder")}
               >
                 <GripVertical className="w-4 h-4" />
               </button>
@@ -198,7 +200,7 @@ const TrackQueue = ({
                 <p
                   className={cn(
                     "text-xs font-body truncate",
-                    isDock ? "text-zinc-500" : "text-muted-foreground"
+                    isDock ? "text-muted-foreground" : "text-muted-foreground"
                   )}
                 >
                   {song.artist}
@@ -208,7 +210,7 @@ const TrackQueue = ({
               <span
                 className={cn(
                   "text-[10px] font-body shrink-0 tabular-nums",
-                  isDock ? "text-zinc-500" : "text-muted-foreground"
+                  isDock ? "text-muted-foreground" : "text-muted-foreground"
                 )}
               >
                 {song.relevanceScore}%
@@ -218,14 +220,14 @@ const TrackQueue = ({
             <div className="flex items-center gap-0.5 shrink-0">
               <button
                 type="button"
-                title={isFavorite(song.id) ? "Rimuovi dai preferiti" : "Aggiungi ai preferiti"}
+                title={isFavorite(song.id) ? t("trackQueue.removeFavorite") : t("trackQueue.addFavorite")}
                 onClick={(e) => {
                   e.stopPropagation();
                   onToggleFavorite(song.id);
                 }}
                 className={cn(
                   "p-1.5 rounded-full transition-colors",
-                  isDock ? "hover:bg-zinc-800 text-zinc-400" : "hover:bg-muted/80 text-muted-foreground"
+                  isDock ? "hover:bg-muted text-muted-foreground" : "hover:bg-muted/80 text-muted-foreground"
                 )}
               >
                 <Heart
@@ -243,7 +245,7 @@ const TrackQueue = ({
               {onRemove && (
                 <button
                   type="button"
-                  title="Rimuovi dalla coda"
+                  title={t("trackQueue.removeFromQueue")}
                   onClick={(e) => {
                     e.stopPropagation();
                     onRemove(i);
@@ -251,7 +253,7 @@ const TrackQueue = ({
                   className={cn(
                     "p-1.5 rounded-full transition-colors",
                     isDock
-                      ? "hover:bg-red-950/50 text-zinc-500 hover:text-red-400"
+                      ? "hover:bg-destructive/15 text-muted-foreground hover:text-destructive"
                       : "hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
                   )}
                 >

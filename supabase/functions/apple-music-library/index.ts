@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
     const action =
       typeof body.action === 'string'
         ? body.action
-        : body.song_id && body.music_user_token
+        : (body.song_id != null && body.song_id !== '' && body.music_user_token)
           ? 'add_to_library'
           : '';
     const music_user_token = body.music_user_token;
@@ -125,8 +125,8 @@ Deno.serve(async (req) => {
 
     if (action === 'add_to_playlist') {
       const playlist_id = body.playlist_id;
-      const song_id = body.song_id;
-      if (!playlist_id || typeof playlist_id !== 'string' || !song_id || typeof song_id !== 'string') {
+      const song_id = body.song_id != null ? String(body.song_id) : '';
+      if (!playlist_id || typeof playlist_id !== 'string' || !song_id) {
         return new Response(JSON.stringify({ error: 'playlist_id and song_id required' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -164,8 +164,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const song_id = body.song_id;
-    if (!song_id || typeof song_id !== 'string') {
+    const song_id = body.song_id != null ? String(body.song_id) : '';
+    if (!song_id) {
       return new Response(JSON.stringify({ error: 'song_id required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

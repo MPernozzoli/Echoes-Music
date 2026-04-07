@@ -7,10 +7,12 @@ export async function addAppleMusicSongToLibrary(
   songId: string,
   musicUserToken: string,
 ): Promise<{ ok: true } | { error: string }> {
+  const id = String(songId ?? "").trim();
+  if (!id) return { error: "song_id mancante" };
   const res = await fetch(fnUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: ANON_KEY },
-    body: JSON.stringify({ song_id: songId, music_user_token: musicUserToken }),
+    body: JSON.stringify({ song_id: id, music_user_token: musicUserToken }),
   });
   const data = await res.json();
   if (!res.ok) return { error: typeof data.error === "string" ? data.error : "Apple Music: richiesta non riuscita" };
@@ -35,13 +37,15 @@ export async function addAppleMusicSongToPlaylist(
   songId: string,
   musicUserToken: string,
 ): Promise<{ ok: true } | { error: string }> {
+  const id = String(songId ?? "").trim();
+  if (!id) return { error: "song_id mancante" };
   const res = await fetch(fnUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: ANON_KEY },
     body: JSON.stringify({
       action: "add_to_playlist",
       playlist_id: playlistId,
-      song_id: songId,
+      song_id: id,
       music_user_token: musicUserToken,
     }),
   });

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Plus, Disc, Loader2, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -18,7 +19,7 @@ function getMusicKitInstance(): { musicUserToken?: string | null } | undefined {
 }
 
 const popClass =
-  "w-[min(100vw-1.5rem,18rem)] border-zinc-700 bg-zinc-950 p-2 text-zinc-100 shadow-2xl";
+  "w-[min(100vw-1.5rem,18rem)] border border-border bg-popover p-2 text-popover-foreground shadow-2xl";
 
 interface DockStreamingActionsProps {
   spotifyTrackId?: string;
@@ -28,6 +29,7 @@ interface DockStreamingActionsProps {
 type StreamSvc = "spotify" | "apple";
 
 export function DockStreamingActions({ spotifyTrackId, appleMusicTrackId }: DockStreamingActionsProps) {
+  const { t } = useTranslation();
   const { isAuthorized: appleOk, isAvailable: appleAvail } = useAppleMusic();
   const { isConnected: spotifyOk, loading: spotifyLoading } = useSpotify();
 
@@ -52,16 +54,16 @@ export function DockStreamingActions({ spotifyTrackId, appleMusicTrackId }: Dock
     const mk = getMusicKitInstance();
     const token = mk?.musicUserToken;
     if (!token) {
-      toast.error("Sessione Apple Music non disponibile");
+      toast.error(t("streaming.appleSessionUnavailable"));
       return;
     }
     setAppleBusy(true);
     const r = await addAppleMusicSongToLibrary(appleMusicTrackId, token);
     setAppleBusy(false);
-    if ("error" in r) toast.error("Apple Music: non aggiunto alla libreria");
-    else toast.success("Aggiunto alla libreria Apple Music");
+    if ("error" in r) toast.error(t("streaming.appleAddLibraryFailed"));
+    else toast.success(t("streaming.appleAddedLibrary"));
     setLibOpen(false);
-  }, [appleMusicTrackId]);
+  }, [appleMusicTrackId, t]);
 
   const onSpotifySave = useCallback(async () => {
     if (!spotifyTrackId) return;
@@ -70,11 +72,11 @@ export function DockStreamingActions({ spotifyTrackId, appleMusicTrackId }: Dock
     setSpotifySaveBusy(false);
     if ("error" in r) {
       if (r.error.includes("403") || r.error.toLowerCase().includes("scope")) {
-        toast.error("Spotify: scollega e ricollega l’account da Profilo");
-      } else toast.error("Spotify: brano non salvato");
-    } else toast.success("Salvato nei brani Spotify");
+        toast.error(t("streaming.spotifyReconnectShort"));
+      } else toast.error(t("streaming.spotifyTrackNotSaved"));
+    } else toast.success(t("streaming.spotifySavedTracks"));
     setLibOpen(false);
-  }, [spotifyTrackId]);
+  }, [spotifyTrackId, t]);
 
   const loadPlaylists = useCallback(
     async (svc: StreamSvc) => {
@@ -84,7 +86,7 @@ export function DockStreamingActions({ spotifyTrackId, appleMusicTrackId }: Dock
         const r = await spotifyListPlaylists();
         setPlaylistsLoading(false);
         if ("error" in r) {
-          toast.error("Impossibile caricare le playlist Spotify");
+          toast.error(t("streaming.spotifyPlaylistLoadFailed"));
           return;
         }
         setPlaylists(r.playlists);
@@ -94,18 +96,18 @@ export function DockStreamingActions({ spotifyTrackId, appleMusicTrackId }: Dock
       const token = mk?.musicUserToken;
       if (!token) {
         setPlaylistsLoading(false);
-        toast.error("Sessione Apple Music non disponibile");
+        toast.error(t("streaming.appleSessionUnavailable"));
         return;
       }
       const r = await listAppleMusicPlaylists(token);
       setPlaylistsLoading(false);
       if ("error" in r) {
-        toast.error("Impossibile caricare le playlist Apple Music");
+        toast.error(t("streaming.applePlaylistLoadFailed"));
         return;
       }
       setPlaylists(r.playlists);
     },
-    [],
+    [t],
   );
 
   useEffect(() => {
@@ -139,10 +141,10 @@ export function DockStreamingActions({ spotifyTrackId, appleMusicTrackId }: Dock
         setAddingTo(null);
         if ("error" in r) {
           if (r.error.includes("403") || r.error.toLowerCase().includes("scope")) {
-            toast.error("Spotify: scollega e ricollega l’account da Profilo");
-          } else toast.error("Non aggiunto alla playlist");
+            toast.error(t("streaming.spotifyReconnectShort"));
+          } else toast.error(t("streaming.notAddedToPlaylist"));
         } else {
-          toast.success("Aggiunto alla playlist");
+          toast.success(t("streaming.addedToPlaylist"));
           setPlOpen(false);
         }
         return;
@@ -151,19 +153,19 @@ export function DockStreamingActions({ spotifyTrackId, appleMusicTrackId }: Dock
       const mk = getMusicKitInstance();
       const token = mk?.musicUserToken;
       if (!token) {
-        toast.error("Sessione Apple Music non disponibile");
+        toast.error(t("streaming.appleSessionUnavailable"));
         return;
       }
       setAddingTo(playlistId);
       const r = await addAppleMusicSongToPlaylist(playlistId, appleMusicTrackId, token);
       setAddingTo(null);
-      if ("error" in r) toast.error("Apple Music: non aggiunto alla playlist");
+      if ("error" in r) toast.error(t("streaming.applePlaylistAddFailed"));
       else {
-        toast.success("Aggiunto alla playlist");
+        toast.success(t("streaming.addedToPlaylist"));
         setPlOpen(false);
       }
     },
-    [plService, needPlPicker, showSpotify, spotifyTrackId, appleMusicTrackId],
+    [plService, needPlPicker, showSpotify, spotifyTrackId, appleMusicTrackId, t],
   );
 
   const onLibraryClick = () => {
@@ -187,19 +189,19 @@ export function DockStreamingActions({ spotifyTrackId, appleMusicTrackId }: Dock
             <button
               type="button"
               className={DOCK_ICON_BTN}
-              title="Aggiungi alla libreria"
+              title={t("streaming.addToLibrary")}
               disabled={libBusy}
             >
               {libBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
             </button>
           </PopoverTrigger>
           <PopoverContent side="top" align="end" sideOffset={8} className={popClass}>
-            <p className="text-[11px] text-zinc-500 font-body px-1 pb-2">Aggiungi alla libreria</p>
+            <p className="text-[11px] text-muted-foreground font-body px-1 pb-2">{t("streaming.addToLibrary")}</p>
             <div className="flex flex-col gap-1">
               <button
                 type="button"
                 disabled={appleBusy}
-                className="text-left text-xs font-body rounded-md px-2 py-2 hover:bg-zinc-900 text-zinc-200"
+                className="text-left text-xs font-body rounded-md px-2 py-2 hover:bg-muted text-foreground"
                 onClick={() => void onAppleLibrary()}
               >
                 Apple Music
@@ -207,7 +209,7 @@ export function DockStreamingActions({ spotifyTrackId, appleMusicTrackId }: Dock
               <button
                 type="button"
                 disabled={spotifySaveBusy}
-                className="text-left text-xs font-body rounded-md px-2 py-2 hover:bg-zinc-900 text-zinc-200"
+                className="text-left text-xs font-body rounded-md px-2 py-2 hover:bg-muted text-foreground"
                 onClick={() => void onSpotifySave()}
               >
                 Spotify
@@ -219,7 +221,7 @@ export function DockStreamingActions({ spotifyTrackId, appleMusicTrackId }: Dock
         <button
           type="button"
           className={DOCK_ICON_BTN}
-          title="Aggiungi alla libreria"
+          title={t("streaming.addToLibrary")}
           disabled={libBusy}
           onClick={onLibraryClick}
         >
@@ -238,18 +240,18 @@ export function DockStreamingActions({ spotifyTrackId, appleMusicTrackId }: Dock
         }}
       >
         <PopoverTrigger asChild>
-          <button type="button" className={DOCK_ICON_BTN} title="Aggiungi a una playlist">
+          <button type="button" className={DOCK_ICON_BTN} title={t("streaming.addToPlaylist")}>
             <Disc className="w-4 h-4" />
           </button>
         </PopoverTrigger>
         <PopoverContent side="top" align="end" sideOffset={8} className={cn(popClass, "p-0")}>
           {plStep === "pick" && needPlPicker ? (
             <div className="p-2">
-              <p className="text-[11px] text-zinc-500 font-body px-1 pb-2">Scegli il servizio</p>
+              <p className="text-[11px] text-muted-foreground font-body px-1 pb-2">{t("streaming.chooseService")}</p>
               <div className="flex flex-col gap-1">
                 <button
                   type="button"
-                  className="text-left text-xs font-body rounded-md px-2 py-2 hover:bg-zinc-900 text-zinc-200"
+                  className="text-left text-xs font-body rounded-md px-2 py-2 hover:bg-muted text-foreground"
                   onClick={() => {
                     setPlService("apple");
                     setPlStep("list");
@@ -260,7 +262,7 @@ export function DockStreamingActions({ spotifyTrackId, appleMusicTrackId }: Dock
                 </button>
                 <button
                   type="button"
-                  className="text-left text-xs font-body rounded-md px-2 py-2 hover:bg-zinc-900 text-zinc-200"
+                  className="text-left text-xs font-body rounded-md px-2 py-2 hover:bg-muted text-foreground"
                   onClick={() => {
                     setPlService("spotify");
                     setPlStep("list");
@@ -276,7 +278,7 @@ export function DockStreamingActions({ spotifyTrackId, appleMusicTrackId }: Dock
               {needPlPicker && plStep === "list" && (
                 <button
                   type="button"
-                  className="flex items-center gap-1 text-[11px] text-zinc-400 hover:text-zinc-200 font-body mb-2 px-1"
+                  className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground font-body mb-2 px-1"
                   onClick={() => {
                     setPlStep("pick");
                     setPlService(null);
@@ -284,24 +286,24 @@ export function DockStreamingActions({ spotifyTrackId, appleMusicTrackId }: Dock
                   }}
                 >
                   <ChevronLeft className="w-3.5 h-3.5" />
-                  Altro servizio
+                  {t("streaming.otherService")}
                 </button>
               )}
-              <p className="text-[11px] text-zinc-500 font-body px-1 pb-2">Le tue playlist</p>
+              <p className="text-[11px] text-muted-foreground font-body px-1 pb-2">{t("streaming.yourPlaylists")}</p>
               <div className="max-h-52 overflow-y-auto space-y-0.5">
                 {playlistsLoading ? (
                   <div className="flex justify-center py-6">
-                    <Loader2 className="w-5 h-5 animate-spin text-zinc-500" />
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                   </div>
                 ) : playlists.length === 0 ? (
-                  <p className="text-xs font-body text-zinc-500 px-2 py-3">Nessuna playlist</p>
+                  <p className="text-xs font-body text-muted-foreground px-2 py-3">{t("streaming.noPlaylists")}</p>
                 ) : (
                   playlists.map((p) => (
                     <button
                       key={p.id}
                       type="button"
                       disabled={addingTo === p.id}
-                      className="w-full text-left text-xs font-body rounded-md px-2 py-2 hover:bg-zinc-900 text-zinc-200 truncate disabled:opacity-50"
+                      className="w-full text-left text-xs font-body rounded-md px-2 py-2 hover:bg-muted text-foreground truncate disabled:opacity-50"
                       onClick={() => void onPickPlaylist(p.id)}
                     >
                       {addingTo === p.id ? (

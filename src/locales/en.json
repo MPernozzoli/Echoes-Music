@@ -197,10 +197,83 @@
     "queue": "Queue",
     "queueCount": "{{count}} tracks"
   },
+  "trackQueue": {
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "dragReorder": "Drag to reorder",
+    "removeFromQueue": "Remove from queue",
+    "addFavorite": "Add to favorites",
+    "removeFavorite": "Remove from favorites"
+  },
+  "resultFb": {
+    "thanks": "Thanks",
+    "titleGood": "Good match",
+    "titleBad": "Not right",
+    "titleWrite": "Write feedback",
+    "placeholder": "What felt off?",
+    "send": "Send",
+    "neg_not_quite": "Not quite right",
+    "neg_too_generic": "Too generic",
+    "neg_too_sad": "Too sad",
+    "neg_too_intense": "Too intense",
+    "neg_wrong_theme": "Wrong theme"
+  },
+  "streaming": {
+    "appleSessionUnavailable": "Apple Music session unavailable",
+    "appleAddFailed": "Apple Music: couldn’t add (check subscription or try again)",
+    "appleAddedLibrary": "Added to Apple Music library",
+    "spotifyReconnect": "Spotify: disconnect and reconnect from Profile to enable library and playlists",
+    "spotifyTrackNotSaved": "Spotify: track not saved",
+    "spotifySavedTracks": "Saved to Spotify liked songs",
+    "playlistsLoadFailed": "Couldn’t load playlists",
+    "spotifyReconnectShort": "Spotify: disconnect and reconnect from Profile",
+    "notAddedToPlaylist": "Not added to playlist",
+    "addedToPlaylist": "Added to playlist",
+    "yourPlaylists": "Your playlists",
+    "noPlaylists": "No playlists",
+    "chooseService": "Choose service",
+    "otherService": "Other service",
+    "addToLibrary": "Add to library",
+    "addToPlaylist": "Add to playlist",
+    "btnAppleLibrary": "Apple Library",
+    "btnSpotifySaved": "Spotify saved",
+    "btnPlaylists": "Playlists",
+    "appleAddLibraryFailed": "Apple Music: not added to library",
+    "spotifyPlaylistLoadFailed": "Couldn’t load Spotify playlists",
+    "applePlaylistLoadFailed": "Couldn’t load Apple Music playlists",
+    "applePlaylistAddFailed": "Apple Music: not added to playlist",
+    "saveAllToLibrary": "Save all to library",
+    "saveAllHint": "Save to your streaming library",
+    "spotifySavedAllTracks": "{{count}} tracks saved to Spotify",
+    "appleAddedAllLibrary": "{{count}} tracks added to Apple Music library"
+  },
+  "narrative": {
+    "selectedTracks": "Selected tracks",
+    "playAll": "Play all",
+    "queueAll": "Queue all"
+  },
   "player": {
     "pause": "Pause",
     "play": "Play",
     "addQueue": "Add to queue",
-    "next": "Next"
+    "next": "Next",
+    "songDetails": "Song details",
+    "airPlayHint": "For AirPlay with Apple Music, use Control Center or the system volume menu.",
+    "artworkAlt": "{{title}} by {{artist}}",
+    "shuffle": "Shuffle",
+    "previous": "Previous",
+    "repeat": "Repeat",
+    "detailsLyrics": "Details / lyrics",
+    "queue": "Queue",
+    "airPlay": "AirPlay",
+    "volume": "Volume",
+    "fullscreenSoon": "Fullscreen (coming soon)",
+    "removeFromFavorites": "Remove from favorites",
+    "addToFavorites": "Favorites",
+    "nowPlayingAria": "Now playing",
+    "previewUnavailable": "Preview not available for this track"
+  },
+  "appleMusic": {
+    "compactLine": "{{action}} · Apple Music account (no new sign-in)"
   }
 }

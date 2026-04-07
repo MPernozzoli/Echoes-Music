@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from "react";
+import { useTranslation } from "react-i18next";
 import { Play, Pause } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { useAppleMusic } from "@/context/AppleMusicContext";
@@ -71,6 +72,7 @@ export const AppleMusicKitPlayer = forwardRef<AppleMusicKitPlayerHandle, AppleMu
     },
     ref
   ) {
+    const { t } = useTranslation();
     const { isAuthorized, isAvailable } = useAppleMusic();
     const resolvedMode = chromeModeProp ?? (compact ? "compact" : "default");
     const [isPlaying, setIsPlaying] = useState(false);
@@ -284,7 +286,9 @@ export const AppleMusicKitPlayer = forwardRef<AppleMusicKitPlayerHandle, AppleMu
             <Play className="w-3.5 h-3.5 text-[hsl(350,80%,55%)] shrink-0" />
           )}
           <span className="text-xs font-body text-foreground text-left min-w-0 truncate">
-            {isPlaying ? "Pausa" : "Play"} · account Apple Music (nessun nuovo accesso)
+            {t("appleMusic.compactLine", {
+              action: isPlaying ? t("player.pause") : t("player.play"),
+            })}
           </span>
         </button>
       );

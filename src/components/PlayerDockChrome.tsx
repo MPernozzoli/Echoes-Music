@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Shuffle,
   SkipBack,
@@ -117,6 +118,7 @@ export function PlayerDockChrome({
   showVolumeControl = true,
   trackExtraActions,
 }: PlayerDockChromeProps) {
+  const { t } = useTranslation();
   const [volOpen, setVolOpen] = useState(false);
   const maxT = duration > 0 ? duration : 1;
 
@@ -150,7 +152,7 @@ export function PlayerDockChrome({
                   "p-2 rounded-full border border-zinc-600 text-zinc-300 hover:border-zinc-400 hover:text-white transition-colors",
                   isFavorite && "text-primary border-primary/50"
                 )}
-                title={isFavorite ? "Rimuovi dai preferiti" : "Preferiti"}
+                title={isFavorite ? t("player.removeFromFavorites") : t("player.addToFavorites")}
               >
                 <Heart className={cn("w-4 h-4", isFavorite && "fill-primary text-primary")} />
               </button>
@@ -165,11 +167,11 @@ export function PlayerDockChrome({
               type="button"
               className={cn(dockBtn, shuffleOn && "text-[hsl(141,73%,48%)]")}
               onClick={onShuffleToggle}
-              title="Shuffle"
+              title={t("player.shuffle")}
             >
               <Shuffle className="w-4 h-4" />
             </button>
-            <button type="button" className={dockBtn} onClick={onPrev} disabled={prevDisabled} title="Precedente">
+            <button type="button" className={dockBtn} onClick={onPrev} disabled={prevDisabled} title={t("player.previous")}>
               <SkipBack className="w-5 h-5 fill-current" />
             </button>
             <button
@@ -177,11 +179,11 @@ export function PlayerDockChrome({
               onClick={onPlayPause}
               disabled={playDisabled}
               className="mx-1 w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-transform disabled:opacity-40 disabled:hover:scale-100 shadow-lg"
-              title={isPlaying ? "Pausa" : "Play"}
+              title={isPlaying ? t("player.pause") : t("player.play")}
             >
               {isPlaying ? <Pause className="w-5 h-5" fill="currentColor" /> : <Play className="w-5 h-5 ml-0.5" fill="currentColor" />}
             </button>
-            <button type="button" className={dockBtn} onClick={onNext} disabled={nextDisabled} title="Successivo">
+            <button type="button" className={dockBtn} onClick={onNext} disabled={nextDisabled} title={t("player.next")}>
               <SkipForward className="w-5 h-5 fill-current" />
             </button>
             <button
@@ -191,7 +193,7 @@ export function PlayerDockChrome({
                 repeatMode !== "off" && "text-[hsl(141,73%,48%)]"
               )}
               onClick={onRepeatCycle}
-              title="Ripeti"
+              title={t("player.repeat")}
             >
               {repeatMode === "one" ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
             </button>
@@ -222,12 +224,12 @@ export function PlayerDockChrome({
           {dockPanelActions ?? (
             <>
               {onDetails && (
-                <button type="button" className={dockBtn} onClick={onDetails} title="Dettagli / testo">
+                <button type="button" className={dockBtn} onClick={onDetails} title={t("player.detailsLyrics")}>
                   <Mic2 className="w-4 h-4" />
                 </button>
               )}
               {onOpenQueue && (
-                <button type="button" className={dockBtn} onClick={onOpenQueue} title="Coda">
+                <button type="button" className={dockBtn} onClick={onOpenQueue} title={t("player.queue")}>
                   <ListMusic className="w-4 h-4" />
                 </button>
               )}
@@ -238,7 +240,7 @@ export function PlayerDockChrome({
               type="button"
               className={cn(dockBtn, "inline-flex shrink-0")}
               onClick={airPlayOnClick}
-              title="AirPlay"
+              title={t("player.airPlay")}
             >
               <AirPlayIcon className="w-[18px] h-[18px]" />
             </button>
@@ -249,7 +251,7 @@ export function PlayerDockChrome({
               onMouseEnter={() => setVolOpen(true)}
               onMouseLeave={() => setVolOpen(false)}
             >
-              <button type="button" className={dockBtn} onClick={onMuteToggle} title="Volume">
+              <button type="button" className={dockBtn} onClick={onMuteToggle} title={t("player.volume")}>
                 {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
               </button>
               <div
@@ -269,7 +271,7 @@ export function PlayerDockChrome({
               </div>
             </div>
           ) : null}
-          <button type="button" className={cn(dockBtn, "hidden md:inline-flex")} title="Schermo intero (in arrivo)" disabled>
+          <button type="button" className={cn(dockBtn, "hidden md:inline-flex")} title={t("player.fullscreenSoon")} disabled>
             <Maximize2 className="w-4 h-4 opacity-40" />
           </button>
         </div>

@@ -188,5 +188,83 @@
     "queue": "File",
     "queueCount": "{{count}} titres"
   },
-  "player": { "pause": "Pause", "play": "Lecture", "addQueue": "À la file", "next": "Suivant" }
+  "trackQueue": {
+    "moveUp": "Monter",
+    "moveDown": "Descendre",
+    "dragReorder": "Glisser pour réorganiser",
+    "removeFromQueue": "Retirer de la file",
+    "addFavorite": "Ajouter aux favoris",
+    "removeFavorite": "Retirer des favoris"
+  },
+  "resultFb": {
+    "thanks": "Merci",
+    "titleGood": "Bon choix",
+    "titleBad": "Pas adapté",
+    "titleWrite": "Écrire un avis",
+    "placeholder": "Qu’est-ce qui clochait ?",
+    "send": "Envoyer",
+    "neg_not_quite": "Pas tout à fait",
+    "neg_too_generic": "Trop générique",
+    "neg_too_sad": "Trop triste",
+    "neg_too_intense": "Trop intense",
+    "neg_wrong_theme": "Mauvais thème"
+  },
+  "streaming": {
+    "appleSessionUnavailable": "Session Apple Music indisponible",
+    "appleAddFailed": "Apple Music : ajout impossible (abonnement ou réessayez)",
+    "appleAddedLibrary": "Ajouté à la bibliothèque Apple Music",
+    "spotifyReconnect": "Spotify : déconnectez et reconnectez-vous depuis le profil pour la bibliothèque et les playlists",
+    "spotifyTrackNotSaved": "Spotify : morceau non enregistré",
+    "spotifySavedTracks": "Enregistré dans les titres likés Spotify",
+    "playlistsLoadFailed": "Impossible de charger les playlists",
+    "spotifyReconnectShort": "Spotify : déconnectez et reconnectez-vous depuis le profil",
+    "notAddedToPlaylist": "Non ajouté à la playlist",
+    "addedToPlaylist": "Ajouté à la playlist",
+    "yourPlaylists": "Vos playlists",
+    "noPlaylists": "Aucune playlist",
+    "chooseService": "Choisir le service",
+    "otherService": "Autre service",
+    "addToLibrary": "Ajouter à la bibliothèque",
+    "addToPlaylist": "Ajouter à une playlist",
+    "btnAppleLibrary": "Bibliothèque Apple",
+    "btnSpotifySaved": "Titres Spotify",
+    "btnPlaylists": "Playlists",
+    "appleAddLibraryFailed": "Apple Music : non ajouté à la bibliothèque",
+    "spotifyPlaylistLoadFailed": "Impossible de charger les playlists Spotify",
+    "applePlaylistLoadFailed": "Impossible de charger les playlists Apple Music",
+    "applePlaylistAddFailed": "Apple Music : non ajouté à la playlist",
+    "saveAllToLibrary": "Tout enregistrer dans la bibliothèque",
+    "saveAllHint": "Enregistrer dans la bibliothèque du service",
+    "spotifySavedAllTracks": "{{count}} titres enregistrés sur Spotify",
+    "appleAddedAllLibrary": "{{count}} titres ajoutés à la bibliothèque Apple Music"
+  },
+  "narrative": {
+    "selectedTracks": "Titres sélectionnés",
+    "playAll": "Tout écouter",
+    "queueAll": "Tout mettre en file"
+  },
+  "player": {
+    "pause": "Pause",
+    "play": "Lecture",
+    "addQueue": "À la file",
+    "next": "Suivant",
+    "songDetails": "Détails du morceau",
+    "airPlayHint": "Pour AirPlay avec Apple Music, utilisez le Centre de contrôle ou le menu du volume.",
+    "artworkAlt": "{{title}} par {{artist}}",
+    "shuffle": "Aléatoire",
+    "previous": "Précédent",
+    "repeat": "Répéter",
+    "detailsLyrics": "Détails / paroles",
+    "queue": "File",
+    "airPlay": "AirPlay",
+    "volume": "Volume",
+    "fullscreenSoon": "Plein écran (bientôt)",
+    "removeFromFavorites": "Retirer des favoris",
+    "addToFavorites": "Favoris",
+    "nowPlayingAria": "Lecture en cours",
+    "previewUnavailable": "Aperçu indisponible pour ce morceau"
+  },
+  "appleMusic": {
+    "compactLine": "{{action}} · compte Apple Music (pas de nouvelle connexion)"
+  }
 }

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { setPlaybackToggleHandler } from "@/lib/playbackToggleBridge";
 import { toast } from "sonner";
 import { Play, Pause, SkipBack, SkipForward, Heart, Volume2, VolumeX, Info } from "lucide-react";
@@ -53,6 +54,7 @@ const FullPlayer = ({
   onOpenQueue,
   dockPanelActions,
 }: FullPlayerProps) => {
+  const { t } = useTranslation();
   const song = songs[currentIndex];
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const autoplayTried = useRef(false);
@@ -340,8 +342,8 @@ const FullPlayer = ({
   const handleDockAirPlay = useCallback(() => {
     const el = audioRef.current;
     if (showWebKitAirPlayPicker(el)) return;
-    toast.info("Per AirPlay con Apple Music usa Controllo centro o il menu volume di sistema.");
-  }, []);
+    toast.info(t("player.airPlayHint"));
+  }, [t]);
 
   if (isDock) {
     return (
@@ -414,7 +416,7 @@ const FullPlayer = ({
       <div className="relative w-64 h-64 md:w-72 md:h-72 rounded-2xl overflow-hidden shadow-2xl mb-6 group">
         <img
           src={song.artwork}
-          alt={`${song.title} by ${song.artist}`}
+          alt={t("player.artworkAlt", { title: song.title, artist: song.artist })}
           className="w-full h-full object-cover"
           width={288}
           height={288}
@@ -436,7 +438,7 @@ const FullPlayer = ({
               type="button"
               onClick={onShowDetails}
               className="p-2 rounded-full hover:bg-muted transition-colors"
-              title="Song details"
+              title={t("player.songDetails")}
             >
               <Info className="w-5 h-5 text-muted-foreground" />
             </button>
@@ -574,7 +576,7 @@ const FullPlayer = ({
             allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
             loading="lazy"
             className="rounded-xl"
-            title={`${song.title} by ${song.artist}`}
+            title={t("player.artworkAlt", { title: song.title, artist: song.artist })}
           />
           {/* Still show prev/next */}
           <div className="flex items-center justify-center gap-6 mt-3">
@@ -591,9 +593,7 @@ const FullPlayer = ({
       {/* Fallback: no preview and no spotify */}
       {!useApplePlayback && useEmbed && !spotifyTrackId && (
         <div className="w-full px-2 mt-2 text-center">
-          <p className="text-xs text-muted-foreground font-body py-4">
-            Preview not available for this track
-          </p>
+          <p className="text-xs text-muted-foreground font-body py-4">{t("player.previewUnavailable")}</p>
           <div className="flex items-center justify-center gap-6">
             <button onClick={handlePrev} disabled={currentIndex === 0} className="p-2 rounded-full text-foreground hover:bg-muted transition-colors disabled:opacity-30">
               <SkipBack className="w-5 h-5" />
