@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
+import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
-import { User, Music, Palette, LogOut, ExternalLink, Shield, Check, Loader2, X, Globe } from "lucide-react";
+import { User, Music, Palette, LogOut, ExternalLink, Shield, Check, Loader2, X, Globe, LogIn, Coins } from "lucide-react";
 import { getUserSettings, setAllowAnonymizedData } from "@/services/tracking";
 import { getSpotifyAuthUrl, disconnectSpotify } from "@/services/spotify";
 import { useSpotify } from "@/context/useSpotify";
 import { useAppleMusic } from "@/context/useAppleMusic";
 import { useApp } from "@/context/useApp";
+import { useAuth } from "@/context/useAuth";
 import { SUPPORTED_UI_LANGS, type SupportedUiLang } from "@/i18n/config";
 
 const DESCRIPTION_LANGS: { value: string; label: string }[] = [
@@ -33,11 +35,13 @@ const UI_LANG_LABEL: Record<SupportedUiLang, string> = {
 const Profile = () => {
   const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
+  const navigate = useNavigate();
   const [mounted, setMounted] = useState(false);
   const [allowData, setAllowData] = useState(true);
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [connectingSpotify, setConnectingSpotify] = useState(false);
   const { descriptionLanguage, setDescriptionLanguage, uiLanguage, setUiLanguage } = useApp();
+  const { user, tokenBalance, plan, signOut } = useAuth();
   const { isConnected: spotifyConnected, displayName: spotifyName, isPremium, loading: spotifyLoading, setDisconnected } = useSpotify();
   const { isAvailable: appleMusicAvailable, isAuthorized: appleMusicAuthorized, loading: appleMusicLoading, authorize: authorizeApple, unauthorize: unauthorizeApple } = useAppleMusic();
 
@@ -77,15 +81,57 @@ const Profile = () => {
       <div className="max-w-2xl mx-auto px-4 md:px-6 py-8 pb-20 md:pb-8">
         <h1 className="font-display text-3xl font-bold mb-8">{t("profile.title")}</h1>
 
+        {/* Account Section */}
         <div className="glass-card rounded-2xl p-6 mb-6">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="w-6 h-6 text-primary" />
-            </div>
-            <div>
-              <h2 className="font-display text-lg font-semibold">{t("profile.demoUser")}</h2>
-              <p className="text-sm text-muted-foreground font-body">{t("profile.demoEmail")}</p>
-            </div>
+            {user ? (
+              <>
+                <img
+                  src={user.user_metadata?.avatar_url || user.user_metadata?.picture}
+                  alt=""
+                  className="w-14 h-14 rounded-full object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                />
+                <div className="flex-1">
+                  <h2 className="font-display text-lg font-semibold">
+                    {user.user_metadata?.full_name || user.user_metadata?.name || user.email}
+                  </h2>
+                  <p className="text-sm text-muted-foreground font-body">{user.email}</p>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary capitalize">{plan}</span>
+                    {tokenBalance !== null && (
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Coins className="w-3 h-3" /> {tokenBalance} token
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={signOut}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="hidden md:inline">Logout</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="w-6 h-6 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <h2 className="font-display text-lg font-semibold">{t("profile.demoUser")}</h2>
+                  <p className="text-sm text-muted-foreground font-body">{t("profile.demoEmail")}</p>
+                </div>
+                <button
+                  onClick={() => navigate("/auth")}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-primary hover:bg-primary/10 transition-colors"
+                >
+                  <LogIn className="w-4 h-4" />
+                  Login
+                </button>
+              </>
+            )}
           </div>
         </div>
 

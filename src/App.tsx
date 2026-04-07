@@ -5,12 +5,14 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider } from "@/context/AppContext";
+import { AuthProvider } from "@/context/AuthContext";
 import { ConversationProvider } from "@/context/ConversationContext";
 import { SpotifyProvider } from "@/context/SpotifyContext";
 import { AppleMusicProvider } from "@/context/AppleMusicContext";
 import { PlaybackQueueProvider } from "@/context/PlaybackQueueContext";
 import Landing from "./pages/Landing";
 import Chat from "./pages/Chat";
+import Auth from "./pages/Auth";
 
 const DiscoverRedirect = () => {
   const { search } = useLocation();
@@ -32,6 +34,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <AuthProvider>
         <AppProvider>
           <ConversationProvider>
           <SpotifyProvider>
@@ -39,6 +42,7 @@ const App = () => (
             <PlaybackQueueProvider>
               <Routes>
                 <Route path="/" element={<Landing />} />
+                <Route path="/auth" element={<Auth />} />
                 <Route path="/chat" element={<Chat />} />
                 <Route path="/discover" element={<DiscoverRedirect />} />
                 <Route path="/history" element={<History />} />
@@ -53,6 +57,7 @@ const App = () => (
           </SpotifyProvider>
           </ConversationProvider>
         </AppProvider>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
     </ThemeProvider>
