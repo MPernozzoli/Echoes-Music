@@ -1,15 +1,29 @@
 import { useState, useEffect } from "react";
 import AppLayout from "@/components/AppLayout";
-import { User, Music, Palette, LogOut, ExternalLink, Shield, Check, Loader2, X } from "lucide-react";
+import { User, Music, Palette, LogOut, ExternalLink, Shield, Check, Loader2, X, Globe } from "lucide-react";
 import { getUserSettings, setAllowAnonymizedData } from "@/services/tracking";
 import { getSpotifyAuthUrl, disconnectSpotify } from "@/services/spotify";
 import { useSpotify } from "@/context/SpotifyContext";
 import { useAppleMusic } from "@/context/AppleMusicContext";
+import { useApp } from "@/context/AppContext";
+
+const LANGUAGES = [
+  { value: "auto", label: "Auto (detect from prompt)" },
+  { value: "it", label: "Italiano" },
+  { value: "en", label: "English" },
+  { value: "es", label: "Español" },
+  { value: "fr", label: "Français" },
+  { value: "de", label: "Deutsch" },
+  { value: "pt", label: "Português" },
+  { value: "ja", label: "日本語" },
+  { value: "ko", label: "한국어" },
+];
 
 const Profile = () => {
   const [allowData, setAllowData] = useState(true);
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [connectingSpotify, setConnectingSpotify] = useState(false);
+  const { descriptionLanguage, setDescriptionLanguage } = useApp();
   const { isConnected: spotifyConnected, displayName: spotifyName, isPremium, loading: spotifyLoading, setDisconnected } = useSpotify();
   const { isAvailable: appleMusicAvailable, isAuthorized: appleMusicAuthorized, loading: appleMusicLoading, authorize: authorizeApple, unauthorize: unauthorizeApple } = useAppleMusic();
 
