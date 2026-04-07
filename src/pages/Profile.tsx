@@ -1,13 +1,24 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "next-themes";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
-<<<<<<< Updated upstream
-import { User, Music, Palette, LogOut, ExternalLink, Shield, Check, Loader2, X, Globe, LogIn, Coins } from "lucide-react";
-=======
-import { User, Music, Palette, LogOut, ExternalLink, Shield, Check, Loader2, X, Globe, ListMusic } from "lucide-react";
->>>>>>> Stashed changes
+import {
+  User,
+  Music,
+  Palette,
+  LogOut,
+  ExternalLink,
+  Shield,
+  Check,
+  Loader2,
+  X,
+  Globe,
+  LogIn,
+  Coins,
+  ListMusic,
+  Crown,
+} from "lucide-react";
 import { getUserSettings, setAllowAnonymizedData } from "@/services/tracking";
 import { getSpotifyAuthUrl, disconnectSpotify } from "@/services/spotify";
 import { useSpotify } from "@/context/useSpotify";
@@ -15,6 +26,8 @@ import { useAppleMusic } from "@/context/useAppleMusic";
 import { useApp } from "@/context/useApp";
 import { useAuth } from "@/context/useAuth";
 import { SUPPORTED_UI_LANGS, type SupportedUiLang } from "@/i18n/config";
+import { openCustomerPortal } from "@/lib/stripeCheckout";
+import { toast } from "sonner";
 
 const DESCRIPTION_LANGS: { value: string; label: string }[] = [
   { value: "it", label: "Italiano" },
@@ -44,10 +57,7 @@ const Profile = () => {
   const [allowData, setAllowData] = useState(true);
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [connectingSpotify, setConnectingSpotify] = useState(false);
-<<<<<<< Updated upstream
-  const { descriptionLanguage, setDescriptionLanguage, uiLanguage, setUiLanguage } = useApp();
-  const { user, tokenBalance, plan, signOut } = useAuth();
-=======
+  const [portalLoading, setPortalLoading] = useState(false);
   const {
     descriptionLanguage,
     setDescriptionLanguage,
@@ -56,7 +66,7 @@ const Profile = () => {
     syncFavoritesEchoesPlaylist,
     setSyncFavoritesEchoesPlaylist,
   } = useApp();
->>>>>>> Stashed changes
+  const { user, tokenBalance, plan, signOut } = useAuth();
   const { isConnected: spotifyConnected, displayName: spotifyName, isPremium, loading: spotifyLoading, setDisconnected } = useSpotify();
   const { isAvailable: appleMusicAvailable, isAuthorized: appleMusicAuthorized, loading: appleMusicLoading, authorize: authorizeApple, unauthorize: unauthorizeApple } = useAppleMusic();
 
@@ -90,6 +100,19 @@ const Profile = () => {
     await disconnectSpotify();
     setDisconnected();
   };
+
+  const handleBillingPortal = useCallback(async () => {
+    setPortalLoading(true);
+    try {
+      const url = await openCustomerPortal();
+      if (url) window.location.href = url;
+      else toast.error(t("pricing.portalError"));
+    } catch {
+      toast.error(t("pricing.portalError"));
+    } finally {
+      setPortalLoading(false);
+    }
+  }, [t]);
 
   return (
     <AppLayout>
@@ -149,6 +172,47 @@ const Profile = () => {
             )}
           </div>
         </div>
+
+        {user && (
+          <div className="glass-card rounded-2xl p-6 mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Crown className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-body text-sm font-medium text-foreground">{t("profile.billingTitle")}</h3>
+                <p className="text-xs text-muted-foreground font-body">{t("profile.billingHint")}</p>
+              </div>
+            </div>
+            <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+              <Link
+                to="/pricing/plan"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl border border-border text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all"
+              >
+                <Crown className="w-3.5 h-3.5" />
+                {t("profile.billingPlans")}
+              </Link>
+              <Link
+                to="/pricing/tokens"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl border border-border text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all"
+              >
+                <Coins className="w-3.5 h-3.5" />
+                {t("profile.billingTokens")}
+              </Link>
+              {plan === "premium" && (
+                <button
+                  type="button"
+                  onClick={() => void handleBillingPortal()}
+                  disabled={portalLoading}
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl border border-border text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all disabled:opacity-50"
+                >
+                  {portalLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ExternalLink className="w-3.5 h-3.5" />}
+                  {t("profile.billingManage")}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="glass-card rounded-2xl p-6 mb-6">
           <div className="flex items-center justify-between">

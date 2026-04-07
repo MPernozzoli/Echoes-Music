@@ -16,6 +16,9 @@ import Landing from "./pages/Landing";
 import Chat from "./pages/Chat";
 import Auth from "./pages/Auth";
 import Pricing from "./pages/Pricing";
+import SubscribePlan from "./pages/SubscribePlan";
+import BuyTokens from "./pages/BuyTokens";
+import CheckoutReturnHandler from "./components/CheckoutReturnHandler";
 
 const DiscoverRedirect = () => {
   const { search } = useLocation();
@@ -39,6 +42,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+        <CheckoutReturnHandler />
         <AppProvider>
           <ConversationProvider>
           <SpotifyProvider>
@@ -49,6 +53,8 @@ const App = () => (
                 <Route path="/" element={<Landing />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/pricing" element={<Pricing />} />
+                <Route path="/pricing/plan" element={<SubscribePlan />} />
+                <Route path="/pricing/tokens" element={<BuyTokens />} />
                 <Route path="/chat" element={<Chat />} />
                 <Route path="/discover" element={<DiscoverRedirect />} />
                 <Route path="/history" element={<History />} />

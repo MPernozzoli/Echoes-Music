@@ -65,7 +65,12 @@
     "privacyHint": "Allow anonymized data to help improve recommendations",
     "favoritesPlaylistTitle": "Echoes playlist on Spotify / Apple Music",
     "favoritesPlaylistHint": "Keep an “Echoes” playlist in sync with favorites (connect an account; only tracks with IDs on that service).",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "billingTitle": "Plan & tokens",
+    "billingHint": "Subscribe or top up when you need more searches.",
+    "billingPlans": "View plans",
+    "billingTokens": "Buy tokens",
+    "billingManage": "Manage subscription"
   },
   "favorites": {
     "title": "Favorites",
@@ -280,5 +285,71 @@
   },
   "appleMusic": {
     "compactLine": "{{action}} · Apple Music account (no new sign-in)"
+  },
+  "pricing": {
+    "hubTitle": "Plans & tokens",
+    "hubSubtitle": "Choose a subscription for ongoing benefits, or buy token packs whenever you need more searches.",
+    "hubCardPlanTitle": "Subscribe to Premium",
+    "hubCardPlanDesc": "Monthly or yearly plan with included monthly tokens and full product access.",
+    "hubCardTokensTitle": "Buy token packs",
+    "hubCardTokensDesc": "One-time packs — ideal if you only need extra searches without a subscription.",
+    "hubCardCta": "Continue",
+    "hubFootnote": "Payments are processed securely by Stripe. Prices include VAT where applicable.",
+    "planPageTitle": "Choose your plan",
+    "planPageSubtitle": "Free tier to get started; Premium adds more capacity and features.",
+    "tokensPageTitle": "Top up tokens",
+    "tokensPageSubtitle": "Tokens are used for AI music searches. Packs credit your account after payment.",
+    "tokensInfoBox": "Each search uses tokens from your balance. Premium includes a monthly token allowance; packs add to your balance immediately after checkout.",
+    "tokensRemaining": "You have {{count}} tokens",
+    "packTokens": "{{count}} tokens",
+    "perSearchApprox": "≈ {{amount}} per search",
+    "buy": "Buy",
+    "backHub": "All options",
+    "needOnlyTokens": "Only need extra tokens?",
+    "wantSubscriptionInstead": "Prefer a subscription with monthly tokens?",
+    "tierFree": "Free",
+    "tierPremiumMonthly": "Premium",
+    "tierPremiumAnnual": "Annual",
+    "freeTokensLine": "Starter tokens",
+    "freeSearchLine": "Core discovery",
+    "currentPlan": "Current plan",
+    "subscribe": "Subscribe",
+    "subscribeYearly": "Subscribe yearly",
+    "savePct": "Save {{pct}}%",
+    "alreadyPremiumHint": "You are on Premium. Manage payment method or cancel from the billing portal.",
+    "manageBilling": "Manage billing",
+    "checkoutSuccess": "Payment successful — your plan or tokens will update shortly.",
+    "checkoutCancelled": "Checkout cancelled.",
+    "checkoutError": "Could not start checkout. Try again.",
+    "portalError": "Could not open billing portal. Connect a subscription first.",
+    "bannerEmpty": "You have no tokens left. Buy a pack or upgrade to continue searching.",
+    "bannerLow": "You have {{count}} tokens left. Top up before they run out.",
+    "buyTokensCta": "Buy tokens",
+    "viewPlansCta": "View plans",
+    "topUpCta": "Top up",
+    "tokenBadgeLowAria": "Low tokens — buy more",
+    "faqTitle": "Common questions",
+    "faq": {
+      "whatAreTokens": {
+        "q": "What are tokens?",
+        "a": "Tokens power AI music searches in Echoes. Each time you run a search, a small amount is deducted from your balance. Free accounts start with a limited balance; Premium includes recurring tokens each month."
+      },
+      "premiumVsTokens": {
+        "q": "Subscription or token packs?",
+        "a": "Premium is best if you use Echoes regularly: it includes a monthly token allowance and product benefits. Token packs are one-time top-ups — useful if you occasionally need more searches without subscribing."
+      },
+      "afterPurchase": {
+        "q": "When will I see new tokens?",
+        "a": "After Stripe confirms payment, your balance is updated automatically. If it does not appear within a few minutes, refresh the app or sign out and back in."
+      },
+      "cancelSub": {
+        "q": "How do I cancel Premium?",
+        "a": "Open Manage billing from your profile or the plan page. You keep access until the end of the paid period; token rules follow your plan at that time."
+      },
+      "payment": {
+        "q": "How are payments handled?",
+        "a": "Card and billing details are processed by Stripe. Echoes does not store your full card number."
+      }
+    }
   }
 }

@@ -59,7 +59,12 @@
     "privacyHint": "Consenti dati anonimi per migliorare i consigli",
     "favoritesPlaylistTitle": "Playlist Echoes su Spotify / Apple Music",
     "favoritesPlaylistHint": "Mantieni una playlist «Echoes» allineata ai preferiti (serve account collegato; solo brani con id sul servizio).",
-    "signOut": "Esci"
+    "signOut": "Esci",
+    "billingTitle": "Piano e token",
+    "billingHint": "Abbonati o ricarica quando ti servono più ricerche.",
+    "billingPlans": "Vedi piani",
+    "billingTokens": "Compra token",
+    "billingManage": "Gestisci abbonamento"
   },
   "favorites": {
     "title": "Preferiti",
@@ -271,5 +276,71 @@
   },
   "appleMusic": {
     "compactLine": "{{action}} · account Apple Music (nessun nuovo accesso)"
+  },
+  "pricing": {
+    "hubTitle": "Piani e token",
+    "hubSubtitle": "Scegli un abbonamento per vantaggi continuativi, oppure acquista pacchetti token quando ti servono più ricerche.",
+    "hubCardPlanTitle": "Abbonati a Premium",
+    "hubCardPlanDesc": "Piano mensile o annuale con token mensili inclusi e accesso completo al prodotto.",
+    "hubCardTokensTitle": "Compra pacchetti token",
+    "hubCardTokensDesc": "Acquisti una tantum — ideali se ti servono solo ricerche extra senza abbonamento.",
+    "hubCardCta": "Continua",
+    "hubFootnote": "I pagamenti sono gestiti in modo sicuro da Stripe. I prezzi includono IVA ove applicabile.",
+    "planPageTitle": "Scegli il piano",
+    "planPageSubtitle": "Il piano gratuito per iniziare; Premium offre più capacità e funzioni.",
+    "tokensPageTitle": "Ricarica i token",
+    "tokensPageSubtitle": "I token servono per le ricerche musicali con IA. I pacchetti accreditano il saldo dopo il pagamento.",
+    "tokensInfoBox": "Ogni ricerca scala token dal saldo. Premium include un tetto mensile di token; i pacchetti si aggiungono al saldo subito dopo il checkout.",
+    "tokensRemaining": "Hai {{count}} token",
+    "packTokens": "{{count}} token",
+    "perSearchApprox": "≈ {{amount}} a ricerca",
+    "buy": "Acquista",
+    "backHub": "Tutte le opzioni",
+    "needOnlyTokens": "Ti servono solo token in più?",
+    "wantSubscriptionInstead": "Preferisci un abbonamento con token mensili?",
+    "tierFree": "Gratis",
+    "tierPremiumMonthly": "Premium",
+    "tierPremiumAnnual": "Annuale",
+    "freeTokensLine": "Token iniziali",
+    "freeSearchLine": "Scoperta base",
+    "currentPlan": "Piano attuale",
+    "subscribe": "Abbonati",
+    "subscribeYearly": "Abbonati annuale",
+    "savePct": "Risparmia {{pct}}%",
+    "alreadyPremiumHint": "Sei su Premium. Gestisci carta o disdici dal portale di fatturazione.",
+    "manageBilling": "Gestisci pagamenti",
+    "checkoutSuccess": "Pagamento riuscito — piano o token si aggiorneranno a breve.",
+    "checkoutCancelled": "Checkout annullato.",
+    "checkoutError": "Impossibile avviare il pagamento. Riprova.",
+    "portalError": "Impossibile aprire il portale. Serve un abbonamento attivo.",
+    "bannerEmpty": "Non hai più token. Compra un pacchetto o passa a Premium per continuare a cercare.",
+    "bannerLow": "Ti restano {{count}} token. Ricarica prima che finiscano.",
+    "buyTokensCta": "Compra token",
+    "viewPlansCta": "Vedi piani",
+    "topUpCta": "Ricarica",
+    "tokenBadgeLowAria": "Pochi token — acquista altri",
+    "faqTitle": "Domande frequenti",
+    "faq": {
+      "whatAreTokens": {
+        "q": "Cosa sono i token?",
+        "a": "I token alimentano le ricerche musicali con IA in Echoes. A ogni ricerca viene scalato un piccolo saldo. Il piano gratuito include un numero limitato; Premium include token ricorrenti ogni mese."
+      },
+      "premiumVsTokens": {
+        "q": "Abbonamento o pacchetti token?",
+        "a": "Premium conviene se usi Echoes spesso: include un tetto mensile di token e i vantaggi del prodotto. I pacchetti sono ricariche una tantum utili se ti servono solo più ricerche di tanto in tanto."
+      },
+      "afterPurchase": {
+        "q": "Quando vedo i nuovi token?",
+        "a": "Dopo la conferma di Stripe il saldo si aggiorna in automatico. Se non li vedi entro pochi minuti, aggiorna l’app o esci e rientra."
+      },
+      "cancelSub": {
+        "q": "Come disdico Premium?",
+        "a": "Apri «Gestisci pagamenti» dal profilo o dalla pagina piano. Resti coperto fino alla fine del periodo pagato; le regole sui token dipendono dal piano attivo."
+      },
+      "payment": {
+        "q": "Come funzionano i pagamenti?",
+        "a": "Carta e dati di fatturazione sono gestiti da Stripe. Echoes non memorizza il numero completo della carta."
+      }
+    }
   }
 }

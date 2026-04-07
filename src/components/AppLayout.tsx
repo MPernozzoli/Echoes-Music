@@ -1,13 +1,10 @@
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-<<<<<<< Updated upstream
-import { MessageSquare, Clock, Heart, User, Home, LogIn } from "lucide-react";
+import { MessageSquare, Clock, Heart, User, LogIn } from "lucide-react";
 import { useAuth } from "@/context/useAuth";
 import TokenBadge from "@/components/TokenBadge";
-=======
-import { MessageSquare, Clock, Heart, User } from "lucide-react";
 import { AppLogo } from "@/components/AppLogo";
->>>>>>> Stashed changes
+import TokenLowBanner from "@/components/TokenLowBanner";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -67,6 +64,8 @@ const AppLayout = ({ children }: AppLayoutProps) => {
           </div>
         </div>
       </header>
+
+      <TokenLowBanner />
 
       <main className="flex-1">{children}</main>
 

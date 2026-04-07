@@ -49,9 +49,24 @@ serve(async (req: Request) => {
     const user = data.user;
     if (!user?.email) throw new Error("User not authenticated");
 
-    const { plan_key } = await req.json();
-    const plan = PLANS[plan_key];
-    if (!plan) throw new Error(`Invalid plan: ${plan_key}`);
+    const body = await req.json().catch(() => ({})) as {
+      plan_key?: string;
+      return_path?: string;
+    };
+    const { plan_key } = body;
+    const allowedReturn = new Set([
+      "/profile",
+      "/pricing",
+      "/pricing/plan",
+      "/pricing/tokens",
+      "/chat",
+    ]);
+    const returnPath =
+      typeof body.return_path === "string" && allowedReturn.has(body.return_path)
+        ? body.return_path
+        : "/profile";
+    const plan = plan_key ? PLANS[plan_key] : undefined;
+    if (!plan || !plan_key) throw new Error(`Invalid plan: ${plan_key ?? ""}`);
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
@@ -73,8 +88,8 @@ serve(async (req: Request) => {
       line_items: [{ price: plan.price_id, quantity: 1 }],
       mode: plan.mode,
       allow_promotion_codes: true,
-      success_url: `${origin}/profile?checkout=success&plan=${plan_key}`,
-      cancel_url: `${origin}/profile?checkout=cancelled`,
+      success_url: `${origin}${returnPath}?checkout=success&plan=${encodeURIComponent(plan_key)}`,
+      cancel_url: `${origin}${returnPath}?checkout=cancelled`,
     });
 
     return new Response(JSON.stringify({ url: session.url }), {
