@@ -1,6 +1,8 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { MessageSquare, Clock, Heart, User, Home } from "lucide-react";
+import { MessageSquare, Clock, Heart, User, Home, LogIn } from "lucide-react";
+import { useAuth } from "@/context/useAuth";
+import TokenBadge from "@/components/TokenBadge";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -8,7 +10,9 @@ interface AppLayoutProps {
 
 const AppLayout = ({ children }: AppLayoutProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { t } = useTranslation();
+  const { user } = useAuth();
 
   const navItems = [
     { labelKey: "nav.chat", path: "/chat", icon: MessageSquare },
@@ -27,6 +31,9 @@ const AppLayout = ({ children }: AppLayoutProps) => {
             </div>
             <span className="font-display text-lg font-semibold gradient-warm-text">Echoes</span>
           </Link>
+
+          <div className="flex items-center gap-3">
+            <TokenBadge />
 
           <nav className="hidden md:flex items-center gap-1">
             {navItems.map((item) => {
