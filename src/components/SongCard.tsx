@@ -20,6 +20,8 @@ interface SongCardProps {
   searchId?: string;
   onTagClick?: (tag: string) => void;
   showPlayer?: boolean;
+  spotifyUri?: string;
+  appleMusicId?: string;
 }
 
 const SongCard = ({
