@@ -1,5 +1,5 @@
 /* @refresh skip */
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { createContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { getSpotifyConnection, getSpotifyToken } from "@/services/spotify";
 
 interface SpotifyState {
@@ -13,7 +13,7 @@ interface SpotifyState {
   setDisconnected: () => void;
 }
 
-const SpotifyContext = createContext<SpotifyState | null>(null);
+export const SpotifyContext = createContext<SpotifyState | null>(null);
 
 export const SpotifyProvider = ({ children }: { children: ReactNode }) => {
   const [isConnected, setIsConnected] = useState(false);
@@ -63,8 +63,3 @@ export const SpotifyProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-export const useSpotify = () => {
-  const ctx = useContext(SpotifyContext);
-  if (!ctx) throw new Error("useSpotify must be used within SpotifyProvider");
-  return ctx;
-};

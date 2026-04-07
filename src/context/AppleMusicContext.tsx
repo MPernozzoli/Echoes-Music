@@ -1,5 +1,5 @@
 /* @refresh skip */
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { createContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { getAppleMusicDeveloperToken } from "@/services/appleMusic";
 
 interface AppleMusicState {
@@ -11,7 +11,7 @@ interface AppleMusicState {
   unauthorize: () => void;
 }
 
-const AppleMusicContext = createContext<AppleMusicState | null>(null);
+export const AppleMusicContext = createContext<AppleMusicState | null>(null);
 
 export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
   const [isAvailable, setIsAvailable] = useState(false);
@@ -93,8 +93,3 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-export const useAppleMusic = () => {
-  const ctx = useContext(AppleMusicContext);
-  if (!ctx) throw new Error("useAppleMusic must be used within AppleMusicProvider");
-  return ctx;
-};

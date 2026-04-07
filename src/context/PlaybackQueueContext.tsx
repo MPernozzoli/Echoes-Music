@@ -2,7 +2,6 @@
 import {
   createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -48,7 +47,7 @@ interface PlaybackQueueState {
   removeFromQueue: (index: number) => void;
 }
 
-const PlaybackQueueContext = createContext<PlaybackQueueState | null>(null);
+export const PlaybackQueueContext = createContext<PlaybackQueueState | null>(null);
 
 export const PlaybackQueueProvider = ({ children }: { children: ReactNode }) => {
   const [queue, setQueue] = useState<Song[]>([]);
@@ -205,8 +204,3 @@ export const PlaybackQueueProvider = ({ children }: { children: ReactNode }) => 
   );
 };
 
-export const usePlaybackQueue = () => {
-  const ctx = useContext(PlaybackQueueContext);
-  if (!ctx) throw new Error("usePlaybackQueue must be used within PlaybackQueueProvider");
-  return ctx;
-};

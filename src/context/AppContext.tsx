@@ -1,5 +1,5 @@
 /* @refresh skip */
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { createContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import type { Song, SearchResult, ListenHistoryEntry } from "@/data/mockData";
 import i18n, {
   UI_LANG_KEY,
@@ -23,7 +23,7 @@ interface AppState {
   setUiLanguage: (lang: SupportedUiLang) => void;
 }
 
-const AppContext = createContext<AppState | null>(null);
+export const AppContext = createContext<AppState | null>(null);
 
 const FAVORITES_KEY = "echoes_favorites";
 const HISTORY_KEY = "echoes_history";
@@ -162,8 +162,3 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-export const useApp = () => {
-  const ctx = useContext(AppContext);
-  if (!ctx) throw new Error("useApp must be used within AppProvider");
-  return ctx;
-};
