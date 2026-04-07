@@ -1,7 +1,7 @@
 import { Heart } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import ResultFeedback from "./ResultFeedback";
-import SpotifyPlayer from "./SpotifyPlayer";
+import MusicPlayer from "./MusicPlayer";
 import { trackInteraction } from "@/services/tracking";
 
 interface SongCardProps {
