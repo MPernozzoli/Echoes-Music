@@ -254,7 +254,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { prompt } = await req.json();
+    const { prompt, descriptionLanguage } = await req.json();
     if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
       return new Response(JSON.stringify({ error: 'prompt is required' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -262,7 +262,7 @@ Deno.serve(async (req) => {
     }
 
     // Step 1: AI interpretation
-    const interpretation = await interpretPrompt(prompt.trim());
+    const interpretation = await interpretPrompt(prompt.trim(), descriptionLanguage);
 
     // Step 2: Search both platforms using AI-generated queries + direct song lookups
     const allQueries = [
