@@ -111,12 +111,21 @@ const FullPlayer = ({
   const handleKitTrackEnded = useCallback(() => {
     const i = indexRef.current;
     const len = songsLenRef.current;
-    if (i >= len - 1) {
-      playbackCbRef.current?.(false);
+    const repeat = dockRepeatRef.current;
+    if (repeat === "one") {
+      // Replay same track
+      setKitAutoplayNonce((n) => n + 1);
       return;
     }
-    setKitAutoplayNonce((n) => n + 1);
-    onChangeIndexRef.current(i + 1);
+    if (i < len - 1) {
+      setKitAutoplayNonce((n) => n + 1);
+      onChangeIndexRef.current(i + 1);
+    } else if (repeat === "all" && len > 0) {
+      setKitAutoplayNonce((n) => n + 1);
+      onChangeIndexRef.current(0);
+    } else {
+      playbackCbRef.current?.(false);
+    }
   }, []);
 
   const onKitQueueAutoplayConsumed = useCallback(() => {
