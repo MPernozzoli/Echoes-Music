@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { MessageSquare, Clock, Heart, User, Home, LogIn } from "lucide-react";
 import { useAuth } from "@/context/useAuth";
@@ -10,7 +10,6 @@ interface AppLayoutProps {
 
 const AppLayout = ({ children }: AppLayoutProps) => {
   const location = useLocation();
-  const navigate = useNavigate();
   const { t } = useTranslation();
   const { user } = useAuth();
 
@@ -34,26 +33,35 @@ const AppLayout = ({ children }: AppLayoutProps) => {
 
           <div className="flex items-center gap-3">
             <TokenBadge />
-
-          <nav className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => {
-              const isActive = location.pathname === item.path;
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-body transition-colors ${
-                    isActive
-                      ? "text-primary bg-primary/10"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <item.icon className="w-4 h-4" />
-                  {t(item.labelKey)}
-                </Link>
-              );
-            })}
-          </nav>
+            <nav className="hidden md:flex items-center gap-1">
+              {navItems.map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-body transition-colors ${
+                      isActive
+                        ? "text-primary bg-primary/10"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    {t(item.labelKey)}
+                  </Link>
+                );
+              })}
+            </nav>
+            {!user && (
+              <Link
+                to="/auth"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-primary hover:bg-primary/10 transition-colors"
+              >
+                <LogIn className="w-4 h-4" />
+                <span className="hidden md:inline">Login</span>
+              </Link>
+            )}
+          </div>
         </div>
       </header>
 
