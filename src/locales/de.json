@@ -282,5 +282,14 @@
   },
   "appleMusic": {
     "compactLine": "{{action}} · Apple Music-Konto (keine neue Anmeldung)"
+  },
+  "referral": {
+    "claimSuccess": "Empfehlung übernommen — Bonus-Tokens für euch beide.",
+    "title": "Freunde einladen",
+    "subtitle": "Über deinen Link: je +{{signup}} Tokens bei Anmeldung. Bei Premium einmalig +{{pct}} % der Zyklus-Token für beide.",
+    "loading": "Link wird geladen…",
+    "copy": "Link kopieren",
+    "copied": "Kopiert",
+    "copyFailed": "Kopieren fehlgeschlagen"
   }
 }

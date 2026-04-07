@@ -4,6 +4,26 @@ import type { Song, EmotionalProfile } from "@/data/mockData";
 
 const sessionId = getSessionId();
 
+async function authUserId(): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.user?.id ?? null;
+}
+
+/** Collega la riga impostazioni anonima all'utente loggato (stesso browser). */
+export async function linkUserSettingsToAccount(userId: string) {
+  const { data: existing } = await supabase
+    .from("user_settings")
+    .select("id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (existing) return;
+  await supabase
+    .from("user_settings")
+    .update({ user_id: userId })
+    .eq("anonymous_session_id", sessionId)
+    .is("user_id", null);
+}
+
 // --- SEARCH ---
 export async function trackSearch(params: {
   rawPrompt: string;
@@ -119,43 +139,66 @@ export async function trackResultFeedback(params: {
 
 // --- USER SETTINGS ---
 export async function getUserSettings() {
+  const uid = await authUserId();
+  if (uid) {
+    const { data } = await supabase
+      .from("user_settings")
+      .select("*")
+      .eq("user_id", uid)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (data) return data;
+  }
   const { data } = await supabase
     .from("user_settings")
     .select("*")
     .eq("anonymous_session_id", sessionId)
+    .order("updated_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
   return data;
 }
 
-export async function setAllowAnonymizedData(allow: boolean) {
+async function upsertUserSettingsPatch(patch: Record<string, unknown>) {
+  const uid = await authUserId();
   const existing = await getUserSettings();
   if (existing) {
-    await supabase
-      .from("user_settings")
-      .update({ allow_anonymized_improvement_data: allow })
-      .eq("id", existing.id);
-  } else {
-    await supabase.from("user_settings").insert({
-      anonymous_session_id: sessionId,
-      allow_anonymized_improvement_data: allow,
-    });
+    await supabase.from("user_settings").update({ ...patch, ...(uid ? { user_id: uid } : {}) }).eq("id", existing.id);
+    return;
   }
+  await supabase.from("user_settings").insert({
+    anonymous_session_id: sessionId,
+    allow_anonymized_improvement_data: true,
+    ...(uid ? { user_id: uid } : {}),
+    ...patch,
+  });
+}
+
+export async function setAllowAnonymizedData(allow: boolean) {
+  await upsertUserSettingsPatch({ allow_anonymized_improvement_data: allow });
 }
 
 export async function setSyncFavoritesEchoesPlaylist(enabled: boolean) {
-  const existing = await getUserSettings();
-  if (existing) {
-    await supabase
-      .from("user_settings")
-      .update({ sync_favorites_echoes_playlist: enabled })
-      .eq("id", existing.id);
-  } else {
-    await supabase.from("user_settings").insert({
-      anonymous_session_id: sessionId,
-      allow_anonymized_improvement_data: true,
-      sync_favorites_echoes_playlist: enabled,
-    });
-  }
+  await upsertUserSettingsPatch({ sync_favorites_echoes_playlist: enabled });
+}
+
+export async function persistUiLanguage(lang: string) {
+  const uid = await authUserId();
+  if (!uid) return;
+  await upsertUserSettingsPatch({ ui_language: lang });
+}
+
+export async function persistDescriptionLanguage(lang: string) {
+  const uid = await authUserId();
+  if (!uid) return;
+  await upsertUserSettingsPatch({ description_language: lang });
+}
+
+export async function persistThemePreference(theme: string) {
+  const uid = await authUserId();
+  if (!uid) return;
+  await upsertUserSettingsPatch({ theme });
 }
 
 // --- ANONYMIZED TRAINING EVENT ---

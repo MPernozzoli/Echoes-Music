@@ -1,10 +1,13 @@
 import type { EmotionalProfile, Song } from "@/data/mockData";
 import type { ConversationMemory, UserTasteProfile } from "@/types/conversation";
 import { supabase } from "@/integrations/supabase/client";
+import { getSessionId } from "@/services/sessionId";
 
 export type MusicSearchMode = "search" | "lucky" | "memory_compact";
 
 export interface MusicSearchRequest {
+  /** Obbligatorio per utenti anonimi (quota IP + una chat) */
+  conversationId?: string;
   prompt?: string;
   /** Base64 grezzo (senza prefisso data:) — usato con imageMimeType per vision */
   imageBase64?: string;
@@ -28,6 +31,10 @@ export interface MusicSearchResponse {
   } | null;
   userTasteProfileUpdate?: Partial<UserTasteProfile> | null;
   error?: string;
+  /** Es. anon_search_limit (403 da music-search) */
+  code?: string;
+  /** True when custom API key failed; user may switch to managed AI in settings */
+  byo_fallback_suggested?: boolean;
 }
 
 function projectUrl(): string {
@@ -39,6 +46,11 @@ export async function callMusicSearch(body: MusicSearchRequest): Promise<MusicSe
   const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
   const { data: { session } } = await supabase.auth.getSession();
   const bearer = session?.access_token ?? ANON_KEY;
+  const payload: Record<string, unknown> = { ...body };
+  if (!session?.user) {
+    payload.anonymousSessionId = getSessionId();
+    if (body.conversationId) payload.conversationId = body.conversationId;
+  }
   const res = await fetch(projectUrl(), {
     method: "POST",
     headers: {
@@ -46,12 +58,20 @@ export async function callMusicSearch(body: MusicSearchRequest): Promise<MusicSe
       apikey: ANON_KEY,
       Authorization: `Bearer ${bearer}`,
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(payload),
   });
 
-  const data = (await res.json().catch(() => ({}))) as MusicSearchResponse & { error?: string };
+  const data = (await res.json().catch(() => ({}))) as MusicSearchResponse & {
+    error?: string;
+    code?: string;
+    byo_fallback_suggested?: boolean;
+  };
   if (!res.ok) {
-    return { error: data.error || "Search failed" };
+    return {
+      error: data.error || "Search failed",
+      ...(typeof data.code === "string" ? { code: data.code } : {}),
+      ...(data.byo_fallback_suggested === true ? { byo_fallback_suggested: true } : {}),
+    };
   }
   return data;
 }

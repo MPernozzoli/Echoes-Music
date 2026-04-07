@@ -18,7 +18,7 @@ const Landing = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { descriptionLanguage } = useApp();
-  const { userTasteProfile, conversations } = useConversations();
+  const { userTasteProfile, conversations, activeConversationId } = useConversations();
   const [luckyLoading, setLuckyLoading] = useState(false);
 
   const landingPrompts = useMemo(() => {
@@ -56,14 +56,33 @@ const Landing = () => {
   };
 
   const handleLucky = async () => {
+    const convId = activeConversationId ?? conversations[0]?.id;
+    if (!convId) {
+      toast.error(t("landing.toastNoConversation"));
+      return;
+    }
     setLuckyLoading(true);
     try {
       const data = await callMusicSearch({
         mode: "lucky",
         userTasteProfile,
         descriptionLanguage,
+        conversationId: convId,
       });
       if (data.error) {
+        if (data.code?.startsWith("anon_")) {
+          toast.error(data.error || t("chat.anonQuotaLogin"));
+          navigate("/auth", { replace: true });
+          return;
+        }
+        if (data.code?.startsWith("byo_")) {
+          toast.error(data.error || t("landing.toastGenericError"), {
+            description: data.byo_fallback_suggested
+              ? "You can return to Echoes managed AI under Profile → Advanced AI Settings."
+              : undefined,
+          });
+          return;
+        }
         if (data.error.includes("Rate") || data.error.includes("429")) toast.error(t("landing.toastRateLimit"));
         else if (data.error.includes("credits") || data.error.includes("402")) toast.error(t("landing.toastNoCredits"));
         else toast.error(data.error);
@@ -73,7 +92,7 @@ const Landing = () => {
         toast.error(t("landing.toastNoSongs"));
         return;
       }
-      navigate("/chat", { state: { luckyPayload: data } });
+      navigate(`/chat?conversation=${encodeURIComponent(convId)}`, { state: { luckyPayload: data } });
     } catch {
       toast.error(t("landing.toastGenericError"));
     } finally {

@@ -1,9 +1,16 @@
 /* @refresh skip */
 import { createContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import type { Song, SearchResult, ListenHistoryEntry } from "@/data/mockData";
-import { getUserSettings, setSyncFavoritesEchoesPlaylist as persistSyncFavoritesEchoesPlaylist } from "@/services/tracking";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  getUserSettings,
+  persistDescriptionLanguage,
+  persistUiLanguage,
+  setSyncFavoritesEchoesPlaylist as persistSyncFavoritesEchoesPlaylist,
+} from "@/services/tracking";
 import i18n, {
   UI_LANG_KEY,
+  isSupported,
   resolveUiLanguage,
   type SupportedUiLang,
 } from "@/i18n/config";
@@ -71,17 +78,33 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [listenHistory, setListenHistory] = useState<ListenHistoryEntry[]>(() =>
     parseListenHistory(loadJSON(LISTEN_HISTORY_KEY, []))
   );
-  const [descriptionLanguage, setDescriptionLanguage] = useState<string>(() => localStorage.getItem(LANGUAGE_KEY) || "auto");
+  const [descriptionLanguage, setDescriptionLanguageState] = useState<string>(() => localStorage.getItem(LANGUAGE_KEY) || "auto");
   const [uiLanguage, setUiLanguageState] = useState<SupportedUiLang>(() => resolveUiLanguage(localStorage.getItem(UI_LANG_KEY)));
   const [syncFavoritesEchoesPlaylist, setSyncFavoritesEchoesPlaylistState] = useState(false);
 
-  useEffect(() => {
-    void getUserSettings().then((s) => {
-      if (s && typeof s.sync_favorites_echoes_playlist === "boolean") {
-        setSyncFavoritesEchoesPlaylistState(s.sync_favorites_echoes_playlist);
-      }
-    });
+  const mergeSettingsFromServer = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const s = await getUserSettings();
+    if (!s) return;
+    if (typeof s.sync_favorites_echoes_playlist === "boolean") {
+      setSyncFavoritesEchoesPlaylistState(s.sync_favorites_echoes_playlist);
+    }
+    if (session?.user) {
+      if (s.ui_language && isSupported(s.ui_language)) setUiLanguageState(s.ui_language);
+      if (s.description_language) setDescriptionLanguageState(s.description_language);
+    }
   }, []);
+
+  useEffect(() => {
+    void mergeSettingsFromServer();
+  }, [mergeSettingsFromServer]);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sess) => {
+      if (event === "SIGNED_IN" && sess?.user) void mergeSettingsFromServer();
+    });
+    return () => subscription.unsubscribe();
+  }, [mergeSettingsFromServer]);
 
   useEffect(() => {
     localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
@@ -111,6 +134,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const setUiLanguage = useCallback((lang: SupportedUiLang) => {
     setUiLanguageState(lang);
+    void persistUiLanguage(lang);
+  }, []);
+
+  const setDescriptionLanguage = useCallback((lang: string) => {
+    setDescriptionLanguageState(lang);
+    void persistDescriptionLanguage(lang);
   }, []);
 
   const setSyncFavoritesEchoesPlaylist = useCallback(async (enabled: boolean) => {

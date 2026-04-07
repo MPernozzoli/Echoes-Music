@@ -8,44 +8,66 @@ function functionsUrl(name: string) {
   return `https://${PROJECT_ID}.supabase.co/functions/v1/${name}`;
 }
 
-export async function getSpotifyAuthUrl(redirectUri: string): Promise<string | null> {
-  const res = await fetch(functionsUrl("spotify-auth"), {
+async function spotifyFetch(body: Record<string, unknown>) {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+  };
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.access_token) {
+    headers.Authorization = `Bearer ${session.access_token}`;
+  }
+  return fetch(functionsUrl("spotify-auth"), {
     method: "POST",
-    headers: { "Content-Type": "application/json", "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-    body: JSON.stringify({ action: "get_auth_url", redirect_uri: redirectUri, session_id: SESSION_ID }),
+    headers,
+    body: JSON.stringify({ ...body, session_id: SESSION_ID }),
   });
+}
+
+/** Dopo login: collega la connessione Spotify di questa sessione anonima all'utente. */
+export async function linkSpotifyConnectionToUser(userId: string) {
+  await supabase
+    .from("spotify_connections")
+    .update({ user_id: userId })
+    .eq("anonymous_session_id", SESSION_ID)
+    .is("user_id", null);
+}
+
+export async function getSpotifyAuthUrl(redirectUri: string): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.user) return null;
+  const res = await spotifyFetch({ action: "get_auth_url", redirect_uri: redirectUri });
   const data = await res.json();
   return data.url ?? null;
 }
 
 export async function exchangeSpotifyCode(code: string, redirectUri: string) {
-  const res = await fetch(functionsUrl("spotify-auth"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-    body: JSON.stringify({ action: "exchange_code", code, redirect_uri: redirectUri, session_id: SESSION_ID }),
-  });
+  const res = await spotifyFetch({ action: "exchange_code", code, redirect_uri: redirectUri });
   return res.json();
 }
 
 export async function getSpotifyToken(): Promise<{ access_token: string; product: string } | null> {
-  const res = await fetch(functionsUrl("spotify-auth"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-    body: JSON.stringify({ action: "get_token", session_id: SESSION_ID }),
-  });
+  const res = await spotifyFetch({ action: "get_token" });
   if (!res.ok) return null;
   return res.json();
 }
 
 export async function disconnectSpotify() {
-  await fetch(functionsUrl("spotify-auth"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-    body: JSON.stringify({ action: "disconnect", session_id: SESSION_ID }),
-  });
+  await spotifyFetch({ action: "disconnect" });
 }
 
 export async function getSpotifyConnection() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.user) {
+    const { data } = await supabase
+      .from("spotify_connections")
+      .select("spotify_user_id, display_name, product")
+      .eq("user_id", session.user.id)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (data) return data;
+  }
   const { data } = await supabase
     .from("spotify_connections")
     .select("spotify_user_id, display_name, product")
@@ -63,11 +85,7 @@ export async function searchSpotifyTrack(query: string): Promise<string | null> 
 export async function spotifySaveTracks(
   trackIds: string[],
 ): Promise<{ ok: true } | { error: string }> {
-  const res = await fetch(functionsUrl("spotify-auth"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-    body: JSON.stringify({ action: "save_tracks", session_id: SESSION_ID, track_ids: trackIds }),
-  });
+  const res = await spotifyFetch({ action: "save_tracks", track_ids: trackIds });
   const data = await res.json();
   if (!res.ok) return { error: typeof data.error === "string" ? data.error : "Spotify: errore" };
   return { ok: true };
@@ -76,11 +94,7 @@ export async function spotifySaveTracks(
 export async function spotifyListPlaylists(): Promise<
   { playlists: { id: string; name: string }[] } | { error: string }
 > {
-  const res = await fetch(functionsUrl("spotify-auth"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-    body: JSON.stringify({ action: "list_playlists", session_id: SESSION_ID }),
-  });
+  const res = await spotifyFetch({ action: "list_playlists" });
   const data = await res.json();
   if (!res.ok) return { error: typeof data.error === "string" ? data.error : "Spotify: errore" };
   return { playlists: data.playlists ?? [] };
@@ -90,15 +104,10 @@ export async function spotifyAddTrackToPlaylist(
   playlistId: string,
   trackId: string,
 ): Promise<{ ok: true } | { error: string }> {
-  const res = await fetch(functionsUrl("spotify-auth"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-    body: JSON.stringify({
-      action: "add_to_playlist",
-      session_id: SESSION_ID,
-      playlist_id: playlistId,
-      track_id: trackId,
-    }),
+  const res = await spotifyFetch({
+    action: "add_to_playlist",
+    playlist_id: playlistId,
+    track_id: trackId,
   });
   const data = await res.json();
   if (!res.ok) return { error: typeof data.error === "string" ? data.error : "Spotify: errore" };
@@ -106,11 +115,7 @@ export async function spotifyAddTrackToPlaylist(
 }
 
 export async function spotifyEnsureEchoesPlaylist(): Promise<{ playlist_id: string } | { error: string }> {
-  const res = await fetch(functionsUrl("spotify-auth"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-    body: JSON.stringify({ action: "ensure_echoes_playlist", session_id: SESSION_ID }),
-  });
+  const res = await spotifyFetch({ action: "ensure_echoes_playlist" });
   const data = await res.json();
   if (!res.ok) return { error: typeof data.error === "string" ? data.error : "Spotify: errore" };
   const id = data.playlist_id;
@@ -122,15 +127,10 @@ export async function spotifyReplacePlaylistTracks(
   playlistId: string,
   trackIds: string[],
 ): Promise<{ ok: true } | { error: string }> {
-  const res = await fetch(functionsUrl("spotify-auth"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json", apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY },
-    body: JSON.stringify({
-      action: "replace_playlist_tracks",
-      session_id: SESSION_ID,
-      playlist_id: playlistId,
-      track_ids: trackIds,
-    }),
+  const res = await spotifyFetch({
+    action: "replace_playlist_tracks",
+    playlist_id: playlistId,
+    track_ids: trackIds,
   });
   const data = await res.json();
   if (!res.ok) return { error: typeof data.error === "string" ? data.error : "Spotify: errore" };

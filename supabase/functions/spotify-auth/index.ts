@@ -17,19 +17,51 @@ type SpotifyConn = {
   product: string | null;
 };
 
+async function getUserIdFromJwt(authHeader: string | null, supabase: any): Promise<string | null> {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+  const jwt = authHeader.slice(7).trim();
+  if (!jwt) return null;
+  const { data: { user }, error } = await supabase.auth.getUser(jwt);
+  if (error || !user) return null;
+  return user.id;
+}
+
+async function resolveSpotifyConnection(
+  supabase: any,
+  session_id: string | undefined,
+  userId: string | null,
+): Promise<SpotifyConn | null> {
+  if (userId) {
+    const { data } = await supabase
+      .from('spotify_connections')
+      .select('*')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (data) return data as SpotifyConn;
+  }
+  if (session_id) {
+    const { data } = await supabase
+      .from('spotify_connections')
+      .select('*')
+      .eq('anonymous_session_id', session_id)
+      .maybeSingle();
+    if (data) return data as SpotifyConn;
+  }
+  return null;
+}
+
 async function getValidAccessToken(
   supabase: any,
-  session_id: string,
+  session_id: string | undefined,
+  userId: string | null,
   clientId: string,
   clientSecret: string,
 ): Promise<{ access_token: string; product: string | null } | { error: string; status: number }> {
-  const { data: conn, error } = await supabase
-    .from('spotify_connections')
-    .select('*')
-    .eq('anonymous_session_id', session_id)
-    .maybeSingle();
+  const conn = await resolveSpotifyConnection(supabase, session_id, userId);
 
-  if (error || !conn) {
+  if (!conn) {
     return { error: 'No Spotify connection found', status: 404 };
   }
 
@@ -97,9 +129,16 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const { action, code, redirect_uri, session_id } = body;
+    const userId = await getUserIdFromJwt(req.headers.get('Authorization'), supabase);
 
     // --- GET AUTH URL ---
     if (action === 'get_auth_url') {
+      if (!userId) {
+        return new Response(JSON.stringify({ error: 'Login required to connect Spotify' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       const scopes = [
         'streaming',
         'user-read-email',
@@ -127,6 +166,12 @@ Deno.serve(async (req) => {
 
     // --- EXCHANGE CODE ---
     if (action === 'exchange_code') {
+      if (!userId) {
+        return new Response(JSON.stringify({ error: 'Login required to connect Spotify' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       const tokenRes = await fetch(SPOTIFY_TOKEN_URL, {
         method: 'POST',
         headers: {
@@ -156,17 +201,46 @@ Deno.serve(async (req) => {
 
       const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
 
-      const { error: dbError } = await supabase
+      const rowPayload = {
+        spotify_user_id: me.id as string,
+        display_name: me.display_name,
+        product: me.product,
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        token_expires_at: expiresAt,
+        anonymous_session_id: session_id ?? null,
+        ...(userId ? { user_id: userId } : {}),
+      };
+
+      let dbError: { message: string } | null = null;
+      const { data: existingUserRow } = await supabase
         .from('spotify_connections')
-        .upsert({
-          anonymous_session_id: session_id,
-          spotify_user_id: me.id,
-          display_name: me.display_name,
-          product: me.product,
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
-          token_expires_at: expiresAt,
-        }, { onConflict: 'anonymous_session_id' });
+        .select('id')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (existingUserRow?.id) {
+        const { error } = await supabase.from('spotify_connections').update(rowPayload).eq('id', existingUserRow.id);
+        dbError = error;
+      } else {
+        const { error } = await supabase
+          .from('spotify_connections')
+          .upsert(
+            {
+              anonymous_session_id: session_id,
+              spotify_user_id: me.id,
+              display_name: me.display_name,
+              product: me.product,
+              access_token: tokens.access_token,
+              refresh_token: tokens.refresh_token,
+              token_expires_at: expiresAt,
+              user_id: userId,
+            },
+            { onConflict: 'anonymous_session_id' },
+          );
+        dbError = error;
+      }
 
       if (dbError) {
         return new Response(JSON.stringify({ error: `DB error: ${dbError.message}` }), {
@@ -185,7 +259,7 @@ Deno.serve(async (req) => {
 
     // --- GET PLAYBACK TOKEN ---
     if (action === 'get_token') {
-      const auth = await getValidAccessToken(supabase, session_id, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET);
+      const auth = await getValidAccessToken(supabase, session_id, userId, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET);
       if ('error' in auth) {
         return new Response(JSON.stringify({ error: auth.error }), {
           status: auth.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -202,13 +276,13 @@ Deno.serve(async (req) => {
     // --- SAVE TRACKS (library) ---
     if (action === 'save_tracks') {
       const track_ids: string[] = body.track_ids;
-      if (!session_id || !Array.isArray(track_ids) || track_ids.length === 0) {
-        return new Response(JSON.stringify({ error: 'session_id and track_ids required' }), {
+      if ((!session_id && !userId) || !Array.isArray(track_ids) || track_ids.length === 0) {
+        return new Response(JSON.stringify({ error: 'session_id or auth, and track_ids required' }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      const auth = await getValidAccessToken(supabase, session_id, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET);
+      const auth = await getValidAccessToken(supabase, session_id, userId, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET);
       if ('error' in auth) {
         return new Response(JSON.stringify({ error: auth.error }), {
           status: auth.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -239,13 +313,13 @@ Deno.serve(async (req) => {
 
     // --- LIST PLAYLISTS ---
     if (action === 'list_playlists') {
-      if (!session_id) {
-        return new Response(JSON.stringify({ error: 'session_id required' }), {
+      if (!session_id && !userId) {
+        return new Response(JSON.stringify({ error: 'session_id or auth required' }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      const auth = await getValidAccessToken(supabase, session_id, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET);
+      const auth = await getValidAccessToken(supabase, session_id, userId, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET);
       if ('error' in auth) {
         return new Response(JSON.stringify({ error: auth.error }), {
           status: auth.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -277,13 +351,13 @@ Deno.serve(async (req) => {
 
     // --- ENSURE "ECHOES" PLAYLIST (find by name or create) ---
     if (action === 'ensure_echoes_playlist') {
-      if (!session_id) {
-        return new Response(JSON.stringify({ error: 'session_id required' }), {
+      if (!session_id && !userId) {
+        return new Response(JSON.stringify({ error: 'session_id or auth required' }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      const auth = await getValidAccessToken(supabase, session_id, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET);
+      const auth = await getValidAccessToken(supabase, session_id, userId, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET);
       if ('error' in auth) {
         return new Response(JSON.stringify({ error: auth.error }), {
           status: auth.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -365,13 +439,13 @@ Deno.serve(async (req) => {
     // --- REPLACE PLAYLIST TRACKS (full mirror; track_ids = Spotify track ids without prefix) ---
     if (action === 'replace_playlist_tracks') {
       const { playlist_id, track_ids } = body;
-      if (!session_id || !playlist_id || !Array.isArray(track_ids)) {
-        return new Response(JSON.stringify({ error: 'session_id, playlist_id and track_ids[] required' }), {
+      if ((!session_id && !userId) || !playlist_id || !Array.isArray(track_ids)) {
+        return new Response(JSON.stringify({ error: 'session_id or auth, playlist_id and track_ids[] required' }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      const auth = await getValidAccessToken(supabase, session_id, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET);
+      const auth = await getValidAccessToken(supabase, session_id, userId, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET);
       if ('error' in auth) {
         return new Response(JSON.stringify({ error: auth.error }), {
           status: auth.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -471,13 +545,13 @@ Deno.serve(async (req) => {
     // --- ADD TO PLAYLIST ---
     if (action === 'add_to_playlist') {
       const { playlist_id, track_id } = body;
-      if (!session_id || !playlist_id || !track_id) {
-        return new Response(JSON.stringify({ error: 'session_id, playlist_id and track_id required' }), {
+      if ((!session_id && !userId) || !playlist_id || !track_id) {
+        return new Response(JSON.stringify({ error: 'session_id or auth, playlist_id and track_id required' }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      const auth = await getValidAccessToken(supabase, session_id, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET);
+      const auth = await getValidAccessToken(supabase, session_id, userId, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET);
       if ('error' in auth) {
         return new Response(JSON.stringify({ error: auth.error }), {
           status: auth.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -509,10 +583,11 @@ Deno.serve(async (req) => {
 
     // --- DISCONNECT ---
     if (action === 'disconnect') {
-      await supabase
-        .from('spotify_connections')
-        .delete()
-        .eq('anonymous_session_id', session_id);
+      if (userId) {
+        await supabase.from('spotify_connections').delete().eq('user_id', userId);
+      } else if (session_id) {
+        await supabase.from('spotify_connections').delete().eq('anonymous_session_id', session_id);
+      }
 
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

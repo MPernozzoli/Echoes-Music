@@ -12,6 +12,10 @@
     "subtitle": "Discover music that resonates with your emotions",
     "continueWithGoogle": "Continue with Google"
   },
+  "anon": {
+    "loginForNewChat": "Sign in to start another chat.",
+    "cannotDeleteOnlyChat": "Without an account you can only keep one chat."
+  },
   "landing": {
     "badge": "AI-powered music discovery",
     "title": "Find the song that means",
@@ -38,7 +42,8 @@
     "toastRateLimit": "Too many requests. Try again shortly.",
     "toastNoCredits": "AI credits exhausted.",
     "toastNoSongs": "No songs found. Try a few searches first to refine your profile.",
-    "toastGenericError": "Something went wrong"
+    "toastGenericError": "Something went wrong",
+    "toastNoConversation": "Open chat from Echoes first."
   },
   "profile": {
     "title": "Settings",
@@ -71,6 +76,8 @@
     "privacyHint": "Allow anonymized data to help improve recommendations",
     "favoritesPlaylistTitle": "Echoes playlist on Spotify / Apple Music",
     "favoritesPlaylistHint": "Keep an “Echoes” playlist in sync with favorites (connect an account; only tracks with IDs on that service).",
+    "streamingLoginRequired": "Sign in to connect Spotify, Apple Music, and the Echoes playlist.",
+    "streamingLoginCta": "Go to login",
     "signOut": "Sign out",
     "billingTitle": "Plan & tokens",
     "billingHint": "Subscribe or top up when you need more searches.",
@@ -135,6 +142,7 @@
     "connectionFailed": "Connection failed"
   },
   "chat": {
+    "anonQuotaLogin": "You’ve used your free try. Sign in to continue.",
     "newChat": "New chat",
     "conversations": "Conversations",
     "deleteChatAria": "Delete chat",
@@ -362,5 +370,14 @@
         "a": "Card and billing details are processed by Stripe. Echoes does not store your full card number."
       }
     }
+  },
+  "referral": {
+    "claimSuccess": "Referral applied — you and your friend received bonus tokens.",
+    "title": "Invite a friend",
+    "subtitle": "Anyone who signs up from your link gets +{{signup}} tokens, and so do you. If they upgrade to Premium, once you both receive an extra {{pct}}% in tokens on that subscription cycle’s allowance (monthly or annual).",
+    "loading": "Loading link…",
+    "copy": "Copy link",
+    "copied": "Link copied",
+    "copyFailed": "Could not copy"
   }
 }

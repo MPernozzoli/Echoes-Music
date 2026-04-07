@@ -11,6 +11,8 @@ const PREMIUM_PRODUCT_MONTHLY = "prod_UIBycXCJF3PNRB";
 const PREMIUM_PRODUCT_ANNUAL = "prod_UIByOkXl3FXIIZ";
 const TOKENS_MONTHLY_CYCLE = 120;
 const TOKENS_ANNUAL_CYCLE = 1440;
+/** Allineare a src/constants/tokenEconomy.ts REFERRAL_PRO_BONUS_RATE */
+const REFERRAL_PRO_BONUS_RATE = 0.5;
 
 function tokensForPremiumProduct(productId: string | undefined): number {
   if (productId === PREMIUM_PRODUCT_MONTHLY) return TOKENS_MONTHLY_CYCLE;
@@ -117,6 +119,14 @@ Deno.serve(async (req) => {
             p_description: `Premium allowance (${grant} tokens)`,
           });
           if (error) console.error("grant_tokens subscription:", error);
+          const referralBonus = Math.floor(grant * REFERRAL_PRO_BONUS_RATE);
+          if (referralBonus > 0) {
+            const { error: refErr } = await admin.rpc("try_grant_referral_pro_bonus", {
+              p_referee_id: userId,
+              p_bonus: referralBonus,
+            });
+            if (refErr) console.error("try_grant_referral_pro_bonus:", refErr);
+          }
         }
         break;
       }

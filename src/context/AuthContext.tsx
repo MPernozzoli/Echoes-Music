@@ -1,6 +1,8 @@
 /* @refresh skip */
 import { createContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { linkUserSettingsToAccount } from "@/services/tracking";
+import { linkSpotifyConnectionToUser } from "@/services/spotify";
 import type { User, Session } from "@supabase/supabase-js";
 
 export interface AuthState {
@@ -44,12 +46,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
+    const linkAccountData = (userId: string) => {
+      void linkUserSettingsToAccount(userId);
+      void linkSpotifyConnectionToUser(userId);
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
+      (event, newSession) => {
         setSession(newSession);
         setUser(newSession?.user ?? null);
         setLoading(false);
         if (newSession?.user) {
+          if (event === "SIGNED_IN") linkAccountData(newSession.user.id);
           setTimeout(() => {
             refreshTokenBalance();
             refreshPlan(newSession.user.id);
@@ -65,6 +73,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(s?.user ?? null);
       setLoading(false);
       if (s?.user) {
+        linkAccountData(s.user.id);
         refreshTokenBalance();
         refreshPlan(s.user.id);
       }

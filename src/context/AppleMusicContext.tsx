@@ -1,5 +1,6 @@
 /* @refresh skip */
 import { createContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { useAuth } from "@/context/useAuth";
 import { getAppleMusicDeveloperToken } from "@/services/appleMusic";
 
 interface AppleMusicState {
@@ -14,6 +15,7 @@ interface AppleMusicState {
 export const AppleMusicContext = createContext<AppleMusicState | null>(null);
 
 export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
   const [isAvailable, setIsAvailable] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [developerToken, setDeveloperToken] = useState<string | null>(null);
@@ -47,6 +49,7 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
         await mk.configure({
           developerToken: token,
           app: { name: "Echoes", build: "1.0.0" },
+          persist: true,
         });
         setIsAvailable(true);
 
@@ -63,6 +66,10 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const authorize = useCallback(async () => {
+    if (!user) {
+      window.location.assign("/auth");
+      return;
+    }
     try {
       const mk = (window as any).MusicKit?.getInstance();
       if (mk) {
@@ -72,7 +79,7 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
     } catch (err) {
       console.error("MusicKit authorize error:", err);
     }
-  }, []);
+  }, [user]);
 
   const unauthorize = useCallback(() => {
     try {

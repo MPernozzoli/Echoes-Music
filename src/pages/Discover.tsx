@@ -178,9 +178,26 @@ const Chat = () => {
           descriptionLanguage,
           conversationMemory: memoryPayload,
           userTasteProfile,
+          conversationId,
         });
 
         if (data.error) {
+          if (data.code?.startsWith("anon_")) {
+            toast.error(data.error || "Accedi per continuare");
+            navigate("/auth", { replace: true });
+            setIsLoading(false);
+            return;
+          }
+          if (data.code?.startsWith("byo_")) {
+            toast.error(data.error || "Ricerca fallita", {
+              description: data.byo_fallback_suggested
+                ? "You can return to Echoes managed AI under Profile → Advanced AI Settings."
+                : undefined,
+            });
+            setIsLoading(false);
+            void refreshTokenBalance();
+            return;
+          }
           if (data.error.includes("Rate") || data.error.includes("429")) toast.error("Troppi richieste. Riprova tra poco.");
           else if (
             data.error.includes("credits") ||
@@ -272,6 +289,7 @@ const Chat = () => {
       mergeUserTasteFromUpdate,
       isGloballyPlaying,
       playNowReplace,
+      navigate,
     ]
   );
 

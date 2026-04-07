@@ -1,5 +1,6 @@
 /* @refresh skip */
 import { createContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { useAuth } from "@/context/useAuth";
 import { getSpotifyConnection, getSpotifyToken } from "@/services/spotify";
 
 interface SpotifyState {
@@ -16,6 +17,7 @@ interface SpotifyState {
 export const SpotifyContext = createContext<SpotifyState | null>(null);
 
 export const SpotifyProvider = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
   const [isPremium, setIsPremium] = useState(false);
   const [displayName, setDisplayName] = useState<string | null>(null);
@@ -54,7 +56,7 @@ export const SpotifyProvider = ({ children }: { children: ReactNode }) => {
     setAccessToken(null);
   }, []);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => { void refresh(); }, [user?.id, refresh]);
 
   return (
     <SpotifyContext.Provider value={{ isConnected, isPremium, displayName, accessToken, loading, refresh, setConnected, setDisconnected }}>

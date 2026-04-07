@@ -282,5 +282,14 @@
   },
   "appleMusic": {
     "compactLine": "{{action}} · conta Apple Music (sem novo login)"
+  },
+  "referral": {
+    "claimSuccess": "Convite aplicado — tokens bónus para os dois.",
+    "title": "Convida um amigo",
+    "subtitle": "Com o teu link: +{{signup}} tokens cada um ao registar. Se passar a Premium, uma vez +{{pct}} % dos tokens do ciclo para ambos.",
+    "loading": "A carregar link…",
+    "copy": "Copiar link",
+    "copied": "Link copiado",
+    "copyFailed": "Não foi possível copiar"
   }
 }

@@ -12,7 +12,7 @@ export const UI_LANG_KEY = "echoes_ui_language";
 export const SUPPORTED_UI_LANGS = ["it", "en", "fr", "de", "es", "pt"] as const;
 export type SupportedUiLang = (typeof SUPPORTED_UI_LANGS)[number];
 
-function isSupported(lang: string): lang is SupportedUiLang {
+export function isSupported(lang: string): lang is SupportedUiLang {
   return (SUPPORTED_UI_LANGS as readonly string[]).includes(lang);
 }
 

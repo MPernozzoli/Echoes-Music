@@ -6,6 +6,10 @@
     "subtitle": "Scopri musica che risuona con le tue emozioni",
     "continueWithGoogle": "Continua con Google"
   },
+  "anon": {
+    "loginForNewChat": "Per aprire un’altra chat accedi al tuo account.",
+    "cannotDeleteOnlyChat": "Senza account è consentita una sola chat."
+  },
   "landing": {
     "badge": "Scoperta musicale con IA",
     "title": "Trova il brano che dice",
@@ -32,7 +36,8 @@
     "toastRateLimit": "Troppi richieste. Riprova tra poco.",
     "toastNoCredits": "Crediti AI esauriti.",
     "toastNoSongs": "Nessun brano trovato. Prova dopo qualche ricerca per affinare il profilo.",
-    "toastGenericError": "Qualcosa è andato storto"
+    "toastGenericError": "Qualcosa è andato storto",
+    "toastNoConversation": "Apri prima la chat da Echoes."
   },
   "profile": {
     "title": "Impostazioni",
@@ -65,6 +70,8 @@
     "privacyHint": "Consenti dati anonimi per migliorare i consigli",
     "favoritesPlaylistTitle": "Playlist Echoes su Spotify / Apple Music",
     "favoritesPlaylistHint": "Mantieni una playlist «Echoes» allineata ai preferiti (serve account collegato; solo brani con id sul servizio).",
+    "streamingLoginRequired": "Accedi per collegare Spotify, Apple Music e la playlist Echoes.",
+    "streamingLoginCta": "Vai al login",
     "signOut": "Esci",
     "billingTitle": "Piano e token",
     "billingHint": "Abbonati o ricarica quando ti servono più ricerche.",
@@ -126,6 +133,7 @@
     "connectionFailed": "Connessione fallita"
   },
   "chat": {
+    "anonQuotaLogin": "Hai usato la prova gratuita. Accedi per continuare.",
     "newChat": "Nuova chat",
     "conversations": "Conversazioni",
     "deleteChatAria": "Elimina chat",
@@ -353,5 +361,14 @@
         "a": "Carta e dati di fatturazione sono gestiti da Stripe. Echoes non memorizza il numero completo della carta."
       }
     }
+  },
+  "referral": {
+    "claimSuccess": "Invito applicato: tu e chi ti ha invitato avete ricevuto token bonus.",
+    "title": "Porta un amico",
+    "subtitle": "Chi si iscrive dal tuo link riceve +{{signup}} token e anche tu. Se poi attiva Premium, una sola volta entrambi ottenete il {{pct}}% in token extra sulla quota del ciclo di abbonamento (mensile o annuale).",
+    "loading": "Caricamento link…",
+    "copy": "Copia link",
+    "copied": "Link copiato",
+    "copyFailed": "Impossibile copiare"
   }
 }

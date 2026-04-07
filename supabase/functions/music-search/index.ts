@@ -1,4 +1,11 @@
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.57.2';
+import { decryptApiKey, importAes256GcmKeyFromEnv } from '../_shared/byo_crypto.ts';
+import {
+  ByoOpenAiError,
+  mapByoCodeToDbStatus,
+  openAiChatCompletion,
+  userMessageForByoCode,
+} from '../_shared/byo_openai.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,6 +43,91 @@ function estimateGemini3FlashUsd(u: GatewayUsage): number | null {
   return (pt * USD_PER_MTOK_PROMPT + ct * USD_PER_MTOK_COMPLETION) / 1_000_000;
 }
 
+type AiInferenceRoute = { kind: 'managed' } | { kind: 'byo'; apiKey: string; model: string };
+
+async function loadAiInferenceRoute(
+  admin: SupabaseClient | null,
+  userId: string | null,
+  needsVision: boolean,
+): Promise<AiInferenceRoute> {
+  if (!userId || !admin) return { kind: 'managed' };
+  const { data: row } = await admin
+    .from('user_settings')
+    .select('ai_provider_mode, byo_ai_provider')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!row || row.ai_provider_mode !== 'byo_key' || row.byo_ai_provider !== 'openai') {
+    return { kind: 'managed' };
+  }
+  const { data: sec } = await admin
+    .from('user_byo_ai_secrets')
+    .select('iv, ciphertext')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (!sec?.iv || !sec?.ciphertext) return { kind: 'managed' };
+  const master = await importAes256GcmKeyFromEnv();
+  if (!master) {
+    console.error('BYO_AI_ENCRYPTION_KEY missing or invalid');
+    return { kind: 'managed' };
+  }
+  try {
+    const apiKey = (await decryptApiKey(sec.iv, sec.ciphertext, master)).trim();
+    if (!apiKey) return { kind: 'managed' };
+    const textModel = Deno.env.get('BYO_OPENAI_MODEL')?.trim() || 'gpt-4o-mini';
+    const visionModel = Deno.env.get('BYO_OPENAI_VISION_MODEL')?.trim() || textModel;
+    const model = needsVision ? visionModel : textModel;
+    return { kind: 'byo', apiKey, model };
+  } catch {
+    return { kind: 'managed' };
+  }
+}
+
+async function runInferenceCompletion(
+  route: AiInferenceRoute,
+  chatBody: Record<string, unknown>,
+): Promise<{ data: unknown; usage: GatewayUsage; gatewayRequestId: string | null }> {
+  if (route.kind === 'managed') {
+    const apiKey = Deno.env.get('LOVABLE_API_KEY');
+    if (!apiKey) throw new Error('LOVABLE_API_KEY not configured');
+    const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ...chatBody, model: AI_MODEL }),
+    });
+    if (!res.ok) {
+      const status = res.status;
+      const text = await res.text();
+      console.error('AI gateway error:', status, text.slice(0, 400));
+      if (status === 429) throw new Error('Rate limited - please try again shortly');
+      if (status === 402) throw new Error('AI credits exhausted');
+      throw new Error('AI interpretation failed');
+    }
+    const data = await res.json();
+    return {
+      data,
+      usage: normalizeUsage(data.usage),
+      gatewayRequestId: typeof data.id === 'string' ? data.id : null,
+    };
+  }
+  const { json, requestId } = await openAiChatCompletion(route.apiKey, route.model, chatBody);
+  return {
+    data: json,
+    usage: normalizeUsage((json as { usage?: unknown }).usage),
+    gatewayRequestId: requestId,
+  };
+}
+
+function httpStatusForByo(err: ByoOpenAiError): number {
+  if (err.code === 'rate_limited') return 429;
+  if (err.code === 'connection_failed') return 503;
+  return 422;
+}
+
 async function insertAiUsage(
   admin: SupabaseClient | null,
   row: {
@@ -44,14 +136,18 @@ async function insertAiUsage(
     search_mode: string | null;
     usage: GatewayUsage;
     gateway_request_id?: string | null;
+    provider?: string;
+    model?: string;
   },
 ): Promise<void> {
   if (!admin) return;
   const est = estimateGemini3FlashUsd(row.usage);
+  const provider = row.provider ?? 'lovable_gateway';
+  const model = row.model ?? AI_MODEL;
   const { error } = await admin.from('ai_usage_events').insert({
     user_id: row.user_id,
-    provider: 'lovable_gateway',
-    model: AI_MODEL,
+    provider,
+    model,
     operation: row.operation,
     search_mode: row.search_mode,
     prompt_tokens: row.usage.prompt_tokens ?? null,
@@ -67,14 +163,70 @@ async function resolveUserContext(req: Request): Promise<{ userId: string | null
   const url = Deno.env.get('SUPABASE_URL') ?? '';
   const anon = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
   const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  if (!url || !anon || !service) return { userId: null, admin: null };
+  const admin = createClient(url, service, { auth: { persistSession: false } });
+
   const authHeader = req.headers.get('Authorization') ?? '';
   const jwt = authHeader.replace(/^Bearer\s+/i, '').trim();
-  if (!jwt || !url || !anon || !service) return { userId: null, admin: null };
+  if (!jwt || jwt === anon) return { userId: null, admin };
+
   const userClient = createClient(url, anon, { global: { headers: { Authorization: `Bearer ${jwt}` } } });
   const { data: { user }, error } = await userClient.auth.getUser();
-  if (error || !user) return { userId: null, admin: null };
-  const admin = createClient(url, service, { auth: { persistSession: false } });
+  if (error || !user) return { userId: null, admin };
   return { userId: user.id, admin };
+}
+
+function getClientIp(req: Request): string | null {
+  const xf = req.headers.get('x-forwarded-for');
+  if (xf) {
+    const first = xf.split(',')[0]?.trim();
+    if (first) return first;
+  }
+  const cf = req.headers.get('cf-connecting-ip')?.trim();
+  if (cf) return cf;
+  const realIp = req.headers.get('x-real-ip')?.trim();
+  if (realIp) return realIp;
+  return null;
+}
+
+async function enforceAnonymousQuota(
+  admin: SupabaseClient,
+  req: Request,
+  body: Record<string, unknown>,
+): Promise<Response | null> {
+  const ip = getClientIp(req);
+  const anonSess = typeof body.anonymousSessionId === 'string' ? body.anonymousSessionId.trim() : '';
+  const convId = typeof body.conversationId === 'string' ? body.conversationId.trim() : '';
+  const { data, error } = await admin.rpc('claim_anonymous_search', {
+    p_ip: ip ?? '',
+    p_session: anonSess,
+    p_conversation: convId,
+  });
+  if (error) {
+    console.error('claim_anonymous_search:', error);
+    return new Response(JSON.stringify({ error: 'Quota check failed', code: 'anon_quota_error' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  const row = data as { ok?: boolean; reason?: string } | null;
+  if (row?.ok === true) return null;
+  const reason = row?.reason ?? 'unknown';
+  const messages: Record<string, string> = {
+    no_ip: 'Richiesta senza indirizzo attendibile; effettua il login.',
+    no_session: 'Sessione anonima mancante; aggiorna la pagina.',
+    no_conversation: 'Chat non valida; aggiorna la pagina.',
+    session_mismatch: 'Hai già usato Echoes da questo rete. Accedi per continuare.',
+    conversation_mismatch: 'È consentita una sola chat senza account. Accedi per continuare.',
+    search_limit: 'Hai già usato la ricerca gratuita. Accedi per continuare.',
+  };
+  return new Response(
+    JSON.stringify({
+      error: messages[reason] ?? 'Accesso limitato. Accedi per continuare.',
+      code: `anon_${reason}`,
+    }),
+    { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+  );
 }
 
 // --- Apple Music token generation (reuse logic) ---
@@ -299,14 +451,12 @@ async function interpretDiscovery(params: {
   descriptionLanguage?: string;
   mode: 'search' | 'lucky';
   image?: { base64: string; mimeType: string };
+  route: AiInferenceRoute;
 }): Promise<{
   interpretation: AIInterpretation;
   usage: GatewayUsage;
   gatewayRequestId: string | null;
 }> {
-  const apiKey = Deno.env.get('LOVABLE_API_KEY');
-  if (!apiKey) throw new Error('LOVABLE_API_KEY not configured');
-
   const languageInstruction = params.descriptionLanguage && params.descriptionLanguage !== 'auto'
     ? `IMPORTANT: The user has set their preferred language to "${params.descriptionLanguage}". ALL song explanations/descriptions MUST be written in ${params.descriptionLanguage}, regardless of the language of the user's prompt or the songs themselves. The emotional profile text (mood, energy, etc.) should also be in ${params.descriptionLanguage}.`
     : `Write explanations and emotional profile text in the same language as the user's prompt.`;
@@ -385,110 +535,92 @@ CRITICAL: Only suggest songs that actually exist. Use correct artist names and s
     }
     : { role: 'user', content: params.userContent };
 
-  const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: AI_MODEL,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        userMessage,
-      ],
-      tools: [{
-        type: 'function',
-        function: {
-          name: 'interpret_emotion',
-          description: 'Interpret the emotional content of a music discovery prompt',
-          parameters: {
-            type: 'object',
-            properties: {
-              emotionalProfile: {
+  const chatBody = {
+    messages: [
+      { role: 'system', content: systemPrompt },
+      userMessage,
+    ],
+    tools: [{
+      type: 'function',
+      function: {
+        name: 'interpret_emotion',
+        description: 'Interpret the emotional content of a music discovery prompt',
+        parameters: {
+          type: 'object',
+          properties: {
+            emotionalProfile: {
+              type: 'object',
+              properties: {
+                themes: { type: 'array', items: { type: 'string' } },
+                mood: { type: 'string' },
+                energy: { type: 'string' },
+                intimacy: { type: 'string' },
+                catharsis: { type: 'string' },
+                emotionalTension: { type: 'string' },
+              },
+              required: ['themes', 'mood', 'energy', 'intimacy', 'catharsis', 'emotionalTension'],
+            },
+            searchQueries: { type: 'array', items: { type: 'string' }, description: 'Search queries to find matching songs on Spotify/Apple Music' },
+            adjacentInterpretations: { type: 'array', items: { type: 'string' } },
+            narrativeReply: {
+              type: 'string',
+              description:
+                '2-5 sentences: organic paragraph on why this selection fits; same language as user; no «quotes», no listing all songs; per-song blurbs only in songSuggestions.explanation',
+            },
+            songSuggestions: {
+              type: 'array',
+              items: {
                 type: 'object',
                 properties: {
-                  themes: { type: 'array', items: { type: 'string' } },
-                  mood: { type: 'string' },
-                  energy: { type: 'string' },
-                  intimacy: { type: 'string' },
-                  catharsis: { type: 'string' },
-                  emotionalTension: { type: 'string' },
-                },
-                required: ['themes', 'mood', 'energy', 'intimacy', 'catharsis', 'emotionalTension'],
-              },
-              searchQueries: { type: 'array', items: { type: 'string' }, description: 'Search queries to find matching songs on Spotify/Apple Music' },
-              adjacentInterpretations: { type: 'array', items: { type: 'string' } },
-              narrativeReply: {
-                type: 'string',
-                description:
-                  '2-5 sentences: organic paragraph on why this selection fits; same language as user; no «quotes», no listing all songs; per-song blurbs only in songSuggestions.explanation',
-              },
-              songSuggestions: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    title: { type: 'string' },
-                    artist: { type: 'string' },
-                    emotionalTags: { type: 'array', items: { type: 'string' } },
-                    explanation: { type: 'string' },
-                    relevanceScore: {
-                      type: 'number',
-                      description:
-                        'How well this track fits the user request (0-100). Must be honest: below 65 if the fit is weak or forced; 65+ only for clearly strong matches. The app hides sub-65 picks.',
-                    },
+                  title: { type: 'string' },
+                  artist: { type: 'string' },
+                  emotionalTags: { type: 'array', items: { type: 'string' } },
+                  explanation: { type: 'string' },
+                  relevanceScore: {
+                    type: 'number',
+                    description:
+                      'How well this track fits the user request (0-100). Must be honest: below 65 if the fit is weak or forced; 65+ only for clearly strong matches. The app hides sub-65 picks.',
                   },
-                  required: ['title', 'artist', 'emotionalTags', 'explanation', 'relevanceScore'],
                 },
-              },
-              conversationMemoryUpdate: {
-                type: 'object',
-                properties: {
-                  threadSummary: { type: 'string' },
-                  standardAxes: standardAxesSchema,
-                },
-                required: ['threadSummary', 'standardAxes'],
-              },
-              userTasteProfileUpdate: {
-                type: 'object',
-                properties: {
-                  globalSummary: { type: 'string' },
-                  userStandardAxes: standardAxesSchema,
-                  genreAffinityTags: { type: 'array', items: { type: 'string' }, maxItems: 12 },
-                  preferredLanguages: { type: 'array', items: { type: 'string' }, maxItems: 6 },
-                },
+                required: ['title', 'artist', 'emotionalTags', 'explanation', 'relevanceScore'],
               },
             },
-            required: [
-              'emotionalProfile',
-              'narrativeReply',
-              'searchQueries',
-              'adjacentInterpretations',
-              'songSuggestions',
-              'conversationMemoryUpdate',
-            ],
+            conversationMemoryUpdate: {
+              type: 'object',
+              properties: {
+                threadSummary: { type: 'string' },
+                standardAxes: standardAxesSchema,
+              },
+              required: ['threadSummary', 'standardAxes'],
+            },
+            userTasteProfileUpdate: {
+              type: 'object',
+              properties: {
+                globalSummary: { type: 'string' },
+                userStandardAxes: standardAxesSchema,
+                genreAffinityTags: { type: 'array', items: { type: 'string' }, maxItems: 12 },
+                preferredLanguages: { type: 'array', items: { type: 'string' }, maxItems: 6 },
+              },
+            },
           },
+          required: [
+            'emotionalProfile',
+            'narrativeReply',
+            'searchQueries',
+            'adjacentInterpretations',
+            'songSuggestions',
+            'conversationMemoryUpdate',
+          ],
         },
-      }],
-      tool_choice: { type: 'function', function: { name: 'interpret_emotion' } },
-    }),
-  });
+      },
+    }],
+    tool_choice: { type: 'function', function: { name: 'interpret_emotion' } },
+  };
 
-  if (!res.ok) {
-    const status = res.status;
-    const text = await res.text();
-    console.error('AI gateway error:', status, text);
-    if (status === 429) throw new Error('Rate limited - please try again shortly');
-    if (status === 402) throw new Error('AI credits exhausted');
-    throw new Error('AI interpretation failed');
-  }
-
-  const data = await res.json();
-  const usage = normalizeUsage(data.usage);
-  const gatewayRequestId = typeof data.id === 'string' ? data.id : null;
-  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-  if (!toolCall) throw new Error('AI did not return structured output');
+  const { data, usage, gatewayRequestId } = await runInferenceCompletion(params.route, chatBody);
+  const d = data as { choices?: Array<{ message?: { tool_calls?: Array<{ function?: { arguments?: string } }> } }> };
+  const toolCall = d.choices?.[0]?.message?.tool_calls?.[0];
+  if (!toolCall?.function?.arguments) throw new Error('AI did not return structured output');
 
   return {
     interpretation: JSON.parse(toolCall.function.arguments) as AIInterpretation,
@@ -502,15 +634,13 @@ async function interpretMemoryCompact(params: {
   conversationMemory: Record<string, unknown> | null;
   userTasteProfile: Record<string, unknown> | null;
   lastUserPrompt?: string;
+  route: AiInferenceRoute;
 }): Promise<{
   conversationMemoryUpdate: { threadSummary: string; standardAxes: StandardAxes };
   userTasteProfileUpdate?: AIInterpretation['userTasteProfileUpdate'];
   usage: GatewayUsage;
   gatewayRequestId: string | null;
 }> {
-  const apiKey = Deno.env.get('LOVABLE_API_KEY');
-  if (!apiKey) throw new Error('LOVABLE_API_KEY not configured');
-
   const userContent = [
     'Compress and realign conversation memory only. Do not suggest songs.',
     params.lastUserPrompt ? `Last user prompt snippet: ${params.lastUserPrompt.slice(0, 500)}` : '',
@@ -518,68 +648,50 @@ async function interpretMemoryCompact(params: {
     `userTasteProfile: ${JSON.stringify(params.userTasteProfile || {})}`,
   ].filter(Boolean).join('\n');
 
-  const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: AI_MODEL,
-      messages: [
-        {
-          role: 'system',
-          content: 'Output only structured memory updates. threadSummary 2-4 sentences. standardAxes must use enums low|medium|high and intimacy 1-5.',
-        },
-        { role: 'user', content: userContent },
-      ],
-      tools: [{
-        type: 'function',
-        function: {
-          name: 'compact_memory',
-          parameters: {
-            type: 'object',
-            properties: {
-              conversationMemoryUpdate: {
-                type: 'object',
-                properties: {
-                  threadSummary: { type: 'string' },
-                  standardAxes: standardAxesSchema,
-                },
-                required: ['threadSummary', 'standardAxes'],
+  const chatBody = {
+    messages: [
+      {
+        role: 'system',
+        content: 'Output only structured memory updates. threadSummary 2-4 sentences. standardAxes must use enums low|medium|high and intimacy 1-5.',
+      },
+      { role: 'user', content: userContent },
+    ],
+    tools: [{
+      type: 'function',
+      function: {
+        name: 'compact_memory',
+        parameters: {
+          type: 'object',
+          properties: {
+            conversationMemoryUpdate: {
+              type: 'object',
+              properties: {
+                threadSummary: { type: 'string' },
+                standardAxes: standardAxesSchema,
               },
-              userTasteProfileUpdate: {
-                type: 'object',
-                properties: {
-                  globalSummary: { type: 'string' },
-                  userStandardAxes: standardAxesSchema,
-                  genreAffinityTags: { type: 'array', items: { type: 'string' } },
-                  preferredLanguages: { type: 'array', items: { type: 'string' } },
-                },
+              required: ['threadSummary', 'standardAxes'],
+            },
+            userTasteProfileUpdate: {
+              type: 'object',
+              properties: {
+                globalSummary: { type: 'string' },
+                userStandardAxes: standardAxesSchema,
+                genreAffinityTags: { type: 'array', items: { type: 'string' } },
+                preferredLanguages: { type: 'array', items: { type: 'string' } },
               },
             },
-            required: ['conversationMemoryUpdate'],
           },
+          required: ['conversationMemoryUpdate'],
         },
-      }],
-      tool_choice: { type: 'function', function: { name: 'compact_memory' } },
-    }),
-  });
+      },
+    }],
+    tool_choice: { type: 'function', function: { name: 'compact_memory' } },
+  };
 
-  if (!res.ok) {
-    const status = res.status;
-    const text = await res.text();
-    console.error('AI gateway error (compact):', status, text);
-    if (status === 429) throw new Error('Rate limited - please try again shortly');
-    if (status === 402) throw new Error('AI credits exhausted');
-    throw new Error('AI memory compact failed');
-  }
-
-  const data = await res.json();
-  const usage = normalizeUsage(data.usage);
-  const gatewayRequestId = typeof data.id === 'string' ? data.id : null;
-  const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-  if (!toolCall) throw new Error('AI did not return structured output');
+  const { data, usage, gatewayRequestId } = await runInferenceCompletion(params.route, chatBody);
+  const d = data as { choices?: Array<{ message?: { tool_calls?: Array<{ function?: { arguments?: string } }> } }> };
+  const toolCall = d.choices?.[0]?.message?.tool_calls?.[0];
+  if (!toolCall?.function?.arguments) throw new Error('AI did not return structured output');
   const parsed = JSON.parse(toolCall.function.arguments);
   const axes = normalizeStandardAxes(parsed.conversationMemoryUpdate?.standardAxes);
   return {
@@ -634,9 +746,25 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  let ctxUserId: string | null = null;
+  let ctxAdmin: SupabaseClient | null = null;
   try {
     const { userId, admin } = await resolveUserContext(req);
+    ctxUserId = userId;
+    ctxAdmin = admin;
     const body = await req.json().catch(() => ({}));
+
+    if (!userId) {
+      if (!admin) {
+        return new Response(JSON.stringify({ error: 'Server misconfigured' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const quotaResp = await enforceAnonymousQuota(admin, req, body as Record<string, unknown>);
+      if (quotaResp) return quotaResp;
+    }
+
     const {
       prompt: rawPrompt,
       imageBase64: rawImageB64,
@@ -670,11 +798,13 @@ Deno.serve(async (req) => {
     }
 
     if (mode === 'memory_compact') {
+      const routeMc = await loadAiInferenceRoute(admin, userId, false);
       const compact = await interpretMemoryCompact({
         descriptionLanguage,
         conversationMemory: conversationMemory ?? null,
         userTasteProfile: userTasteProfile ?? null,
         lastUserPrompt,
+        route: routeMc,
       });
       await insertAiUsage(admin, {
         user_id: userId,
@@ -682,6 +812,9 @@ Deno.serve(async (req) => {
         search_mode: 'memory_compact',
         usage: compact.usage,
         gateway_request_id: compact.gatewayRequestId,
+        ...(routeMc.kind === 'byo'
+          ? { provider: 'byo_openai', model: routeMc.model }
+          : {}),
       });
       return new Response(JSON.stringify({
         conversationMemoryUpdate: {
@@ -723,11 +856,13 @@ Deno.serve(async (req) => {
       }
     }
 
+    const routeDisc = await loadAiInferenceRoute(admin, userId, hasImage);
     const discovery = await interpretDiscovery({
       userContent,
       descriptionLanguage,
       mode: mode === 'lucky' ? 'lucky' : 'search',
       ...(hasImage ? { image: { base64: imageB64, mimeType: imageMime } } : {}),
+      route: routeDisc,
     });
     await insertAiUsage(admin, {
       user_id: userId,
@@ -735,6 +870,9 @@ Deno.serve(async (req) => {
       search_mode: mode === 'lucky' ? 'lucky' : 'search',
       usage: discovery.usage,
       gateway_request_id: discovery.gatewayRequestId,
+      ...(routeDisc.kind === 'byo'
+        ? { provider: 'byo_openai', model: routeDisc.model }
+        : {}),
     });
     const interpretation = sanitizeInterpretation(discovery.interpretation);
 
@@ -834,7 +972,21 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err: unknown) {
-    console.error('music-search error:', err);
+    if (err instanceof ByoOpenAiError && ctxUserId && ctxAdmin) {
+      await ctxAdmin.from('user_settings').update({
+        byo_key_status: mapByoCodeToDbStatus(err.code),
+        updated_at: new Date().toISOString(),
+      }).eq('user_id', ctxUserId);
+      return new Response(JSON.stringify({
+        error: userMessageForByoCode(err.code),
+        code: `byo_${err.code}`,
+        byo_fallback_suggested: true,
+      }), {
+        status: httpStatusForByo(err),
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    console.error('music-search error:', err instanceof Error ? err.message : err);
     const message = err instanceof Error ? err.message : String(err);
     const status = message?.includes('Rate limited') ? 429
       : message?.includes('credits') ? 402 : 500;

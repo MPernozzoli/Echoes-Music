@@ -282,5 +282,14 @@
   },
   "appleMusic": {
     "compactLine": "{{action}} · compte Apple Music (pas de nouvelle connexion)"
+  },
+  "referral": {
+    "claimSuccess": "Parrainage enregistré — bonus de jetons pour vous deux.",
+    "title": "Parrainez un ami",
+    "subtitle": "Via votre lien : +{{signup}} jetons chacun à l’inscription. S’il passe Premium, une fois +{{pct}} % de jetons sur le cycle d’abonnement pour vous deux.",
+    "loading": "Chargement…",
+    "copy": "Copier le lien",
+    "copied": "Lien copié",
+    "copyFailed": "Copie impossible"
   }
 }

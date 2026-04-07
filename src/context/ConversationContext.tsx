@@ -7,6 +7,9 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+import { useAuth } from "@/context/useAuth";
 import type { SearchResult } from "@/data/mockData";
 import type { Conversation, ChatMessage, ConversationMemory, UserTasteProfile } from "@/types/conversation";
 import { applyConversationMemoryUpdate, loadUserTasteProfile, mergeUserTasteProfile } from "@/lib/memoryMerge";
@@ -93,12 +96,27 @@ interface ConversationState {
 export const ConversationContext = createContext<ConversationState | null>(null);
 
 export const ConversationProvider = ({ children }: { children: ReactNode }) => {
+  const { user } = useAuth();
+  const { t } = useTranslation();
   const initialConvState = useMemo(() => getInitialConversationState(), []);
   const [conversations, setConversations] = useState<Conversation[]>(() => initialConvState.conversations);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(() => initialConvState.activeId);
   const [userTasteProfile, setUserTasteProfile] = useState<UserTasteProfile>(() =>
     loadUserTasteProfile(loadJSON(USER_TASTE_KEY, null))
   );
+
+  useEffect(() => {
+    if (user) return;
+    setConversations((prev) => {
+      if (prev.length <= 1) return prev;
+      const sorted = [...prev].sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      );
+      const keep = sorted[0];
+      queueMicrotask(() => setActiveConversationId(keep.id));
+      return [keep];
+    });
+  }, [user, conversations.length]);
 
   useEffect(() => {
     localStorage.setItem(CONVERSATIONS_KEY, JSON.stringify(conversations));
@@ -114,6 +132,11 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
   }, [userTasteProfile]);
 
   const createConversation = useCallback((): string => {
+    if (!user && conversations.length >= 1) {
+      toast.message(t("anon.loginForNewChat"));
+      window.location.assign("/auth");
+      return activeConversationId ?? conversations[0]?.id ?? "";
+    }
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
     const conv: Conversation = {
@@ -127,16 +150,23 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
     setConversations((prev) => [conv, ...prev].slice(0, 80));
     setActiveConversationId(id);
     return id;
-  }, []);
+  }, [user, conversations.length, conversations, activeConversationId, t]);
 
   const selectConversation = useCallback((id: string | null) => {
     setActiveConversationId(id);
   }, []);
 
-  const deleteConversation = useCallback((id: string) => {
-    setConversations((prev) => prev.filter((c) => c.id !== id));
-    setActiveConversationId((cur) => (cur === id ? null : cur));
-  }, []);
+  const deleteConversation = useCallback(
+    (id: string) => {
+      if (!user && conversations.length <= 1) {
+        toast.message(t("anon.cannotDeleteOnlyChat"));
+        return;
+      }
+      setConversations((prev) => prev.filter((c) => c.id !== id));
+      setActiveConversationId((cur) => (cur === id ? null : cur));
+    },
+    [user, conversations.length, t]
+  );
 
   const renameConversation = useCallback((id: string, title: string) => {
     setConversations((prev) =>

@@ -282,5 +282,14 @@
   },
   "appleMusic": {
     "compactLine": "{{action}} · cuenta Apple Music (sin nuevo inicio de sesión)"
+  },
+  "referral": {
+    "claimSuccess": "Invitación aplicada: ambos habéis recibido tokens extra.",
+    "title": "Invita a un amigo",
+    "subtitle": "Con tu enlace: +{{signup}} tokens cada uno al registrarse. Si pasa a Premium, una vez +{{pct}} % de tokens del ciclo para ambos.",
+    "loading": "Cargando enlace…",
+    "copy": "Copiar enlace",
+    "copied": "Enlace copiado",
+    "copyFailed": "No se pudo copiar"
   }
 }

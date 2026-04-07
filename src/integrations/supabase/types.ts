@@ -106,6 +106,36 @@ export type Database = {
           },
         ]
       }
+      anonymous_ip_quotas: {
+        Row: {
+          anonymous_session_id: string
+          conversation_id: string
+          created_at: string
+          id: string
+          ip: string
+          search_count: number
+          updated_at: string
+        }
+        Insert: {
+          anonymous_session_id: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          ip: string
+          search_count?: number
+          updated_at?: string
+        }
+        Update: {
+          anonymous_session_id?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          ip?: string
+          search_count?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -113,6 +143,8 @@ export type Database = {
           display_name: string | null
           email: string | null
           id: string
+          referral_code: string
+          referred_by_user_id: string | null
           updated_at: string
         }
         Insert: {
@@ -121,6 +153,8 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id: string
+          referral_code?: string
+          referred_by_user_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -129,7 +163,36 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
+          referral_code?: string
+          referred_by_user_id?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          created_at: string
+          id: string
+          pro_rewarded_at: string | null
+          referee_id: string
+          referrer_id: string
+          signup_rewarded_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pro_rewarded_at?: string | null
+          referee_id: string
+          referrer_id: string
+          signup_rewarded_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pro_rewarded_at?: string | null
+          referee_id?: string
+          referrer_id?: string
+          signup_rewarded_at?: string
         }
         Relationships: []
       }
@@ -466,31 +529,79 @@ export type Database = {
       }
       user_settings: {
         Row: {
+          ai_provider_mode: string
           allow_anonymized_improvement_data: boolean
           anonymous_session_id: string | null
+          byo_ai_provider: string | null
+          byo_api_key_masked: string | null
+          byo_disclaimer_accepted_at: string | null
+          byo_key_last_validated_at: string | null
+          byo_key_status: string | null
           created_at: string
+          description_language: string | null
           id: string
           sync_favorites_echoes_playlist: boolean
+          theme: string | null
+          ui_language: string | null
           updated_at: string
           user_id: string | null
         }
         Insert: {
+          ai_provider_mode?: string
           allow_anonymized_improvement_data?: boolean
           anonymous_session_id?: string | null
+          byo_ai_provider?: string | null
+          byo_api_key_masked?: string | null
+          byo_disclaimer_accepted_at?: string | null
+          byo_key_last_validated_at?: string | null
+          byo_key_status?: string | null
           created_at?: string
+          description_language?: string | null
           id?: string
           sync_favorites_echoes_playlist?: boolean
+          theme?: string | null
+          ui_language?: string | null
           updated_at?: string
           user_id?: string | null
         }
         Update: {
+          ai_provider_mode?: string
           allow_anonymized_improvement_data?: boolean
           anonymous_session_id?: string | null
+          byo_ai_provider?: string | null
+          byo_api_key_masked?: string | null
+          byo_disclaimer_accepted_at?: string | null
+          byo_key_last_validated_at?: string | null
+          byo_key_status?: string | null
           created_at?: string
+          description_language?: string | null
           id?: string
           sync_favorites_echoes_playlist?: boolean
+          theme?: string | null
+          ui_language?: string | null
           updated_at?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_byo_ai_secrets: {
+        Row: {
+          ciphertext: string
+          iv: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ciphertext: string
+          iv: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ciphertext?: string
+          iv?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -568,6 +679,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_anonymous_search: {
+        Args: { p_conversation: string; p_ip: string; p_session: string }
+        Returns: Json
+      },
+      claim_referral: {
+        Args: { p_code: string }
+        Returns: Json
+      },
       grant_tokens: {
         Args: {
           p_amount: number
@@ -580,6 +699,10 @@ export type Database = {
       spend_token: {
         Args: { p_amount?: number; p_user_id: string }
         Returns: boolean
+      }
+      try_grant_referral_pro_bonus: {
+        Args: { p_bonus: number; p_referee_id: string }
+        Returns: Json
       }
     }
     Enums: {

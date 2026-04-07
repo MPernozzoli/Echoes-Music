@@ -11,6 +11,7 @@ import { SpotifyProvider } from "@/context/SpotifyContext";
 import { AppleMusicProvider } from "@/context/AppleMusicContext";
 import { PlaybackQueueProvider } from "@/context/PlaybackQueueContext";
 import { FavoritesEchoesPlaylistSync } from "@/components/FavoritesEchoesPlaylistSync";
+import { ThemePreferenceSync } from "@/components/ThemePreferenceSync";
 import { ThemeFaviconSync } from "@/components/AppLogo";
 import Landing from "./pages/Landing";
 import Chat from "./pages/Chat";
@@ -19,6 +20,7 @@ import Pricing from "./pages/Pricing";
 import SubscribePlan from "./pages/SubscribePlan";
 import BuyTokens from "./pages/BuyTokens";
 import CheckoutReturnHandler from "./components/CheckoutReturnHandler";
+import { ReferralQueryCapture, ReferralClaimOnLogin } from "./components/ReferralProgram";
 
 const DiscoverRedirect = () => {
   const { search } = useLocation();
@@ -42,6 +44,9 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+        <ReferralQueryCapture />
+        <ReferralClaimOnLogin />
+        <ThemePreferenceSync />
         <CheckoutReturnHandler />
         <AppProvider>
           <ConversationProvider>

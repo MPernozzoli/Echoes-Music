@@ -94,7 +94,7 @@ const Chat = () => {
   const [chatDockInset, setChatDockInset] = useState(0);
 
   const isMobile = useIsMobile();
-  const { refreshTokenBalance } = useAuth();
+  const { refreshTokenBalance, user } = useAuth();
   const { isConnected: spotifyConnected, loading: spotifyLoading } = useSpotify();
   const {
     isAvailable: appleMusicAvailable,
@@ -185,7 +185,11 @@ const Chat = () => {
   const streamingLinked =
     spotifyConnected || (appleMusicAvailable && appleMusicAuthorized);
   const showStreamingConnectBanner =
-    hasAnyMessage && !spotifyLoading && !appleMusicLoading && !streamingLinked;
+    Boolean(user) &&
+    hasAnyMessage &&
+    !spotifyLoading &&
+    !appleMusicLoading &&
+    !streamingLinked;
   /** Su desktop con coda, profilo/coda duplicati sono nel dock — non nel thread */
   const hideInlineDockExtras = queue.length > 0 && !isMobile;
   useLayoutEffect(() => {
@@ -233,9 +237,26 @@ const Chat = () => {
           descriptionLanguage,
           conversationMemory: memoryPayload,
           userTasteProfile,
+          conversationId,
         });
 
         if (data.error) {
+          if (data.code?.startsWith("anon_")) {
+            toast.error(data.error || t("chat.anonQuotaLogin"));
+            setIsLoading(false);
+            navigate("/auth", { replace: true });
+            return;
+          }
+          if (data.code?.startsWith("byo_")) {
+            toast.error(data.error || t("chat.toastSearchFailed"), {
+              description: data.byo_fallback_suggested
+                ? "You can return to Echoes managed AI under Profile → Advanced AI Settings."
+                : undefined,
+            });
+            setIsLoading(false);
+            void refreshTokenBalance();
+            return;
+          }
           if (data.error.includes("Rate") || data.error.includes("429")) toast.error(t("chat.toastRate"));
           else if (
             data.error.includes("credits") ||
@@ -336,6 +357,7 @@ const Chat = () => {
       mergeUserTasteFromUpdate,
       isGloballyPlaying,
       playNowReplace,
+      navigate,
     ]
   );
 
@@ -454,7 +476,10 @@ const Chat = () => {
     const hasImg = Boolean(ls.imageBase64 && ls.imageMimeType);
     if (!text && !hasImg) return;
     landingFromHomeProcessed.current = true;
-    const id = createConversation();
+    const id =
+      activeConversationId ??
+      conversations[0]?.id ??
+      createConversation();
     navigate(`${CHAT_PATH}?conversation=${encodeURIComponent(id)}`, { replace: true, state: {} });
     const displayText = text || t("chat.imageSearchLabel");
     const previewUrl =
@@ -467,18 +492,38 @@ const Chat = () => {
         ? { imageBase64: ls.imageBase64, imageMimeType: ls.imageMimeType }
         : undefined;
     setTimeout(() => void runSearch(id, text, media), 0);
-  }, [location.state, t, createConversation, navigate, appendUserMessage, runSearch]);
+  }, [
+    location.state,
+    t,
+    activeConversationId,
+    conversations,
+    createConversation,
+    navigate,
+    appendUserMessage,
+    runSearch,
+  ]);
 
   useEffect(() => {
     if (qProcessed.current) return;
     const q = searchParams.get("q");
     if (!q) return;
     qProcessed.current = true;
-    const id = createConversation();
+    const id =
+      activeConversationId ??
+      conversations[0]?.id ??
+      createConversation();
     navigate(`${CHAT_PATH}?conversation=${encodeURIComponent(id)}`, { replace: true });
     appendUserMessage(id, q);
     setTimeout(() => void runSearch(id, q), 0);
-  }, [searchParams, createConversation, navigate, appendUserMessage, runSearch]);
+  }, [
+    searchParams,
+    activeConversationId,
+    conversations,
+    createConversation,
+    navigate,
+    appendUserMessage,
+    runSearch,
+  ]);
 
   useEffect(() => {
     if (luckyProcessed.current) return;
@@ -487,8 +532,13 @@ const Chat = () => {
     const data = st.luckyPayload;
     const luckySongs = filterSongsByMinRelevance(dedupeSongVersions(data.songs!));
     if (!luckySongs.length) return;
+    const cid =
+      searchParams.get("conversation") ||
+      activeConversationId ||
+      conversations[0]?.id;
+    if (!cid) return;
     luckyProcessed.current = true;
-    const id = createConversation();
+    const id = cid;
     const surpriseLabel = t("chat.surpriseMe");
     appendUserMessage(id, surpriseLabel);
     const presentation: SearchResult["playbackPresentation"] = isGloballyPlaying ? "pick" : "inline";
@@ -537,7 +587,9 @@ const Chat = () => {
   }, [
     t,
     location.state,
-    createConversation,
+    searchParams,
+    activeConversationId,
+    conversations,
     appendUserMessage,
     appendAssistantResult,
     patchSearchResultTracking,
