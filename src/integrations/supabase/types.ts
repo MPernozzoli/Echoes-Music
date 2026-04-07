@@ -153,7 +153,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id: string
-          referral_code?: string
+          referral_code: string
           referred_by_user_id?: string | null
           updated_at?: string
         }
@@ -527,6 +527,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_byo_ai_secrets: {
+        Row: {
+          ciphertext: string
+          iv: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ciphertext: string
+          iv: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ciphertext?: string
+          iv?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_settings: {
         Row: {
           ai_provider_mode: string
@@ -581,27 +602,6 @@ export type Database = {
           ui_language?: string | null
           updated_at?: string
           user_id?: string | null
-        }
-        Relationships: []
-      }
-      user_byo_ai_secrets: {
-        Row: {
-          ciphertext: string
-          iv: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          ciphertext: string
-          iv: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          ciphertext?: string
-          iv?: string
-          updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }
@@ -682,11 +682,8 @@ export type Database = {
       claim_anonymous_search: {
         Args: { p_conversation: string; p_ip: string; p_session: string }
         Returns: Json
-      },
-      claim_referral: {
-        Args: { p_code: string }
-        Returns: Json
-      },
+      }
+      claim_referral: { Args: { p_code: string }; Returns: Json }
       grant_tokens: {
         Args: {
           p_amount: number
@@ -694,7 +691,7 @@ export type Database = {
           p_type: string
           p_user_id: string
         }
-        Returns: null
+        Returns: undefined
       }
       spend_token: {
         Args: { p_amount?: number; p_user_id: string }
