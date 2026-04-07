@@ -152,8 +152,8 @@ const SongCard = ({
             ))}
           </div>
 
-          {/* Spotify Player */}
-          {showPlayer && <SpotifyPlayer trackTitle={title} artistName={artist} />}
+          {/* Music Player */}
+          {showPlayer && <MusicPlayer trackTitle={title} artistName={artist} />}
 
           {/* Inline feedback */}
           {searchResultId && searchId && (
