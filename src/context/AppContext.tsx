@@ -31,6 +31,8 @@ interface AppState {
   clearListenHistory: () => void;
   setDescriptionLanguage: (lang: string) => void;
   setUiLanguage: (lang: SupportedUiLang) => void;
+  /** Ricarica da server (user_settings) lingue, sync playlist, ecc. */
+  refreshPreferencesFromServer: () => Promise<void>;
 }
 
 export const AppContext = createContext<AppState | null>(null);
@@ -83,15 +85,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [syncFavoritesEchoesPlaylist, setSyncFavoritesEchoesPlaylistState] = useState(false);
 
   const mergeSettingsFromServer = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
     const s = await getUserSettings();
     if (!s) return;
     if (typeof s.sync_favorites_echoes_playlist === "boolean") {
       setSyncFavoritesEchoesPlaylistState(s.sync_favorites_echoes_playlist);
     }
-    if (session?.user) {
-      if (s.ui_language && isSupported(s.ui_language)) setUiLanguageState(s.ui_language);
-      if (s.description_language) setDescriptionLanguageState(s.description_language);
+    if (s.ui_language && isSupported(s.ui_language)) setUiLanguageState(s.ui_language);
+    if (s.description_language != null && s.description_language !== "") {
+      setDescriptionLanguageState(s.description_language);
     }
   }, []);
 
@@ -104,6 +105,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (event === "SIGNED_IN" && sess?.user) void mergeSettingsFromServer();
     });
     return () => subscription.unsubscribe();
+  }, [mergeSettingsFromServer]);
+
+  const refreshPreferencesFromServer = useCallback(async () => {
+    await mergeSettingsFromServer();
   }, [mergeSettingsFromServer]);
 
   useEffect(() => {
@@ -203,6 +208,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         clearListenHistory,
         setDescriptionLanguage,
         setUiLanguage,
+        refreshPreferencesFromServer,
       }}
     >
       {children}

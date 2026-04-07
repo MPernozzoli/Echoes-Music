@@ -184,20 +184,14 @@ export async function setSyncFavoritesEchoesPlaylist(enabled: boolean) {
 }
 
 export async function persistUiLanguage(lang: string) {
-  const uid = await authUserId();
-  if (!uid) return;
   await upsertUserSettingsPatch({ ui_language: lang });
 }
 
 export async function persistDescriptionLanguage(lang: string) {
-  const uid = await authUserId();
-  if (!uid) return;
   await upsertUserSettingsPatch({ description_language: lang });
 }
 
 export async function persistThemePreference(theme: string) {
-  const uid = await authUserId();
-  if (!uid) return;
   await upsertUserSettingsPatch({ theme });
 }
 

@@ -299,8 +299,14 @@ const FullPlayer = ({
       ((!useApplePlayback && useEmbed && Boolean(sp)) ||
         (useApplePlayback && Boolean(am) && !(appleMusic.isAuthorized && appleMusic.isAvailable)));
     if (embedOnly) {
-      if (sp) window.open(`https://open.spotify.com/track/${sp}`, "_blank", "noopener,noreferrer");
-      else if (am) window.open(`https://music.apple.com/us/song/${am}`, "_blank", "noopener,noreferrer");
+      // Con preferenza Apple non aprire mai Spotify solo perché c’è anche spotifyUri sulla canzone.
+      if (useApplePlayback && am) {
+        window.open(`https://music.apple.com/us/song/${am}`, "_blank", "noopener,noreferrer");
+      } else if (sp) {
+        window.open(`https://open.spotify.com/track/${sp}`, "_blank", "noopener,noreferrer");
+      } else if (am) {
+        window.open(`https://music.apple.com/us/song/${am}`, "_blank", "noopener,noreferrer");
+      }
       return;
     }
     if (useAppleKitPlayer) void kitPlayerRef.current?.togglePlay();
@@ -346,7 +352,9 @@ const FullPlayer = ({
       (useApplePlayback && Boolean(appleMusicId) && !(appleMusic.isAuthorized && appleMusic.isAvailable)));
 
   const openExternalStream = () => {
-    if (spotifyTrackId) {
+    if (useApplePlayback && appleMusicId) {
+      window.open(`https://music.apple.com/us/song/${appleMusicId}`, "_blank", "noopener,noreferrer");
+    } else if (spotifyTrackId) {
       window.open(`https://open.spotify.com/track/${spotifyTrackId}`, "_blank", "noopener,noreferrer");
     } else if (appleMusicId) {
       window.open(`https://music.apple.com/us/song/${appleMusicId}`, "_blank", "noopener,noreferrer");

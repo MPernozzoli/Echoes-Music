@@ -28,6 +28,7 @@ function statusLabel(server: ByoAiSettingsStatus): { text: string; tone: "ok" | 
 
 export function AdvancedAISettings() {
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [server, setServer] = useState<ByoAiSettingsStatus | null>(null);
   const [draftMode, setDraftMode] = useState<DraftMode>("managed");
   const [disclaimerChecked, setDisclaimerChecked] = useState(false);
@@ -40,6 +41,7 @@ export function AdvancedAISettings() {
   const [modeSaving, setModeSaving] = useState(false);
 
   const refresh = useCallback(async () => {
+    setLoadError(null);
     const s = await getByoAiSettings();
     setServer(s);
     setDraftMode(s.ai_provider_mode === "byo_key" ? "byo" : "managed");
@@ -54,8 +56,12 @@ export function AdvancedAISettings() {
         if (!cancelled && s) {
           setDraftMode(s.ai_provider_mode === "byo_key" ? "byo" : "managed");
         }
-      } catch {
-        if (!cancelled) toast.error("Could not load advanced AI settings.");
+      } catch (e) {
+        if (!cancelled) {
+          const msg = e instanceof Error ? e.message : "Could not load advanced AI settings.";
+          setLoadError(msg);
+          toast.error(msg);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -180,7 +186,43 @@ export function AdvancedAISettings() {
     );
   }
 
-  if (!server) return null;
+  if (!server) {
+    if (loadError) {
+      return (
+        <div className="glass-card rounded-2xl p-6 mb-6 border border-destructive/20">
+          <div className="flex items-start gap-3">
+            <Sparkles className="w-5 h-5 text-amber-500/90 shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <h3 className="font-body text-sm font-medium text-foreground">Advanced AI Settings</h3>
+              <p className="text-xs text-muted-foreground font-body mt-2 leading-relaxed">
+                Impossibile caricare questa sezione. Di solito dipende da una di queste cose: non sei loggato con sessione valida, la Edge
+                Function <code className="text-[10px] px-1 rounded bg-muted">byo-ai-settings</code> non è ancora deployata su Supabase, o
+                manca il secret <code className="text-[10px] px-1 rounded bg-muted">BYO_AI_ENCRYPTION_KEY</code> (vedi punto 2 sotto).
+              </p>
+              <p className="text-xs text-destructive/90 font-mono mt-2 break-all">{loadError}</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoading(true);
+                  setLoadError(null);
+                  void refresh()
+                    .catch((err) => {
+                      setLoadError(err instanceof Error ? err.message : "Retry failed");
+                      toast.error(err instanceof Error ? err.message : "Retry failed");
+                    })
+                    .finally(() => setLoading(false));
+                }}
+                className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-body border border-border hover:border-primary/30"
+              >
+                Riprova
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  }
 
   const badge = statusLabel(server);
   const showByoFlow = draftMode === "byo";

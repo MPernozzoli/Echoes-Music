@@ -76,6 +76,7 @@ const Profile = () => {
     setUiLanguage,
     syncFavoritesEchoesPlaylist,
     setSyncFavoritesEchoesPlaylist,
+    refreshPreferencesFromServer,
   } = useApp();
   const { user, tokenBalance, plan, signOut } = useAuth();
   const { isConnected: spotifyConnected, displayName: spotifyName, isPremium, loading: spotifyLoading, setDisconnected } = useSpotify();
@@ -101,11 +102,23 @@ const Profile = () => {
   }, [user?.id]);
 
   useEffect(() => {
-    getUserSettings().then((s) => {
-      if (s) setAllowData(s.allow_anonymized_improvement_data);
-      setLoadingSettings(false);
-    });
-  }, []);
+    let cancelled = false;
+    void (async () => {
+      await refreshPreferencesFromServer();
+      if (cancelled) return;
+      const s = await getUserSettings();
+      if (cancelled) return;
+      if (s) {
+        setAllowData(s.allow_anonymized_improvement_data);
+        const th = s.theme;
+        if (th === "light" || th === "dark" || th === "system") setTheme(th);
+      }
+      if (!cancelled) setLoadingSettings(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshPreferencesFromServer, user?.id, setTheme]);
 
   const handleToggle = async () => {
     const next = !allowData;
@@ -521,7 +534,25 @@ const Profile = () => {
           </div>
         </div>
 
-        {user ? <AdvancedAISettings /> : null}
+        {user ? (
+          <AdvancedAISettings />
+        ) : (
+          <div className="glass-card rounded-2xl p-6 mb-6 border border-border/50">
+            <h3 className="font-body text-sm font-medium text-foreground">Advanced AI Settings</h3>
+            <p className="text-xs text-muted-foreground font-body mt-1 leading-relaxed">
+              Per collegare la tua API key OpenAI (modalità avanzata) devi essere loggato. Dopo il login la sezione completa apparirà qui,
+              sotto il tema.
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate("/auth")}
+              className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-body border border-border text-primary hover:bg-primary/10"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              Accedi
+            </button>
+          </div>
+        )}
 
         <div className="glass-card rounded-2xl p-6 mb-6">
           <div className="flex items-center justify-between">
