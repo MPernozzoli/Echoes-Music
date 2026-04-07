@@ -275,6 +275,199 @@ Deno.serve(async (req) => {
       });
     }
 
+    // --- ENSURE "ECHOES" PLAYLIST (find by name or create) ---
+    if (action === 'ensure_echoes_playlist') {
+      if (!session_id) {
+        return new Response(JSON.stringify({ error: 'session_id required' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const auth = await getValidAccessToken(supabase, session_id, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET);
+      if ('error' in auth) {
+        return new Response(JSON.stringify({ error: auth.error }), {
+          status: auth.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const PLAYLIST_NAME = 'Echoes';
+      let url: string | null = `${SPOTIFY_API}/me/playlists?limit=50`;
+      while (url) {
+        const res = await fetch(url, {
+          headers: { Authorization: `Bearer ${auth.access_token}` },
+        });
+        if (!res.ok) {
+          const t = await res.text();
+          return new Response(JSON.stringify({ error: t || `Spotify ${res.status}` }), {
+            status: res.status === 401 || res.status === 403 ? res.status : 502,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        const data = await res.json();
+        const items = (data.items ?? []) as { id: string; name: string }[];
+        const found = items.find((p) => p.name === PLAYLIST_NAME);
+        if (found) {
+          return new Response(JSON.stringify({ playlist_id: found.id }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        url = data.next ?? null;
+      }
+
+      const meRes = await fetch(SPOTIFY_ME_URL, {
+        headers: { Authorization: `Bearer ${auth.access_token}` },
+      });
+      if (!meRes.ok) {
+        const t = await meRes.text();
+        return new Response(JSON.stringify({ error: t || 'Spotify me failed' }), {
+          status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const me = await meRes.json();
+      const userId = me.id;
+      if (!userId) {
+        return new Response(JSON.stringify({ error: 'Spotify user id missing' }), {
+          status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const createRes = await fetch(`${SPOTIFY_API}/users/${encodeURIComponent(userId)}/playlists`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${auth.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: PLAYLIST_NAME,
+          public: false,
+          description: 'Preferiti sincronizzati da Echoes',
+        }),
+      });
+      if (!createRes.ok) {
+        const t = await createRes.text();
+        return new Response(JSON.stringify({ error: t || `Spotify ${createRes.status}` }), {
+          status: createRes.status === 401 || createRes.status === 403 ? createRes.status : 502,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const created = await createRes.json();
+      const pid = created.id;
+      if (!pid) {
+        return new Response(JSON.stringify({ error: 'Playlist create: no id' }), {
+          status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(JSON.stringify({ playlist_id: pid }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // --- REPLACE PLAYLIST TRACKS (full mirror; track_ids = Spotify track ids without prefix) ---
+    if (action === 'replace_playlist_tracks') {
+      const { playlist_id, track_ids } = body;
+      if (!session_id || !playlist_id || !Array.isArray(track_ids)) {
+        return new Response(JSON.stringify({ error: 'session_id, playlist_id and track_ids[] required' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const auth = await getValidAccessToken(supabase, session_id, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET);
+      if ('error' in auth) {
+        return new Response(JSON.stringify({ error: auth.error }), {
+          status: auth.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const toUris = (ids: string[]) =>
+        ids.map((id) => {
+          const s = String(id).trim();
+          if (!s) return '';
+          return s.startsWith('spotify:') ? s : `spotify:track:${s}`;
+        }).filter(Boolean);
+
+      const uris = toUris(track_ids as string[]);
+
+      const clearPlaylist = async () => {
+        for (;;) {
+          const res = await fetch(
+            `${SPOTIFY_API}/playlists/${playlist_id}/tracks?limit=100&fields=items(track(uri)),next`,
+            { headers: { Authorization: `Bearer ${auth.access_token}` } },
+          );
+          if (!res.ok) {
+            const t = await res.text();
+            throw new Error(t || `Spotify ${res.status}`);
+          }
+          const page = await res.json();
+          const items = (page.items ?? []) as { track: { uri: string } | null }[];
+          const tracks = items
+            .filter((i) => i.track?.uri)
+            .map((i) => ({ uri: i.track!.uri }));
+          if (tracks.length === 0) break;
+          const delRes = await fetch(`${SPOTIFY_API}/playlists/${playlist_id}/tracks`, {
+            method: 'DELETE',
+            headers: {
+              Authorization: `Bearer ${auth.access_token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ tracks }),
+          });
+          if (!delRes.ok) {
+            const t = await delRes.text();
+            throw new Error(t || `Spotify ${delRes.status}`);
+          }
+        }
+      };
+
+      try {
+        if (uris.length === 0) {
+          await clearPlaylist();
+        } else {
+          const first = uris.slice(0, 100);
+          const putRes = await fetch(`${SPOTIFY_API}/playlists/${playlist_id}/tracks`, {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${auth.access_token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ uris: first }),
+          });
+          if (!putRes.ok) {
+            const t = await putRes.text();
+            return new Response(JSON.stringify({ error: t || `Spotify ${putRes.status}` }), {
+              status: putRes.status === 401 || putRes.status === 403 ? putRes.status : 502,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          for (let i = 100; i < uris.length; i += 100) {
+            const chunk = uris.slice(i, i + 100);
+            const postRes = await fetch(`${SPOTIFY_API}/playlists/${playlist_id}/tracks`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${auth.access_token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ uris: chunk }),
+            });
+            if (!postRes.ok) {
+              const t = await postRes.text();
+              return new Response(JSON.stringify({ error: t || `Spotify ${postRes.status}` }), {
+                status: postRes.status === 401 || postRes.status === 403 ? postRes.status : 502,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              });
+            }
+          }
+        }
+      } catch (e) {
+        return new Response(JSON.stringify({ error: (e as Error).message }), {
+          status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // --- ADD TO PLAYLIST ---
     if (action === 'add_to_playlist') {
       const { playlist_id, track_id } = body;
