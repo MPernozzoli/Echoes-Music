@@ -39,6 +39,8 @@ const SongCard = ({
   searchId,
   onTagClick,
   showPlayer = true,
+  spotifyUri,
+  appleMusicId,
 }: SongCardProps) => {
   const [imgLoaded, setImgLoaded] = useState(false);
   const [expanded, setExpanded] = useState(false);
