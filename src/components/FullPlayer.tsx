@@ -92,6 +92,8 @@ const FullPlayer = ({
   const [kitTelemetry, setKitTelemetry] = useState({ current: 0, duration: 0, isPlaying: false });
   const [dockShuffle, setDockShuffle] = useState(false);
   const [dockRepeat, setDockRepeat] = useState<DockRepeatMode>("off");
+  const dockRepeatRef = useRef<DockRepeatMode>(dockRepeat);
+  dockRepeatRef.current = dockRepeat;
 
   useEffect(() => {
     setKitTelemetry({ current: 0, duration: 0, isPlaying: false });
