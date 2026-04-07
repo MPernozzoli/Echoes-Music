@@ -89,16 +89,12 @@ Deno.serve(async (req) => {
       APPLE_MUSIC_TEAM_ID,
     );
 
-    const appleRes = await fetch('https://api.music.apple.com/v1/me/library', {
+    const appleRes = await fetch(`https://api.music.apple.com/v1/me/library?ids[songs]=${song_id}`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${devToken}`,
         'Music-User-Token': music_user_token,
-        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        data: [{ id: song_id, type: 'songs' }],
-      }),
     });
 
     if (appleRes.status === 202 || appleRes.status === 204) {
