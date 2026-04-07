@@ -142,9 +142,13 @@ interface AIInterpretation {
   songSuggestions: Array<{ title: string; artist: string; emotionalTags: string[]; explanation: string; relevanceScore: number }>;
 }
 
-async function interpretPrompt(prompt: string): Promise<AIInterpretation> {
+async function interpretPrompt(prompt: string, descriptionLanguage?: string): Promise<AIInterpretation> {
   const apiKey = Deno.env.get('LOVABLE_API_KEY');
   if (!apiKey) throw new Error('LOVABLE_API_KEY not configured');
+
+  const languageInstruction = descriptionLanguage && descriptionLanguage !== 'auto'
+    ? `IMPORTANT: The user has set their preferred language to "${descriptionLanguage}". ALL song explanations/descriptions MUST be written in ${descriptionLanguage}, regardless of the language of the user's prompt or the songs themselves. The emotional profile text (mood, energy, etc.) should also be in ${descriptionLanguage}.`
+    : `Write explanations and emotional profile text in the same language as the user's prompt.`;
 
   const systemPrompt = `You are Echoes, an advanced emotionally and culturally intelligent music discovery engine with deep knowledge of song lyrics, genres, languages, and musical concepts.
 
@@ -155,6 +159,9 @@ async function interpretPrompt(prompt: string): Promise<AIInterpretation> {
 - **Era & period**: Understand decades and musical eras (80s synth-pop, 90s grunge, 2000s indie, etc.).
 - **Complex concepts**: Handle metaphors, abstract ideas, cultural references, literary allusions, and synesthetic descriptions ("music that tastes like rain", "songs that feel like velvet").
 - **Instrumentation & production**: Understand lo-fi, acoustic, orchestral, electronic, analog, etc.
+
+## Language for descriptions:
+${languageInstruction}
 
 ## Instructions:
 Given the user's prompt:
