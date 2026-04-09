@@ -5,12 +5,15 @@ import { useAuth } from "@/context/useAuth";
 import TokenBadge from "@/components/TokenBadge";
 import { AppLogo } from "@/components/AppLogo";
 import TokenLowBanner from "@/components/TokenLowBanner";
+import { Button } from "@/components/ui/button";
 
 interface AppLayoutProps {
   children: React.ReactNode;
+  /** Home / landing: solo logo e azioni account, senza nav principale né dock mobile */
+  headerVariant?: "app" | "marketing";
 }
 
-const AppLayout = ({ children }: AppLayoutProps) => {
+const AppLayout = ({ children, headerVariant = "app" }: AppLayoutProps) => {
   const location = useLocation();
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -22,6 +25,8 @@ const AppLayout = ({ children }: AppLayoutProps) => {
     { labelKey: "nav.profile", path: "/profile", icon: User },
   ] as const;
 
+  const isMarketing = headerVariant === "marketing";
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
@@ -31,35 +36,62 @@ const AppLayout = ({ children }: AppLayoutProps) => {
             <span className="font-display text-lg font-semibold gradient-warm-text">Echoes</span>
           </Link>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <TokenBadge />
-            <nav className="hidden md:flex items-center gap-1">
-              {navItems.map((item) => {
-                const isActive = location.pathname === item.path;
-                return (
+            {!isMarketing && (
+              <nav className="hidden md:flex items-center gap-1">
+                {navItems.map((item) => {
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-body transition-colors ${
+                        isActive
+                          ? "text-primary bg-primary/10"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <item.icon className="w-4 h-4" />
+                      {t(item.labelKey)}
+                    </Link>
+                  );
+                })}
+              </nav>
+            )}
+            {isMarketing ? (
+              user ? (
+                <Link
+                  to="/profile"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-body font-medium text-primary hover:bg-primary/10 transition-colors"
+                >
+                  <User className="w-4 h-4 shrink-0" />
+                  <span className="hidden sm:inline">{t("nav.profile")}</span>
+                </Link>
+              ) : (
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   <Link
-                    key={item.path}
-                    to={item.path}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-body transition-colors ${
-                      isActive
-                        ? "text-primary bg-primary/10"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
+                    to="/auth"
+                    className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-body font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                   >
-                    <item.icon className="w-4 h-4" />
-                    {t(item.labelKey)}
+                    <LogIn className="w-4 h-4 shrink-0" />
+                    <span className="hidden sm:inline">{t("nav.login")}</span>
                   </Link>
-                );
-              })}
-            </nav>
-            {!user && (
-              <Link
-                to="/auth"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-primary hover:bg-primary/10 transition-colors"
-              >
-                <LogIn className="w-4 h-4" />
-                <span className="hidden md:inline">Login</span>
-              </Link>
+                  <Button size="sm" className="rounded-lg font-body" asChild>
+                    <Link to="/auth">{t("nav.signUp")}</Link>
+                  </Button>
+                </div>
+              )
+            ) : (
+              !user && (
+                <Link
+                  to="/auth"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-primary hover:bg-primary/10 transition-colors"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span className="hidden md:inline">{t("nav.login")}</span>
+                </Link>
+              )
             )}
           </div>
         </div>
@@ -69,6 +101,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
 
       <main className="flex-1">{children}</main>
 
+      {!isMarketing && (
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-border bg-background/90 backdrop-blur-xl">
         <div className="flex items-center justify-around h-14">
           {navItems.map((item) => {
@@ -88,6 +121,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
           })}
         </div>
       </nav>
+      )}
     </div>
   );
 };

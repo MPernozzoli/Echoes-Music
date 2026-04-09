@@ -1,5 +1,5 @@
 {
-  "nav": { "chat": "Chat", "history": "Verlauf", "favorites": "Favoriten", "profile": "Profil", "home": "Start" },
+  "nav": { "chat": "Chat", "history": "Verlauf", "favorites": "Favoriten", "profile": "Profil", "home": "Start", "login": "Anmelden", "signUp": "Registrieren" },
   "auth": {
     "freeTokens": "{{count}} Suchen inklusive bei der Registrierung",
     "loginError": "Anmeldung fehlgeschlagen. Bitte erneut versuchen.",

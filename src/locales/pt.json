@@ -1,5 +1,5 @@
 {
-  "nav": { "chat": "Chat", "history": "Histórico", "favorites": "Favoritos", "profile": "Perfil", "home": "Início" },
+  "nav": { "chat": "Chat", "history": "Histórico", "favorites": "Favoritos", "profile": "Perfil", "home": "Início", "login": "Entrar", "signUp": "Criar conta" },
   "auth": {
     "freeTokens": "{{count}} pesquisas incluídas ao criar conta",
     "loginError": "Falha no login. Tente novamente.",

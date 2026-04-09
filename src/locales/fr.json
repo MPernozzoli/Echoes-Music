@@ -1,5 +1,5 @@
 {
-  "nav": { "chat": "Chat", "history": "Historique", "favorites": "Favoris", "profile": "Profil", "home": "Accueil" },
+  "nav": { "chat": "Chat", "history": "Historique", "favorites": "Favoris", "profile": "Profil", "home": "Accueil", "login": "Connexion", "signUp": "S’inscrire" },
   "auth": {
     "freeTokens": "{{count}} recherches incluses à l’inscription",
     "loginError": "Connexion impossible. Réessayez.",

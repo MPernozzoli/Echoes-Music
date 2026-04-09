@@ -11,6 +11,7 @@ import { useApp } from "@/context/useApp";
 import { useConversations } from "@/context/useConversations";
 import { callMusicSearch } from "@/services/musicSearchApi";
 import { Button } from "@/components/ui/button";
+import AppLayout from "@/components/AppLayout";
 import { AppLogo } from "@/components/AppLogo";
 import { toast } from "sonner";
 
@@ -110,6 +111,7 @@ const Landing = () => {
   );
 
   return (
+    <AppLayout headerVariant="marketing">
     <div className="min-h-screen bg-background">
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
         <img
@@ -240,6 +242,7 @@ const Landing = () => {
         <p className="text-xs text-muted-foreground font-body">{t("landing.footerTagline")}</p>
       </footer>
     </div>
+    </AppLayout>
   );
 };
 

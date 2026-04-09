@@ -1,5 +1,5 @@
 {
-  "nav": { "chat": "Chat", "history": "Historial", "favorites": "Favoritos", "profile": "Perfil", "home": "Inicio" },
+  "nav": { "chat": "Chat", "history": "Historial", "favorites": "Favoritos", "profile": "Perfil", "home": "Inicio", "login": "Iniciar sesión", "signUp": "Registrarse" },
   "auth": {
     "freeTokens": "{{count}} búsquedas incluidas al registrarte",
     "loginError": "No se pudo iniciar sesión. Inténtalo de nuevo.",

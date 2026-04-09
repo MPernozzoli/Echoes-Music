@@ -4,7 +4,9 @@
     "history": "History",
     "favorites": "Favorites",
     "profile": "Profile",
-    "home": "Home"
+    "home": "Home",
+    "login": "Log in",
+    "signUp": "Sign up"
   },
   "auth": {
     "freeTokens": "{{count}} searches included when you sign up",
