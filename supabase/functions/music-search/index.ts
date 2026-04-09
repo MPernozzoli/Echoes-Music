@@ -798,6 +798,18 @@ Deno.serve(async (req) => {
     }
 
     if (mode === 'memory_compact') {
+      if (userId && admin) {
+        const { data: tokMc } = await admin.from('user_tokens').select('balance').eq('user_id', userId).maybeSingle();
+        if (!tokMc || tokMc.balance < 1) {
+          return new Response(
+            JSON.stringify({ error: 'Insufficient tokens', code: 'insufficient_tokens' }),
+            {
+              status: 402,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            },
+          );
+        }
+      }
       const routeMc = await loadAiInferenceRoute(admin, userId, false);
       const compact = await interpretMemoryCompact({
         descriptionLanguage,
@@ -816,6 +828,22 @@ Deno.serve(async (req) => {
           ? { provider: 'byo_openai', model: routeMc.model }
           : {}),
       });
+      if (userId && admin) {
+        const { data: spentMc, error: spendMcErr } = await admin.rpc('spend_token', {
+          p_user_id: userId,
+          p_amount: 1,
+        });
+        if (spendMcErr || spentMc !== true) {
+          console.error('spend_token memory_compact:', spendMcErr, spentMc);
+          return new Response(
+            JSON.stringify({ error: 'Insufficient tokens', code: 'insufficient_tokens' }),
+            {
+              status: 402,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            },
+          );
+        }
+      }
       return new Response(JSON.stringify({
         conversationMemoryUpdate: {
           threadSummary: compact.conversationMemoryUpdate.threadSummary,
@@ -849,10 +877,13 @@ Deno.serve(async (req) => {
     if (userId && admin) {
       const { data: tok } = await admin.from('user_tokens').select('balance').eq('user_id', userId).maybeSingle();
       if (!tok || tok.balance < 1) {
-        return new Response(JSON.stringify({ error: 'Insufficient tokens' }), {
-          status: 402,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        return new Response(
+          JSON.stringify({ error: 'Insufficient tokens', code: 'insufficient_tokens' }),
+          {
+            status: 402,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        );
       }
     }
 
@@ -964,8 +995,16 @@ Deno.serve(async (req) => {
 
     if (userId && admin) {
       const { data: spent, error: spendErr } = await admin.rpc('spend_token', { p_user_id: userId, p_amount: 1 });
-      if (spendErr) console.error('spend_token rpc:', spendErr);
-      else if (spent !== true) console.error('spend_token returned false', userId);
+      if (spendErr || spent !== true) {
+        console.error('spend_token search:', spendErr, spent, userId);
+        return new Response(
+          JSON.stringify({ error: 'Insufficient tokens', code: 'insufficient_tokens' }),
+          {
+            status: 402,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        );
+      }
     }
 
     return new Response(JSON.stringify(result), {

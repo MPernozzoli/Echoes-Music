@@ -33,6 +33,8 @@
     "resultsSubtitle": "Ogni consiglio ha contesto — non solo metadati, ma perché il brano risuona.",
     "enterEchoes": "Entra in Echoes",
     "footerTagline": "Scoperta musicale, reinventata.",
+    "footerPrivacy": "Privacy Policy",
+    "footerCookies": "Informativa sui cookie",
     "toastRateLimit": "Troppi richieste. Riprova tra poco.",
     "toastNoCredits": "Crediti AI esauriti.",
     "toastNoSongs": "Nessun brano trovato. Prova dopo qualche ricerca per affinare il profilo.",
@@ -333,7 +335,14 @@
     "checkoutError": "Impossibile avviare il pagamento. Riprova.",
     "portalError": "Impossibile aprire il portale. Serve un abbonamento attivo.",
     "bannerEmpty": "Non hai più token. Compra un pacchetto o passa a Premium per continuare a cercare.",
+    "bannerEmptyFree": "Non hai più token. Passa a Pro per avere un accredito mensile, oppure compra un pacchetto una tantum.",
+    "bannerEmptyPremium": "Hai esaurito i token di questo periodo. Ricarica con un pacchetto per continuare subito.",
+    "bannerEmptyPremiumHint": "Al rinnovo del ciclo riceverai di nuovo i token inclusi nel piano.",
     "bannerLow": "Ti restano {{count}} token. Ricarica prima che finiscano.",
+    "bannerLowFree": "Ti restano {{count}} token. Con Pro hai un tetto mensile incluso; puoi anche ricaricare quando vuoi.",
+    "bannerLowPremium": "Ti restano {{count}} token. Ricarica prima che finiscano.",
+    "bannerSubscribeProCta": "Abbonati a Pro",
+    "bannerManageBillingCta": "Gestisci abbonamento",
     "buyTokensCta": "Compra token",
     "viewPlansCta": "Vedi piani",
     "topUpCta": "Ricarica",
@@ -370,5 +379,11 @@
     "copy": "Copia link",
     "copied": "Link copiato",
     "copyFailed": "Impossibile copiare"
+  },
+  "legal": {
+    "privacyTitle": "Informativa sulla privacy",
+    "cookiesTitle": "Informativa sui cookie",
+    "backHome": "Torna alla home",
+    "lastUpdated": "Ultimo aggiornamento: 9 aprile 2026"
   }
 }

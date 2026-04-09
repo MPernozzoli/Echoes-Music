@@ -29,6 +29,8 @@
     "resultsSubtitle": "Cada recomendação tem contexto — não só metadados, mas por que a música ressoa.",
     "enterEchoes": "Entrar no Echoes",
     "footerTagline": "Descoberta musical, reinventada.",
+    "footerPrivacy": "Política de privacidade",
+    "footerCookies": "Política de cookies",
     "toastRateLimit": "Muitas solicitações. Tente de novo em breve.",
     "toastNoCredits": "Créditos de IA esgotados.",
     "toastNoSongs": "Nenhuma faixa encontrada. Faça algumas buscas para refinar o perfil.",
@@ -291,5 +293,11 @@
     "copy": "Copiar link",
     "copied": "Link copiado",
     "copyFailed": "Não foi possível copiar"
+  },
+  "legal": {
+    "privacyTitle": "Política de privacidade",
+    "cookiesTitle": "Política de cookies",
+    "backHome": "Voltar ao início",
+    "lastUpdated": "Última atualização: 9 de abril de 2026"
   }
 }

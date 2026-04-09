@@ -32,6 +32,8 @@ import Profile from "./pages/Profile";
 import Insights from "./pages/Insights";
 import SpotifyCallback from "./pages/SpotifyCallback";
 import NotFound from "./pages/NotFound";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import CookiePolicy from "./pages/CookiePolicy";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +69,8 @@ const App = () => (
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/insights" element={<Insights />} />
                 <Route path="/spotify-callback" element={<SpotifyCallback />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/cookies" element={<CookiePolicy />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </PlaybackQueueProvider>

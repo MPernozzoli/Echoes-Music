@@ -8,6 +8,7 @@ import SongCard from "@/components/SongCard";
 import { mockSongs } from "@/data/mockData";
 import { pickDiscoverPromptSuggestions } from "@/lib/discoverPromptSuggestions";
 import { useApp } from "@/context/useApp";
+import { useAuth } from "@/context/useAuth";
 import { useConversations } from "@/context/useConversations";
 import { callMusicSearch } from "@/services/musicSearchApi";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ const Landing = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { descriptionLanguage } = useApp();
+  const { refreshTokenBalance } = useAuth();
   const { userTasteProfile, conversations, activeConversationId } = useConversations();
   const [luckyLoading, setLuckyLoading] = useState(false);
 
@@ -82,17 +84,26 @@ const Landing = () => {
               ? "You can return to Echoes managed AI under Profile → Advanced AI Settings."
               : undefined,
           });
+          void refreshTokenBalance();
           return;
         }
         if (data.error.includes("Rate") || data.error.includes("429")) toast.error(t("landing.toastRateLimit"));
-        else if (data.error.includes("credits") || data.error.includes("402")) toast.error(t("landing.toastNoCredits"));
-        else toast.error(data.error);
+        else if (
+          data.error.includes("credits") ||
+          data.error.includes("402") ||
+          data.error.includes("Insufficient")
+        ) {
+          toast.error(t("landing.toastNoCredits"));
+        } else toast.error(data.error);
+        void refreshTokenBalance();
         return;
       }
       if (!data.emotionalProfile || !data.songs?.length) {
         toast.error(t("landing.toastNoSongs"));
+        void refreshTokenBalance();
         return;
       }
+      void refreshTokenBalance();
       navigate(`/chat?conversation=${encodeURIComponent(convId)}`, { state: { luckyPayload: data } });
     } catch {
       toast.error(t("landing.toastGenericError"));
@@ -240,6 +251,17 @@ const Landing = () => {
           <p className="font-display text-lg gradient-warm-text">Echoes</p>
         </div>
         <p className="text-xs text-muted-foreground font-body">{t("landing.footerTagline")}</p>
+        <nav className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs font-body">
+          <Link to="/privacy" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
+            {t("landing.footerPrivacy")}
+          </Link>
+          <span className="text-border" aria-hidden>
+            ·
+          </span>
+          <Link to="/cookies" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
+            {t("landing.footerCookies")}
+          </Link>
+        </nav>
       </footer>
     </div>
     </AppLayout>

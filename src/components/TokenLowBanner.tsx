@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 
 const TokenLowBanner = () => {
   const { t } = useTranslation();
-  const { user, tokenBalance } = useAuth();
+  const { user, tokenBalance, plan } = useAuth();
+  const isPremium = (plan ?? "").toLowerCase() === "premium";
 
   if (!user || tokenBalance === null) return null;
 
@@ -15,17 +16,37 @@ const TokenLowBanner = () => {
     return (
       <div className="border-b border-destructive/40 bg-destructive/10 px-4 py-3">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex items-start gap-2 text-sm">
+          <div className="flex items-start gap-2 text-sm min-w-0">
             <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-            <p className="text-foreground font-medium">{t("pricing.bannerEmpty")}</p>
+            <div className="min-w-0">
+              <p className="text-foreground font-medium">
+                {isPremium ? t("pricing.bannerEmptyPremium") : t("pricing.bannerEmptyFree")}
+              </p>
+              {isPremium ? (
+                <p className="text-xs text-muted-foreground mt-1">{t("pricing.bannerEmptyPremiumHint")}</p>
+              ) : null}
+            </div>
           </div>
           <div className="flex flex-wrap gap-2 shrink-0">
-            <Button size="sm" variant="secondary" asChild>
-              <Link to="/pricing/tokens">{t("pricing.buyTokensCta")}</Link>
-            </Button>
-            <Button size="sm" asChild>
-              <Link to="/pricing/plan">{t("pricing.viewPlansCta")}</Link>
-            </Button>
+            {isPremium ? (
+              <>
+                <Button size="sm" asChild>
+                  <Link to="/pricing/tokens">{t("pricing.buyTokensCta")}</Link>
+                </Button>
+                <Button size="sm" variant="secondary" asChild>
+                  <Link to="/profile">{t("pricing.bannerManageBillingCta")}</Link>
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button size="sm" asChild>
+                  <Link to="/pricing/plan">{t("pricing.bannerSubscribeProCta")}</Link>
+                </Button>
+                <Button size="sm" variant="secondary" asChild>
+                  <Link to="/pricing/tokens">{t("pricing.buyTokensCta")}</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -43,15 +64,35 @@ const TokenLowBanner = () => {
       }`}
     >
       <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-        <div className="flex items-center gap-2 text-sm">
+        <div className="flex items-center gap-2 text-sm min-w-0">
           <Coins className={`w-4 h-4 shrink-0 ${urgent ? "text-amber-600 dark:text-amber-400" : "text-primary"}`} />
-          <p className={urgent ? "text-amber-950 dark:text-amber-100 font-medium" : "text-muted-foreground"}>
-            {t("pricing.bannerLow", { count: tokenBalance })}
+          <p className={`min-w-0 ${urgent ? "text-amber-950 dark:text-amber-100 font-medium" : "text-muted-foreground"}`}>
+            {isPremium
+              ? t("pricing.bannerLowPremium", { count: tokenBalance })
+              : t("pricing.bannerLowFree", { count: tokenBalance })}
           </p>
         </div>
-        <Button size="sm" variant={urgent ? "default" : "outline"} className="shrink-0 w-fit" asChild>
-          <Link to="/pricing/tokens">{t("pricing.topUpCta")}</Link>
-        </Button>
+        <div className="flex flex-wrap gap-2 shrink-0">
+          {isPremium ? (
+            <>
+              <Button size="sm" variant={urgent ? "default" : "outline"} className="w-fit" asChild>
+                <Link to="/pricing/tokens">{t("pricing.topUpCta")}</Link>
+              </Button>
+              <Button size="sm" variant="ghost" className="w-fit" asChild>
+                <Link to="/profile">{t("pricing.bannerManageBillingCta")}</Link>
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button size="sm" variant={urgent ? "default" : "outline"} className="w-fit" asChild>
+                <Link to="/pricing/plan">{t("pricing.bannerSubscribeProCta")}</Link>
+              </Button>
+              <Button size="sm" variant={urgent ? "secondary" : "ghost"} className="w-fit" asChild>
+                <Link to="/pricing/tokens">{t("pricing.topUpCta")}</Link>
+              </Button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

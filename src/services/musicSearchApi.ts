@@ -31,7 +31,7 @@ export interface MusicSearchResponse {
   } | null;
   userTasteProfileUpdate?: Partial<UserTasteProfile> | null;
   error?: string;
-  /** Es. anon_search_limit (403 da music-search) */
+  /** Es. insufficient_tokens (402), anon_* (403), byo_* */
   code?: string;
   /** True when custom API key failed; user may switch to managed AI in settings */
   byo_fallback_suggested?: boolean;

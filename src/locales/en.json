@@ -41,6 +41,8 @@
     "resultsSubtitle": "Every recommendation comes with context — not just metadata, but an understanding of why the song resonates.",
     "enterEchoes": "Enter Echoes",
     "footerTagline": "Music discovery, reimagined.",
+    "footerPrivacy": "Privacy Policy",
+    "footerCookies": "Cookie Policy",
     "toastRateLimit": "Too many requests. Try again shortly.",
     "toastNoCredits": "AI credits exhausted.",
     "toastNoSongs": "No songs found. Try a few searches first to refine your profile.",
@@ -344,7 +346,14 @@
     "checkoutError": "Could not start checkout. Try again.",
     "portalError": "Could not open billing portal. Connect a subscription first.",
     "bannerEmpty": "You have no tokens left. Buy a pack or upgrade to continue searching.",
+    "bannerEmptyFree": "You’re out of tokens. Subscribe to Pro for a monthly allowance, or buy a one-time pack.",
+    "bannerEmptyPremium": "You’ve used this billing period’s tokens. Buy a pack to keep searching right away.",
+    "bannerEmptyPremiumHint": "Your plan adds more tokens at the next renewal.",
     "bannerLow": "You have {{count}} tokens left. Top up before they run out.",
+    "bannerLowFree": "Only {{count}} tokens left. Pro includes a monthly pool—or top up anytime.",
+    "bannerLowPremium": "{{count}} tokens left—top up before they run out.",
+    "bannerSubscribeProCta": "Subscribe to Pro",
+    "bannerManageBillingCta": "Manage subscription",
     "buyTokensCta": "Buy tokens",
     "viewPlansCta": "View plans",
     "topUpCta": "Top up",
@@ -381,5 +390,11 @@
     "copy": "Copy link",
     "copied": "Link copied",
     "copyFailed": "Could not copy"
+  },
+  "legal": {
+    "privacyTitle": "Privacy Policy",
+    "cookiesTitle": "Cookie Policy",
+    "backHome": "Back to home",
+    "lastUpdated": "Last updated: 9 April 2026"
   }
 }
