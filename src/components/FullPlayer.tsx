@@ -341,6 +341,13 @@ const FullPlayer = ({
     return () => setPlaybackToggleHandler(null);
   }, [songs, currentIndex, toggleGlobalPlayback]);
 
+  const dockAirPlayUi = isAppleUserAgent() && canUseWebKitAirPlayPicker();
+  const handleDockAirPlay = useCallback(() => {
+    const el = audioRef.current;
+    if (showWebKitAirPlayPicker(el)) return;
+    toast.info(t("player.airPlayHint"));
+  }, [t]);
+
   if (!song) return null;
 
   const fav = isFavorite(song.id);
@@ -378,13 +385,6 @@ const FullPlayer = ({
     (useAppleKitPlayer ? kitTelemetry.duration <= 0 : !audioReady || duration <= 0);
 
   const dockPlayDisabled = !embedOnlyDock && !useAppleKitPlayer && !audioReady;
-
-  const dockAirPlayUi = isAppleUserAgent() && canUseWebKitAirPlayPicker();
-  const handleDockAirPlay = useCallback(() => {
-    const el = audioRef.current;
-    if (showWebKitAirPlayPicker(el)) return;
-    toast.info(t("player.airPlayHint"));
-  }, [t]);
 
   if (isDock) {
     return (
