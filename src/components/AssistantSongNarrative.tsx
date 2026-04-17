@@ -154,7 +154,7 @@ function SongLinkPopover({
             {song.explanation}
           </p>
         )}
-        {versionsCount > 0 && song.alternateVersions ? (
+        {versionsCount > 1 && song.alternateVersions ? (
           <div className="border-t border-border/30 bg-card/40">
             <button
               type="button"

@@ -77,4 +77,35 @@ describe("dedupeSongVersions", () => {
 
     expect(dedupeSongVersions(songs)).toEqual(songs);
   });
+
+  it("collapses equivalent title spellings with accents and apostrophes", () => {
+    const songs = [
+      makeSong({
+        id: "accented",
+        title: "La Pianta Del Tè",
+        artist: "Franco Battiato",
+        relevanceScore: 82,
+      }),
+      makeSong({
+        id: "apostrophe",
+        title: "La Pianta Del Te'",
+        artist: "Franco Battiato",
+        relevanceScore: 78,
+      }),
+    ];
+
+    expect(dedupeSongVersions(songs)).toEqual([
+      {
+        ...songs[0],
+        alternateVersions: [
+          {
+            id: songs[1].id,
+            title: songs[1].title,
+            artist: songs[1].artist,
+            album: songs[1].album,
+          },
+        ],
+      },
+    ]);
+  });
 });

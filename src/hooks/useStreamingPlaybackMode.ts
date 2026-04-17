@@ -11,7 +11,7 @@ export function useStreamingPlaybackMode(): StreamingPlaybackMode {
   const { isAuthorized, isLinkedAccount } = useAppleMusic();
   const { isConnected } = useSpotify();
   if (isAuthorized) return "apple";
-  if (isLinkedAccount && !isConnected) return "apple";
+  if (isLinkedAccount) return "apple";
   if (isConnected) return "spotify";
   return "guest";
 }

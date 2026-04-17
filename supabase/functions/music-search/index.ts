@@ -389,8 +389,19 @@ function normalizeWhitespaceLower(s: string): string {
   return normalizeWhitespace(s).toLowerCase();
 }
 
+function normalizeTextForMatching(s: string): string {
+  return normalizeWhitespace(
+    s
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[’`´ʻʼʹ]/g, "'")
+      .replace(/['"]/g, '')
+      .replace(/[^\p{L}\p{N}\s-]+/gu, ' '),
+  ).toLowerCase();
+}
+
 function normalizePrimaryArtist(artist: string): string {
-  return normalizeWhitespaceLower(
+  return normalizeTextForMatching(
     artist
       .split(/\s+(?:feat\.|ft\.|featuring|with)\s+/i)[0]
       .split(/[,&/]/)[0] || artist,
@@ -398,7 +409,7 @@ function normalizePrimaryArtist(artist: string): string {
 }
 
 function isVersionSuffix(inner: string): boolean {
-  const s = normalizeWhitespaceLower(inner);
+  const s = normalizeTextForMatching(inner);
   return (
     /\blive\b/.test(s) ||
     /remaster/.test(s) ||
@@ -421,7 +432,7 @@ function isVersionSuffix(inner: string): boolean {
 }
 
 function canonicalTitle(title: string): string {
-  let s = normalizeWhitespaceLower(title);
+  let s = normalizeTextForMatching(title);
   const dashVersion = /\s+-\s*(live|acoustic|remaster(?:ed)?|mono|stereo|radio edit|edit|version|mix|demo|session)\b/i;
   if (dashVersion.test(s)) s = s.split(dashVersion)[0]?.trim() || s;
   const paren = /\s*\(([^)]*)\)\s*$/;

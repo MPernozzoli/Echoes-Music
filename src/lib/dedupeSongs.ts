@@ -10,11 +10,25 @@ export function filterSongsByMinRelevance(songs: Song[]): Song[] {
 /** Primo artista principale (prima di feat./,&). */
 function normalizeArtist(artist: string): string {
   return artist
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[’`´ʻʼʹ]/g, "'")
     .toLowerCase()
     .split(/\s+(?:feat\.|ft\.|featuring)\s+/i)[0]
     .split(/,/)[0]
     .trim()
     .replace(/\s+/g, " ");
+}
+
+function normalizeTitleTypography(title: string): string {
+  return title
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[’`´ʻʼʹ]/g, "'")
+    .replace(/['"]/g, "")
+    .replace(/[^\p{L}\p{N}\s-]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function isVersionParenContent(inner: string): boolean {
@@ -42,7 +56,7 @@ function isVersionParenContent(inner: string): boolean {
 
 /** Suffix tipo " - Live at …", " (Remastered 2023)" inline. */
 function stripTrailingVersionSuffixes(t: string): string {
-  let s = t.trim();
+  let s = normalizeTitleTypography(t);
   const dashLive = /\s+-\s*live\b/i;
   if (dashLive.test(s)) s = s.split(dashLive)[0].trim();
   const paren = /\s*\(([^)]*)\)\s*$/;
