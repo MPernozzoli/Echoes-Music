@@ -16,6 +16,7 @@ import { ThemeFaviconSync } from "@/components/AppLogo";
 import Landing from "./pages/Landing";
 import Chat from "./pages/Chat";
 import Auth from "./pages/Auth";
+import Invite from "./pages/Invite";
 import Pricing from "./pages/Pricing";
 import SubscribePlan from "./pages/SubscribePlan";
 import BuyTokens from "./pages/BuyTokens";
@@ -61,6 +62,7 @@ const App = () => (
                 <Route path="/" element={<Landing />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/auth/callback" element={<AuthCallback />} />
+                <Route path="/invite/:code" element={<Invite />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/pricing/plan" element={<SubscribePlan />} />
                 <Route path="/pricing/tokens" element={<BuyTokens />} />

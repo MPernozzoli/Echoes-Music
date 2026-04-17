@@ -157,7 +157,7 @@ const Profile = () => {
 
   const referralUrl =
     referralCode && typeof window !== "undefined"
-      ? `${window.location.origin}/?${REFERRAL_QUERY_PARAM}=${encodeURIComponent(referralCode)}`
+      ? `${window.location.origin}/invite/${encodeURIComponent(referralCode)}?${REFERRAL_QUERY_PARAM}=${encodeURIComponent(referralCode)}`
       : "";
 
   const handleCopyReferral = useCallback(async () => {

@@ -1,11 +1,12 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Music, Sparkles } from "lucide-react";
+import { Gift, Music, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/useAuth";
 import { SIGNUP_TOKEN_BONUS } from "@/constants/tokenEconomy";
-import { lovable } from "@/integrations/lovable/index";
+import { PENDING_REFERRAL_STORAGE_KEY } from "@/constants/referralStorage";
+import { startGoogleAuth } from "@/services/auth";
 import { toast } from "sonner";
 
 const Auth = () => {
@@ -19,10 +20,17 @@ const Auth = () => {
     }
   }, [user, loading, navigate]);
 
+  const hasPendingReferral = (() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return Boolean(localStorage.getItem(PENDING_REFERRAL_STORAGE_KEY)?.trim());
+    } catch {
+      return false;
+    }
+  })();
+
   const handleGoogleLogin = async () => {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: `${window.location.origin}/auth/callback`,
-    });
+    const result = await startGoogleAuth();
 
     if (result.error) {
       toast.error(t("auth.loginError", "Login failed. Please try again."));
@@ -61,6 +69,18 @@ const Auth = () => {
           <Sparkles className="h-4 w-4" />
           <span>{t("auth.freeTokens", { count: SIGNUP_TOKEN_BONUS })}</span>
         </div>
+
+        {hasPendingReferral ? (
+          <div className="flex items-center justify-center gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">
+            <Gift className="h-4 w-4" />
+            <span>
+              {t(
+                "auth.referralPending",
+                "Referral detected: finish with Google and the invite bonus will be credited automatically."
+              )}
+            </span>
+          </div>
+        ) : null}
 
         {/* Google Sign In */}
         <Button

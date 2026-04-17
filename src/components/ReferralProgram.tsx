@@ -1,10 +1,12 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/useAuth";
 import { PENDING_REFERRAL_STORAGE_KEY, REFERRAL_QUERY_PARAM } from "@/constants/referralStorage";
+
+export const REFERRAL_STORAGE_UPDATED_EVENT = "echoes-referral-updated";
 
 /** Salva ?ref= nel localStorage per applicarlo dopo il login. */
 export function ReferralQueryCapture() {
@@ -15,6 +17,7 @@ export function ReferralQueryCapture() {
     if (code) {
       try {
         localStorage.setItem(PENDING_REFERRAL_STORAGE_KEY, code);
+        window.dispatchEvent(new Event(REFERRAL_STORAGE_UPDATED_EVENT));
       } catch {
         /* ignore */
       }
@@ -37,7 +40,27 @@ const terminalErrors = new Set([
 export function ReferralClaimOnLogin() {
   const { session, refreshTokenBalance } = useAuth();
   const { t } = useTranslation();
+  const { pathname, search } = useLocation();
   const storageCheckedForUser = useRef<string | null>(null);
+  const [storageVersion, setStorageVersion] = useState(0);
+
+  useEffect(() => {
+    const handleReferralStorageUpdated = () => setStorageVersion((value) => value + 1);
+    window.addEventListener(REFERRAL_STORAGE_UPDATED_EVENT, handleReferralStorageUpdated);
+    window.addEventListener("storage", handleReferralStorageUpdated);
+    return () => {
+      window.removeEventListener(REFERRAL_STORAGE_UPDATED_EVENT, handleReferralStorageUpdated);
+      window.removeEventListener("storage", handleReferralStorageUpdated);
+    };
+  }, []);
+
+  const pendingCode = useMemo(() => {
+    try {
+      return localStorage.getItem(PENDING_REFERRAL_STORAGE_KEY)?.trim() ?? "";
+    } catch {
+      return "";
+    }
+  }, [pathname, search, storageVersion]);
 
   useEffect(() => {
     const userId = session?.user?.id;
@@ -45,16 +68,11 @@ export function ReferralClaimOnLogin() {
       storageCheckedForUser.current = null;
       return;
     }
-    if (storageCheckedForUser.current === userId) return;
-    storageCheckedForUser.current = userId;
-
-    let trimmed: string | null = null;
-    try {
-      trimmed = localStorage.getItem(PENDING_REFERRAL_STORAGE_KEY)?.trim() ?? null;
-    } catch {
-      return;
-    }
+    const trimmed = pendingCode || null;
     if (!trimmed) return;
+    const claimAttemptKey = `${userId}:${trimmed}`;
+    if (storageCheckedForUser.current === claimAttemptKey) return;
+    storageCheckedForUser.current = claimAttemptKey;
 
     void (async () => {
       const { data, error } = await supabase.rpc("claim_referral", { p_code: trimmed });
@@ -80,7 +98,7 @@ export function ReferralClaimOnLogin() {
         }
       }
     })();
-  }, [session?.user?.id, refreshTokenBalance, t]);
+  }, [pendingCode, refreshTokenBalance, session?.user?.id, t]);
 
   return null;
 }
