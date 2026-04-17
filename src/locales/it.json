@@ -345,7 +345,8 @@
     "nowPlayingAria": "In riproduzione",
     "previewUnavailable": "Anteprima non disponibile per questo brano",
     "appleConnectHint": "Stai ascoltando l’anteprima di 30 secondi. Apri Apple Music per la versione completa.",
-    "appleFallbackToPreview": "Apple Music non ha potuto riprodurre il brano — passo all’anteprima."
+    "appleFallbackToPreview": "Apple Music non ha potuto riprodurre il brano — passo all’anteprima.",
+    "appleSessionRepaired": "Sessione Apple Music aggiornata. Prova di nuovo Play; se non parte, riconnetti da Impostazioni."
   },
   "appleMusic": {
     "compactLine": "{{action}} · account Apple Music (nessun nuovo accesso)"

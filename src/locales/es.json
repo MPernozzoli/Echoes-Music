@@ -314,7 +314,8 @@
     "nowPlayingAria": "En reproducción",
     "previewUnavailable": "Vista previa no disponible para este tema",
     "appleConnectHint": "Estás escuchando una vista previa de 30 segundos. Abre Apple Music para el tema completo.",
-    "appleFallbackToPreview": "Apple Music no pudo reproducir este tema — cambiando a vista previa."
+    "appleFallbackToPreview": "Apple Music no pudo reproducir este tema — cambiando a vista previa.",
+    "appleSessionRepaired": "Sesión de Apple Music actualizada. Prueba Play de nuevo; si sigue fallando, vuelve a conectar en Ajustes."
   },
   "appleMusic": {
     "compactLine": "{{action}} · cuenta Apple Music (sin nuevo inicio de sesión)"

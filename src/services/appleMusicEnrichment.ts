@@ -13,7 +13,7 @@ type Listener = (songId: string) => void;
 const SESSION_PREFIX = "echoes_am_v1:";
 const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7; // 7 giorni
 
-/** Cache in memoria: songId → match Apple Music catalog */
+/** Cache in memoria: songId → match Apple Music catalog (o `null` se risoluzione tentata senza match) */
 const songIdCache = new Map<string, AppleMusicCatalogMatch | null>();
 /** Cache parallela per query (title|artist) — evita round-trip duplicati tra card e dock */
 const queryCache = new Map<string, AppleMusicCatalogMatch | null>();
@@ -191,7 +191,7 @@ export async function resolveAppleMusicSong(input: ResolveInput): Promise<AppleM
   if (queryCache.has(qKey)) {
     const cached = queryCache.get(qKey) ?? null;
     songIdCache.set(input.songId, cached);
-    if (cached) notify(input.songId);
+    notify(input.songId);
     return cached;
   }
 
@@ -207,7 +207,7 @@ export async function resolveAppleMusicSong(input: ResolveInput): Promise<AppleM
   if (existing) {
     const { match: cached } = await existing;
     songIdCache.set(input.songId, cached);
-    if (cached) notify(input.songId);
+    notify(input.songId);
     return cached;
   }
 
@@ -235,17 +235,24 @@ export async function resolveAppleMusicSong(input: ResolveInput): Promise<AppleM
 
   const { match: result } = await pending;
   inflight.delete(qKey);
-  // Solo i match positivi vengono messi in cache: i null vengono riprovati se cambiano token/rete.
   if (result) {
     queryCache.set(qKey, result);
-    songIdCache.set(input.songId, result);
     writeSessionMatch(qKey, result);
-    notify(input.songId);
+  } else {
+    queryCache.set(qKey, null);
   }
+  songIdCache.set(input.songId, result);
+  notify(input.songId);
   return result;
 }
 
+/** True se per questo brano la risoluzione Apple è già stata tentata (match o miss in cache). */
+export function isAppleMusicResolutionComplete(songId: string): boolean {
+  return songIdCache.has(songId);
+}
+
 export function getResolvedAppleMusic(songId: string): AppleMusicCatalogMatch | null {
+  if (!songIdCache.has(songId)) return null;
   return songIdCache.get(songId) ?? null;
 }
 

@@ -312,7 +312,8 @@
     "nowPlayingAria": "A reproduzir",
     "previewUnavailable": "Pré-visualização indisponível para esta faixa",
     "appleConnectHint": "Estás a ouvir uma pré-visualização de 30 segundos. Abre o Apple Music para a faixa completa.",
-    "appleFallbackToPreview": "O Apple Music não conseguiu reproduzir esta faixa — a mudar para a pré-visualização."
+    "appleFallbackToPreview": "O Apple Music não conseguiu reproduzir esta faixa — a mudar para a pré-visualização.",
+    "appleSessionRepaired": "Sessão do Apple Music atualizada. Tente Play novamente; se ainda falhar, volte a ligar em Definições."
   },
   "appleMusic": {
     "compactLine": "{{action}} · conta Apple Music (sem novo login)"

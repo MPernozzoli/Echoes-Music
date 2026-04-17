@@ -4,6 +4,7 @@ import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
 import { useApp } from "@/context/useApp";
 import {
   getResolvedAppleMusic,
+  isAppleMusicResolutionComplete,
   resolveAppleMusicSong,
   subscribeAppleMusicResolution,
   type AppleMusicCatalogMatch,
@@ -43,6 +44,7 @@ export function useAppleEnrichedSong(song: Song | null | undefined): Song | null
 
   if (!song) return null;
   if (song.appleMusicId) return song;
+  if (!isAppleMusicResolutionComplete(song.id)) return song;
   const resolved: AppleMusicCatalogMatch | null = getResolvedAppleMusic(song.id);
   if (!resolved) return song;
   return {

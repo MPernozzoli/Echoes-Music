@@ -10,7 +10,7 @@ import { useAppleMusic } from "@/context/useAppleMusic";
 import { useApp } from "@/context/useApp";
 import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
 import { useAppleEnrichedSong } from "@/hooks/useAppleMusicResolution";
-import { resolveAppleMusicSong } from "@/services/appleMusicEnrichment";
+import { isAppleMusicResolutionComplete, resolveAppleMusicSong } from "@/services/appleMusicEnrichment";
 import { parseSpotifyTrackIdFromUri } from "@/services/trackStreamingIdCache";
 import { AppleMusicEmbed } from "@/components/AppleMusicEmbed";
 import { AppleMusicKitPlayer, type AppleMusicKitPlayerHandle } from "@/components/AppleMusicKitPlayer";
@@ -19,6 +19,7 @@ import { DockStreamingActions } from "@/components/DockStreamingActions";
 import { PlayerDockChrome, type DockRepeatMode } from "@/components/PlayerDockChrome";
 import { canUseWebKitAirPlayPicker, isAppleUserAgent, showWebKitAirPlayPicker } from "@/lib/airPlay";
 import { artworkTintFromId } from "@/lib/artworkTint";
+import { isAppleMusicSessionOrTokenError } from "@/lib/appleMusicKitErrors";
 import { cn } from "@/lib/utils";
 
 interface FullPlayerProps {
@@ -95,11 +96,15 @@ const FullPlayer = ({
   const kitFailedForCurrent = song ? kitUnavailableSongIds.has(song.id) : false;
 
   // Determine playback source
-  const previewUrl = song?.previewUrl;
   const spotifyTrackId = song?.spotifyUri?.replace("spotify:track:", "");
   const appleMusicId = song?.appleMusicId;
+  const appleResolutionComplete = song?.id ? isAppleMusicResolutionComplete(song.id) : false;
+  /** Con Apple preferito ma ID ancora in risoluzione: non usare previewUrl (spesso è Spotify) finché non c’è match Apple. */
+  const suppressNonApplePreview =
+    applePreferred && !appleMusicId && !appleResolutionComplete;
+  const previewUrl = suppressNonApplePreview ? undefined : song?.previewUrl;
   const useApplePlayback = applePreferred && !!appleMusicId;
-  const appleResolutionPending = applePreferred && !appleMusicId;
+  const appleResolutionPending = applePreferred && !appleMusicId && !appleResolutionComplete;
   const useAppleKitPlayer =
     useApplePlayback &&
     appleMusic.isAuthorized &&
@@ -184,7 +189,14 @@ const FullPlayer = ({
   }, []);
 
   const handleKitPlaybackError = useCallback(
-    (err: unknown) => {
+    async (err: unknown) => {
+      if (isAppleMusicSessionOrTokenError(err)) {
+        await appleMusic.repairMusicKitSession();
+        toast.info(t("player.appleSessionRepaired"), {
+          description: err instanceof Error ? err.message : undefined,
+        });
+        return;
+      }
       const sid = songs[indexRef.current]?.id ?? rawSong?.id;
       if (!sid) return;
       setKitUnavailableSongIds((prev) => {
@@ -197,7 +209,7 @@ const FullPlayer = ({
         description: err instanceof Error ? err.message : undefined,
       });
     },
-    [songs, rawSong?.id, t],
+    [appleMusic, songs, rawSong?.id, t],
   );
 
   // Reset state when song changes
@@ -273,9 +285,11 @@ const FullPlayer = ({
       };
     } else {
       queueContinueAfterLoad.current = false;
-      setUseEmbed(true);
+      if (!suppressNonApplePreview) {
+        setUseEmbed(true);
+      }
     }
-  }, [song?.id, previewUrl, useAppleKitPlayer]);
+  }, [song?.id, previewUrl, useAppleKitPlayer, suppressNonApplePreview]);
 
   useEffect(() => {
     if (useAppleKitPlayer || useEmbed || !audioReady || !audioRef.current) return;

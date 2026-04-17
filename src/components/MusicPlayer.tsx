@@ -10,6 +10,7 @@ import { AppleMusicKitPlayer } from "@/components/AppleMusicKitPlayer";
 import { StreamingLibraryActions } from "@/components/StreamingLibraryActions";
 import {
   getResolvedAppleMusic,
+  isAppleMusicResolutionComplete,
   resolveAppleMusicSong,
   subscribeAppleMusicResolution,
 } from "@/services/appleMusicEnrichment";
@@ -62,7 +63,8 @@ const MusicPlayer = ({
 
   const resolvedAppleId = appleMusicTrackId || getResolvedAppleMusic(resolverKey)?.id || undefined;
   const preferApple = applePreferred && !!resolvedAppleId;
-  const appleResolutionPending = applePreferred && !resolvedAppleId;
+  const appleResolutionPending =
+    applePreferred && !resolvedAppleId && !isAppleMusicResolutionComplete(resolverKey);
   const preferSpotifyEmbed =
     !!spotifyTrackId && !applePreferred && (playbackMode === "spotify" || playbackMode === "guest");
   const appleOnlyFallback = !spotifyTrackId && !!resolvedAppleId;

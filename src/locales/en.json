@@ -353,7 +353,8 @@
     "nowPlayingAria": "Now playing",
     "previewUnavailable": "Preview not available for this track",
     "appleConnectHint": "You’re hearing a 30-second preview. Open Apple Music for the full track.",
-    "appleFallbackToPreview": "Apple Music couldn’t play this track — switching to preview."
+    "appleFallbackToPreview": "Apple Music couldn’t play this track — switching to preview.",
+    "appleSessionRepaired": "Apple Music session refreshed. Try Play again; if it still fails, reconnect in Settings."
   },
   "appleMusic": {
     "compactLine": "{{action}} · Apple Music account (no new sign-in)"

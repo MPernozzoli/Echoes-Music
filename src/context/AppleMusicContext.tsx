@@ -9,7 +9,6 @@ import {
 } from "@/services/appleMusicConnection";
 import {
   clearCachedAppleMusicUserToken,
-  getCachedAppleMusicUserToken,
   setCachedAppleMusicUserToken,
 } from "@/services/appleMusicSession";
 
@@ -22,6 +21,10 @@ interface AppleMusicState {
   authorize: () => Promise<void>;
   unauthorize: () => void;
   refresh: () => Promise<void>;
+  /** Aggiorna developer token + stato MusicKit senza distruggere il provider (tab lunga / JWT vicino alla scadenza). */
+  resyncMusicKit: () => Promise<void>;
+  /** Dopo errori di play: pulisce cache user token locale e ri-allinea MusicKit (spesso equivale a un nuovo login AM). */
+  repairMusicKitSession: () => Promise<void>;
 }
 
 type MKInstance = {
@@ -40,10 +43,6 @@ type MusicKitGlobal = {
 
 function getMKGlobal(): MusicKitGlobal | undefined {
   return (window as unknown as { MusicKit?: MusicKitGlobal }).MusicKit;
-}
-
-function hasMusicUserToken(instance: MKInstance | null | undefined): boolean {
-  return Boolean(instance?.musicUserToken?.trim());
 }
 
 /** Attende MusicKit: evento + polling (l’evento può essere già scattato prima del listener). */
@@ -148,8 +147,8 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
         if (cancelledRef.current || !instance) return;
         const liveToken = instance.musicUserToken?.trim();
         if (liveToken) setCachedAppleMusicUserToken(liveToken, user?.id);
-        const cachedToken = getCachedAppleMusicUserToken(user?.id);
-        setIsAuthorized(Boolean(instance.isAuthorized || liveToken || cachedToken));
+        // Non usare solo localStorage: può restare un user token scaduto mentre MusicKit sembra “ok”.
+        setIsAuthorized(Boolean(instance.isAuthorized || liveToken));
       };
 
       syncAuth();
@@ -198,12 +197,65 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [clearRuntimeListeners, user?.id]);
 
+  const resyncMusicKit = useCallback(async () => {
+    const mk = getMKGlobal();
+    if (!mk) return;
+    const token = await getAppleMusicDeveloperToken();
+    if (!token) return;
+    try {
+      await mk.configure({
+        developerToken: token,
+        app: { name: "Echoes", build: "1.0.0" },
+        persist: true,
+      });
+      setDeveloperToken(token);
+    } catch (e) {
+      console.warn("MusicKit resync configure:", e);
+      return;
+    }
+    const inst = mk.getInstance();
+    const live = inst.musicUserToken?.trim();
+    if (live) setCachedAppleMusicUserToken(live, user?.id);
+    setIsAuthorized(Boolean(inst.isAuthorized || live));
+  }, [user?.id]);
+
+  const repairMusicKitSession = useCallback(async () => {
+    clearCachedAppleMusicUserToken(user?.id);
+    await resyncMusicKit();
+  }, [user?.id, resyncMusicKit]);
+
   useEffect(() => {
     void refresh();
     return () => {
       clearRuntimeListeners();
     };
   }, [clearRuntimeListeners, refresh]);
+
+  /** Tab in background: al ritorno rinnova il JWT dev su MusicKit (evita play morto fino al reload). */
+  useEffect(() => {
+    if (!isAvailable) return;
+    let timer: number | null = null;
+    const onVis = () => {
+      if (document.visibilityState !== "visible") return;
+      if (timer != null) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        timer = null;
+        void resyncMusicKit();
+      }, 600);
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      if (timer != null) window.clearTimeout(timer);
+    };
+  }, [isAvailable, resyncMusicKit]);
+
+  /** JWT developer: MusicKit resta configurato col token iniziale; lo riallineiamo periodicamente. */
+  useEffect(() => {
+    if (!isAvailable) return;
+    const id = window.setInterval(() => void resyncMusicKit(), 45 * 60 * 1000);
+    return () => window.clearInterval(id);
+  }, [isAvailable, resyncMusicKit]);
 
   const authorize = useCallback(async () => {
     if (!user) {
@@ -262,6 +314,8 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
         authorize,
         unauthorize,
         refresh,
+        resyncMusicKit,
+        repairMusicKitSession,
       }}
     >
       {children}
