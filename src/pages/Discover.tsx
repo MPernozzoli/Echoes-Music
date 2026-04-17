@@ -14,7 +14,7 @@ import EmotionalProfileCard from "@/components/EmotionalProfile";
 import LoadingSkeleton from "@/components/LoadingSkeleton";
 import SearchFeedback from "@/components/SearchFeedback";
 import { pickDiscoverPromptSuggestions } from "@/lib/discoverPromptSuggestions";
-import type { ListenHistoryEntry, SearchResult } from "@/data/mockData";
+import type { ListenHistoryEntry, SearchResult, Song } from "@/data/mockData";
 import { useApp } from "@/context/useApp";
 import { useAuth } from "@/context/useAuth";
 import { usePlaybackQueue } from "@/context/usePlaybackQueue";
@@ -51,6 +51,8 @@ import { cn } from "@/lib/utils";
 import { dedupeSongVersions, filterSongsByMinRelevance } from "@/lib/dedupeSongs";
 import SearchResultTrackList from "@/components/SearchResultTrackList";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
+import { usePrefetchAppleMusicCatalogIds } from "@/hooks/usePrefetchAppleMusicCatalogIds";
 import { isLuckyPrompt } from "@/constants/luckyPrompt";
 import type { MusicSearchMode } from "@/services/musicSearchApi";
 
@@ -156,6 +158,33 @@ const Chat = () => {
   );
   const latestAssistant = assistantTurns?.[assistantTurns.length - 1];
   const currentResult = latestAssistant?.searchResult ?? null;
+  const playbackMode = useStreamingPlaybackMode();
+  const prefetchCatalogSongs = useMemo(() => {
+    const out: Song[] = [];
+    const seen = new Set<string>();
+    for (const s of queue) {
+      if (!seen.has(s.id)) {
+        seen.add(s.id);
+        out.push(s);
+      }
+    }
+    if (currentResult?.songs) {
+      for (const s of currentResult.songs) {
+        if (!seen.has(s.id)) {
+          seen.add(s.id);
+          out.push(s);
+        }
+      }
+    }
+    return out;
+  }, [queue, currentResult?.songs, currentResult?.id]);
+
+  usePrefetchAppleMusicCatalogIds(
+    prefetchCatalogSongs,
+    playbackMode === "apple" && prefetchCatalogSongs.length > 0,
+    descriptionLanguage,
+  );
+
   const currentSong = queue[currentIndex] ?? currentResult?.songs[0] ?? null;
   const hasAnyMessage = (activeConversation?.messages.length ?? 0) > 0;
   const showDockPlayer = queue.length > 0 && !isMobile;

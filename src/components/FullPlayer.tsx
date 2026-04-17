@@ -10,8 +10,8 @@ import { useAppleMusic } from "@/context/useAppleMusic";
 import { useApp } from "@/context/useApp";
 import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
 import { useAppleEnrichedSong } from "@/hooks/useAppleMusicResolution";
-import { isAppleMusicResolutionComplete, resolveAppleMusicSong } from "@/services/appleMusicEnrichment";
-import { parseSpotifyTrackIdFromUri } from "@/services/trackStreamingIdCache";
+import { usePrefetchAppleMusicCatalogIds } from "@/hooks/usePrefetchAppleMusicCatalogIds";
+import { isAppleMusicResolutionComplete } from "@/services/appleMusicEnrichment";
 import { AppleMusicEmbed } from "@/components/AppleMusicEmbed";
 import { AppleMusicKitPlayer, type AppleMusicKitPlayerHandle } from "@/components/AppleMusicKitPlayer";
 import { StreamingLibraryActions } from "@/components/StreamingLibraryActions";
@@ -126,24 +126,13 @@ const FullPlayer = ({
     if (!useAppleKitPlayer) setKitAutoplayNonce(0);
   }, [useAppleKitPlayer]);
 
-  /** Risolve in anticipo gli ID Apple per il brano corrente e i prossimi in coda (meno attesa al play). */
-  useEffect(() => {
-    if (!applePreferred || playbackMode !== "apple" || songs.length === 0) return;
-    const start = Math.max(0, currentIndex - 1);
-    const end = Math.min(songs.length, currentIndex + 6);
-    for (let i = start; i < end; i++) {
-      const s = songs[i];
-      if (s && !s.appleMusicId) {
-        void resolveAppleMusicSong({
-          songId: s.id,
-          title: s.title,
-          artist: s.artist,
-          languageHint: descriptionLanguage,
-          spotifyTrackId: parseSpotifyTrackIdFromUri(s.spotifyUri),
-        });
-      }
-    }
-  }, [songs, currentIndex, applePreferred, playbackMode, descriptionLanguage]);
+  usePrefetchAppleMusicCatalogIds(
+    songs,
+    applePreferred && playbackMode === "apple" && songs.length > 0,
+    descriptionLanguage,
+  );
+
+  const seekBarAppleResolving = appleResolutionPending && !useAppleKitPlayer;
 
   /** Autoplay iniziale su MusicKit: bumpa il nonce una sola volta per brano quando autoplay è richiesto */
   const kitAutoplayTriedRef = useRef<string | null>(null);
@@ -519,6 +508,7 @@ const FullPlayer = ({
             onDetails={dockPanelActions ? undefined : onShowDetails}
             onOpenQueue={dockPanelActions ? undefined : onOpenQueue}
             airPlayOnClick={dockAirPlayUi ? handleDockAirPlay : undefined}
+            seekBarLoading={seekBarAppleResolving}
           />
         </div>
       </>
@@ -588,14 +578,22 @@ const FullPlayer = ({
       {/* HTML5 preview (in Apple mode usa la preview Apple, altrimenti quella Spotify) */}
       {!useAppleKitPlayer && !useEmbed && (
         <>
-          <div className="w-full px-2 mb-2">
+          <div className="w-full px-2 mb-2 relative">
+            {seekBarAppleResolving ? (
+              <div
+                className="pointer-events-none absolute left-2 right-2 top-1/2 -translate-y-1/2 h-2 rounded-full bg-secondary overflow-hidden z-[1]"
+                aria-hidden
+              >
+                <div className="absolute inset-y-0 left-0 w-[32%] rounded-full bg-gradient-to-r from-primary/25 via-primary to-primary/25 opacity-90 animate-seek-track-load" />
+              </div>
+            ) : null}
             <Slider
               value={[currentTime]}
               min={0}
               max={duration || 1}
               step={0.5}
               onValueChange={handleSeek}
-              className="w-full"
+              className={cn("w-full relative z-[2]", seekBarAppleResolving && "opacity-40")}
               disabled={!audioReady}
             />
             <div className="flex justify-between mt-1.5">

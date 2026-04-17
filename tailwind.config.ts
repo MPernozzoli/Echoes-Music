@@ -127,6 +127,12 @@ export default {
           "0%, 100%": { transform: "scaleY(0.35)", opacity: "0.7" },
           "50%": { transform: "scaleY(1)", opacity: "1" },
         },
+        /** Indicatore “risoluzione ID Apple in corso” sulla seek bar */
+        seekTrackLoad: {
+          "0%": { transform: "translateX(-120%)", opacity: "0.35" },
+          "40%": { opacity: "1" },
+          "100%": { transform: "translateX(420%)", opacity: "0.35" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -136,6 +142,7 @@ export default {
         "artwork-float": "artworkFloat 5s ease-in-out infinite",
         "vinyl-spin": "vinylSpin 8s linear infinite",
         "wave-bars": "waveBars 0.9s ease-in-out infinite",
+        "seek-track-load": "seekTrackLoad 1.75s ease-in-out infinite",
       },
     },
   },

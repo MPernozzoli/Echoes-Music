@@ -78,6 +78,8 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const cancelledRef = useRef(false);
   const cleanupRef = useRef<(() => void) | null>(null);
+  /** Evita di azzerare `isAuthorized` mentre la tab è in background: MusicKit spesso svuota temporaneamente il token. */
+  const heldAppleSessionRef = useRef(false);
 
   const clearRuntimeListeners = useCallback(() => {
     cleanupRef.current?.();
@@ -147,8 +149,11 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
         if (cancelledRef.current || !instance) return;
         const liveToken = instance.musicUserToken?.trim();
         if (liveToken) setCachedAppleMusicUserToken(liveToken, user?.id);
-        // Non usare solo localStorage: può restare un user token scaduto mentre MusicKit sembra “ok”.
-        setIsAuthorized(Boolean(instance.isAuthorized || liveToken));
+        const next = Boolean(instance.isAuthorized || liveToken);
+        if (next) heldAppleSessionRef.current = true;
+        else if (document.visibilityState === "hidden" && heldAppleSessionRef.current) return;
+        setIsAuthorized(next);
+        if (!next) heldAppleSessionRef.current = false;
       };
 
       syncAuth();
@@ -216,11 +221,16 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
     const inst = mk.getInstance();
     const live = inst.musicUserToken?.trim();
     if (live) setCachedAppleMusicUserToken(live, user?.id);
-    setIsAuthorized(Boolean(inst.isAuthorized || live));
+    const next = Boolean(inst.isAuthorized || live);
+    if (next) heldAppleSessionRef.current = true;
+    else if (document.visibilityState === "hidden" && heldAppleSessionRef.current) return;
+    setIsAuthorized(next);
+    if (!next) heldAppleSessionRef.current = false;
   }, [user?.id]);
 
   const repairMusicKitSession = useCallback(async () => {
     clearCachedAppleMusicUserToken(user?.id);
+    heldAppleSessionRef.current = false;
     await resyncMusicKit();
   }, [user?.id, resyncMusicKit]);
 
@@ -275,6 +285,7 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
         }
         setIsAuthorized(Boolean(mk.isAuthorized || token));
         if (mk.isAuthorized || token) {
+          heldAppleSessionRef.current = true;
           await upsertAppleMusicConnection(user.id);
           setIsLinkedAccount(true);
         }
@@ -295,6 +306,7 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
         console.error("Apple Music disconnect error:", err);
       }
       clearCachedAppleMusicUserToken(user?.id);
+      heldAppleSessionRef.current = false;
       const mk = getMKGlobal()?.getInstance();
       if (mk) {
         void mk.unauthorize();

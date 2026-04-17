@@ -124,7 +124,10 @@ const MusicPlayer = ({
 
   if (appleResolutionPending) {
     return (
-      <div className={cn(chrome, "overflow-hidden")} onClick={(e) => e.stopPropagation()}>
+      <div className={cn(chrome, "overflow-hidden relative")} onClick={(e) => e.stopPropagation()}>
+        <div className="h-1 w-full rounded-full bg-muted/50 overflow-hidden mb-3" aria-hidden>
+          <div className="h-full w-2/5 rounded-full bg-gradient-to-r from-primary/30 via-primary to-primary/30 animate-seek-track-load" />
+        </div>
         <div className="px-3 py-4 text-center">
           <p className="text-xs text-muted-foreground font-body">{t("profile.loadingMusickit")}</p>
         </div>

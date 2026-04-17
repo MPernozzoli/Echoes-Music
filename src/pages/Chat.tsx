@@ -9,7 +9,7 @@ import EmotionalProfileCard from "@/components/EmotionalProfile";
 import MusicSearchThinking from "@/components/MusicSearchThinking";
 import SearchFeedback from "@/components/SearchFeedback";
 import { pickDiscoverPromptSuggestions } from "@/lib/discoverPromptSuggestions";
-import type { SearchResult } from "@/data/mockData";
+import type { SearchResult, Song } from "@/data/mockData";
 import { useApp } from "@/context/useApp";
 import { useAuth } from "@/context/useAuth";
 import { useSpotify } from "@/context/useSpotify";
@@ -46,6 +46,8 @@ import { dedupeSongVersions, filterSongsByMinRelevance } from "@/lib/dedupeSongs
 import { AssistantSongNarrative } from "@/components/AssistantSongNarrative";
 import { fallbackNarrativeForResult } from "@/lib/assistantNarrative";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
+import { usePrefetchAppleMusicCatalogIds } from "@/hooks/usePrefetchAppleMusicCatalogIds";
 import { isLuckyPrompt } from "@/constants/luckyPrompt";
 import type { MusicSearchMode } from "@/services/musicSearchApi";
 
@@ -170,6 +172,33 @@ const Chat = () => {
   );
   const latestAssistant = assistantTurns?.[assistantTurns.length - 1];
   const currentResult = latestAssistant?.searchResult ?? null;
+
+  const playbackMode = useStreamingPlaybackMode();
+  const prefetchCatalogSongs = useMemo(() => {
+    const out: Song[] = [];
+    const seen = new Set<string>();
+    for (const s of queue) {
+      if (!seen.has(s.id)) {
+        seen.add(s.id);
+        out.push(s);
+      }
+    }
+    if (currentResult?.songs) {
+      for (const s of currentResult.songs) {
+        if (!seen.has(s.id)) {
+          seen.add(s.id);
+          out.push(s);
+        }
+      }
+    }
+    return out;
+  }, [queue, currentResult?.songs, currentResult?.id]);
+
+  usePrefetchAppleMusicCatalogIds(
+    prefetchCatalogSongs,
+    playbackMode === "apple" && prefetchCatalogSongs.length > 0,
+    descriptionLanguage,
+  );
 
   const totalInlineAssistantTurns = useMemo(
     () =>

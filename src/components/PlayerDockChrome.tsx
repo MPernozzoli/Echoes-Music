@@ -69,6 +69,8 @@ interface PlayerDockChromeProps {
   showVolumeControl?: boolean;
   /** + libreria / playlist prima del cuore */
   trackExtraActions?: ReactNode;
+  /** Animazione sulla barra avanzamento (es. risoluzione ID Apple Music) */
+  seekBarLoading?: boolean;
 }
 
 function formatDockTime(seconds: number): string {
@@ -117,6 +119,7 @@ export function PlayerDockChrome({
   airPlayOnClick,
   showVolumeControl = true,
   trackExtraActions,
+  seekBarLoading = false,
 }: PlayerDockChromeProps) {
   const { t } = useTranslation();
   const [volOpen, setVolOpen] = useState(false);
@@ -212,26 +215,40 @@ export function PlayerDockChrome({
                 {repeatMode === "one" ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
               </button>
             </div>
-            <div className="flex items-center gap-2 w-full max-w-xl px-1 group/seek">
+            <div
+              className="flex items-center gap-2 w-full max-w-xl px-1 group/seek"
+              aria-busy={seekBarLoading || undefined}
+            >
               <span className="text-[11px] text-muted-foreground tabular-nums w-9 text-right shrink-0">{formatDockTime(currentTime)}</span>
-              <input
-                type="range"
-                min={0}
-                max={maxT}
-                step={0.25}
-                value={Math.min(Math.max(0, currentTime), maxT)}
-                onChange={(e) => onSeek(Number(e.target.value))}
-                disabled={seekDisabled}
-                className={cn(
-                  "flex-1 h-1 rounded-full appearance-none cursor-pointer accent-primary",
-                  "bg-muted-foreground/25",
-                  "[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-sm",
-                  "[&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:duration-150",
-                  "group-hover/seek:[&::-webkit-slider-thumb]:scale-110",
-                  "[&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:border-0",
-                  seekDisabled && "opacity-40 cursor-not-allowed",
-                )}
-              />
+              <div className="relative flex-1 min-w-0 h-4 flex items-center">
+                {seekBarLoading ? (
+                  <div
+                    className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 h-1 rounded-full bg-muted-foreground/20 overflow-hidden z-[1]"
+                    aria-hidden
+                  >
+                    <div className="absolute inset-y-0 left-0 w-[38%] rounded-full bg-gradient-to-r from-primary/20 via-primary/85 to-primary/20 shadow-[0_0_12px_hsl(var(--primary)/0.35)] animate-seek-track-load" />
+                  </div>
+                ) : null}
+                <input
+                  type="range"
+                  min={0}
+                  max={maxT}
+                  step={0.25}
+                  value={Math.min(Math.max(0, currentTime), maxT)}
+                  onChange={(e) => onSeek(Number(e.target.value))}
+                  disabled={seekDisabled}
+                  className={cn(
+                    "relative z-[2] w-full h-1 rounded-full appearance-none cursor-pointer accent-primary",
+                    "bg-muted-foreground/25",
+                    "[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-sm",
+                    "[&::-webkit-slider-thumb]:transition-transform [&::-webkit-slider-thumb]:duration-150",
+                    "group-hover/seek:[&::-webkit-slider-thumb]:scale-110",
+                    "[&::-moz-range-thumb]:w-3 [&::-moz-range-thumb]:h-3 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:border-0",
+                    seekDisabled && "opacity-40 cursor-not-allowed",
+                    seekBarLoading && "opacity-[0.35]",
+                  )}
+                />
+              </div>
               <span className="text-[11px] text-muted-foreground tabular-nums w-9 shrink-0">{formatDockTime(duration)}</span>
             </div>
           </div>
