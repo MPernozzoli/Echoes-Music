@@ -1,3 +1,15 @@
+export interface SongVersion {
+  id: string;
+  title: string;
+  artist: string;
+  album: string;
+  releaseYear?: number;
+  provider?: 'spotify' | 'apple_music' | 'mock';
+  spotifyUri?: string;
+  appleMusicId?: string;
+  previewUrl?: string;
+}
+
 export interface Song {
   id: string;
   title: string;
@@ -14,6 +26,7 @@ export interface Song {
   spotifyUri?: string;
   appleMusicId?: string;
   previewUrl?: string;
+  alternateVersions?: SongVersion[];
 }
 
 /** Dopo trackSearch/trackResults, per feedback sui singoli brani */

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Gift, Loader2, Sparkles, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -50,8 +50,18 @@ const Invite = () => {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(240,171,252,0.14),transparent_32%),radial-gradient(circle_at_bottom,rgba(251,191,36,0.12),transparent_38%)]" />
-      <div className="relative z-10 w-full max-w-md rounded-3xl border border-border/60 bg-card/80 p-8 text-center shadow-2xl backdrop-blur">
+      <div
+        className="absolute inset-0 bg-artwork-radial opacity-50"
+        style={
+          {
+            "--artwork-h": "280",
+            "--artwork-s": "60%",
+            "--artwork-l": "50%",
+          } as CSSProperties
+        }
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.08] via-transparent to-background" aria-hidden />
+      <div className="relative z-10 w-full max-w-md rounded-3xl border border-border/50 surface-elevated p-8 md:p-10 text-center shadow-elevated backdrop-blur-xl">
         <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
           <Gift className="h-8 w-8 text-primary" />
         </div>

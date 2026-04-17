@@ -1,8 +1,10 @@
-import { Heart } from "lucide-react";
+import { Heart, Play } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import ResultFeedback from "./ResultFeedback";
 import MusicPlayer from "./MusicPlayer";
 import { trackInteraction } from "@/services/tracking";
+import { artworkTintFromId } from "@/lib/artworkTint";
+import { cn } from "@/lib/utils";
 
 interface SongCardProps {
   id: string;
@@ -46,6 +48,7 @@ const SongCard = ({
   const [expanded, setExpanded] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const impressionTracked = useRef(false);
+  const tintStyle = artworkTintFromId(id);
 
   useEffect(() => {
     if (!searchResultId || !searchId || impressionTracked.current) return;
@@ -56,7 +59,7 @@ const SongCard = ({
           trackInteraction({ searchResultId, searchId, interactionType: "impression" });
         }
       },
-      { threshold: 0.5 }
+      { threshold: 0.5 },
     );
     if (cardRef.current) observer.observe(cardRef.current);
     return () => observer.disconnect();
@@ -90,88 +93,115 @@ const SongCard = ({
     <div
       ref={cardRef}
       onClick={handleClick}
-      className="group glass-card rounded-2xl p-5 hover:border-primary/20 transition-all duration-500 animate-fade-up"
-      style={{ animationDelay: `${index * 100}ms`, animationFillMode: "backwards" }}
+      style={{ ...tintStyle, animationDelay: `${index * 100}ms`, animationFillMode: "backwards" }}
+      className={cn(
+        "group relative overflow-hidden rounded-2xl border border-border/50 transition-all duration-500 animate-fade-up",
+        "bg-gradient-to-br from-card/95 via-card/90 to-background/80 backdrop-blur-xl shadow-elevated",
+        "hover:border-primary/35 hover:shadow-glow"
+      )}
     >
-      <div className="flex gap-5">
-        {/* Artwork */}
-        <div className="relative shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-xl overflow-hidden bg-muted">
-          {!imgLoaded && <div className="absolute inset-0 animate-pulse-soft bg-muted" />}
-          <img
-            src={artwork}
-            alt={`${title} by ${artist}`}
-            className={`w-full h-full object-cover transition-opacity duration-500 ${imgLoaded ? "opacity-100" : "opacity-0"}`}
-            onLoad={() => setImgLoaded(true)}
-            loading="lazy"
-            width={96}
-            height={96}
-          />
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h3 className="font-display text-lg font-semibold text-foreground leading-tight">{title}</h3>
-              <p className="text-muted-foreground text-sm mt-0.5">{artist}</p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs font-body text-primary font-medium px-2 py-1 rounded-full bg-primary/10">
-                {relevanceScore}%
-              </span>
-              <button
-                onClick={(e) => { e.stopPropagation(); handleFavorite(); }}
-                className="p-1.5 rounded-full hover:bg-muted transition-colors"
-              >
-                <Heart
-                  className={`w-4 h-4 transition-colors ${
-                    isFavorite ? "fill-primary text-primary" : "text-muted-foreground"
-                  }`}
-                />
-              </button>
-            </div>
-          </div>
-
-          <button
-            onClick={(e) => { e.stopPropagation(); handleExpand(); }}
-            className="text-left w-full"
-          >
-            <p className={`text-sm text-secondary-foreground/70 mt-2 leading-relaxed ${expanded ? "" : "line-clamp-2"}`}>
-              {explanation}
-            </p>
-          </button>
-
-          <div className="flex flex-wrap gap-1.5 mt-3">
-            {emotionalTags.map((tag) => (
-              <button
-                key={tag}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onTagClick?.(tag);
-                }}
-                className="text-xs px-2.5 py-0.5 rounded-full bg-emotional-tag/15 text-emotional-tag-foreground/80 font-body cursor-pointer hover:bg-emotional-tag/25 transition-colors"
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
-
-          {/* Music Player */}
-          {showPlayer && (
-            <MusicPlayer
-              trackTitle={title}
-              artistName={artist}
-              spotifyTrackId={spotifyUri?.replace('spotify:track:', '')}
-              appleMusicTrackId={appleMusicId}
+      <div className="pointer-events-none absolute inset-0 gradient-artwork opacity-90" aria-hidden />
+      <div className="relative p-5 md:p-6">
+        <div className="flex flex-col sm:flex-row gap-5">
+          {/* Artwork + hover play */}
+          <div className="relative shrink-0 mx-auto sm:mx-0 w-32 h-32 md:w-36 md:h-36 rounded-2xl overflow-hidden bg-muted shadow-lg ring-1 ring-border/40">
+            {!imgLoaded && <div className="absolute inset-0 animate-pulse-soft bg-muted" />}
+            <img
+              src={artwork}
+              alt={`${title} by ${artist}`}
+              className={cn(
+                "w-full h-full object-cover transition-all duration-500",
+                imgLoaded ? "opacity-100" : "opacity-0",
+                "group-hover:scale-105 motion-reduce:group-hover:scale-100",
+              )}
+              onLoad={() => setImgLoaded(true)}
+              loading="lazy"
+              width={144}
+              height={144}
             />
-          )}
-
-          {/* Inline feedback */}
-          {searchResultId && searchId && (
-            <div className="mt-3 pt-2 border-t border-border/40">
-              <ResultFeedback searchResultId={searchResultId} searchId={searchId} />
+            <div
+              className={cn(
+                "absolute inset-0 flex items-center justify-center bg-background/50 opacity-0 transition-opacity duration-300",
+                "group-hover:opacity-100 motion-reduce:group-hover:opacity-0",
+              )}
+            >
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-glow">
+                <Play className="h-7 w-7 ml-0.5" fill="currentColor" />
+              </span>
             </div>
-          )}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="font-display text-xl font-semibold text-foreground leading-tight">{title}</h3>
+                <p className="text-muted-foreground text-sm mt-1 font-body">{artist}</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs font-body text-primary font-medium px-2.5 py-1 rounded-full bg-primary/15 border border-primary/20">
+                  {relevanceScore}%
+                </span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleFavorite();
+                  }}
+                  className="p-2 rounded-full hover:bg-muted/80 transition-colors"
+                  aria-label={isFavorite ? "Remove favorite" : "Add favorite"}
+                >
+                  <Heart
+                    className={cn(
+                      "w-4 h-4 transition-colors",
+                      isFavorite ? "fill-primary text-primary" : "text-muted-foreground",
+                    )}
+                  />
+                </button>
+              </div>
+            </div>
+
+            <button type="button" onClick={(e) => { e.stopPropagation(); handleExpand(); }} className="text-left w-full">
+              <p
+                className={cn(
+                  "text-sm text-muted-foreground mt-3 leading-relaxed font-body",
+                  expanded ? "" : "line-clamp-2",
+                )}
+              >
+                {explanation}
+              </p>
+            </button>
+
+            <div className="flex flex-wrap gap-2 mt-4">
+              {emotionalTags.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTagClick?.(tag);
+                  }}
+                  className="text-xs px-3 py-1 rounded-full bg-emotional-tag/20 text-emotional-tag-foreground/90 font-body border border-emotional-tag/25 cursor-pointer hover:bg-emotional-tag/30 transition-colors"
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+
+            {showPlayer && (
+              <MusicPlayer
+                trackTitle={title}
+                artistName={artist}
+                spotifyTrackId={spotifyUri?.replace("spotify:track:", "")}
+                appleMusicTrackId={appleMusicId}
+              />
+            )}
+
+            {searchResultId && searchId && (
+              <div className="mt-4 pt-3 border-t border-border/40">
+                <ResultFeedback searchResultId={searchResultId} searchId={searchId} />
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

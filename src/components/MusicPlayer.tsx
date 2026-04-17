@@ -1,10 +1,12 @@
 import { Volume2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useSpotify } from "@/context/useSpotify";
 import { useAppleMusic } from "@/context/useAppleMusic";
 import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
 import { AppleMusicEmbed } from "@/components/AppleMusicEmbed";
 import { AppleMusicKitPlayer } from "@/components/AppleMusicKitPlayer";
 import { StreamingLibraryActions } from "@/components/StreamingLibraryActions";
+import { cn } from "@/lib/utils";
 
 interface MusicPlayerProps {
   trackTitle: string;
@@ -14,6 +16,7 @@ interface MusicPlayerProps {
 }
 
 const MusicPlayer = ({ trackTitle, artistName, spotifyTrackId, appleMusicTrackId }: MusicPlayerProps) => {
+  const { t } = useTranslation();
   const spotify = useSpotify();
   const appleMusic = useAppleMusic();
   const playbackMode = useStreamingPlaybackMode();
@@ -23,10 +26,12 @@ const MusicPlayer = ({ trackTitle, artistName, spotifyTrackId, appleMusicTrackId
     !!spotifyTrackId && (playbackMode === "spotify" || playbackMode === "guest");
   const appleOnlyFallback = !spotifyTrackId && !!appleMusicTrackId;
 
+  const chrome = "surface-player rounded-2xl border border-borderSubtle/50 p-2 md:p-3 shadow-soft mt-3";
+
   if (preferApple) {
     const useKit = appleMusic.isAuthorized && appleMusic.isAvailable;
     return (
-      <div className="mt-3" onClick={(e) => e.stopPropagation()}>
+      <div className={cn(chrome, "overflow-hidden")} onClick={(e) => e.stopPropagation()}>
         {useKit ? (
           <AppleMusicKitPlayer
             trackId={appleMusicTrackId!}
@@ -47,7 +52,7 @@ const MusicPlayer = ({ trackTitle, artistName, spotifyTrackId, appleMusicTrackId
 
   if (preferSpotifyEmbed) {
     return (
-      <div className="mt-3" onClick={(e) => e.stopPropagation()}>
+      <div className={cn(chrome, "overflow-hidden")} onClick={(e) => e.stopPropagation()}>
         <iframe
           src={`https://open.spotify.com/embed/track/${spotifyTrackId}?utm_source=generator&theme=0`}
           width="100%"
@@ -55,13 +60,13 @@ const MusicPlayer = ({ trackTitle, artistName, spotifyTrackId, appleMusicTrackId
           frameBorder="0"
           allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
           loading="lazy"
-          className="rounded-xl opacity-90 hover:opacity-100 transition-opacity"
+          className="rounded-xl opacity-95 hover:opacity-100 transition-opacity"
           title={`${trackTitle} by ${artistName}`}
         />
         {spotify.isConnected && spotify.isPremium && (
-          <p className="text-[10px] text-[hsl(141,73%,42%)]/50 font-body mt-1 flex items-center gap-1">
-            <Volume2 className="w-3 h-3" />
-            Riproduzione completa disponibile
+          <p className="text-[10px] text-primary/70 font-body mt-2 flex items-center gap-1">
+            <Volume2 className="w-3 h-3 shrink-0" />
+            {t("musicPlayer.fullPlaybackAvailable")}
           </p>
         )}
         <StreamingLibraryActions
@@ -76,7 +81,7 @@ const MusicPlayer = ({ trackTitle, artistName, spotifyTrackId, appleMusicTrackId
   if (appleOnlyFallback) {
     const useKit = appleMusic.isAuthorized && appleMusic.isAvailable;
     return (
-      <div className="mt-3" onClick={(e) => e.stopPropagation()}>
+      <div className={cn(chrome, "overflow-hidden")} onClick={(e) => e.stopPropagation()}>
         {useKit ? (
           <AppleMusicKitPlayer
             trackId={appleMusicTrackId!}

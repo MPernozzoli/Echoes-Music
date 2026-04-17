@@ -29,11 +29,11 @@ const AppLayout = ({ children, headerVariant = "app" }: AppLayoutProps) => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-borderSubtle/70 bg-background/90 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/75 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 md:px-6 h-14 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <AppLogo size={28} className="rounded-lg" />
-            <span className="font-display text-lg font-semibold gradient-warm-text">Echoes</span>
+          <Link to="/" className="group flex items-center gap-2 rounded-xl pr-1 -ml-1 pl-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ringGlow focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none">
+            <AppLogo size={28} className="rounded-lg transition-transform duration-300 motion-reduce:transition-none group-hover:scale-[1.04] group-active:scale-[0.98]" />
+            <span className="font-display text-lg font-semibold gradient-warm-text transition-[opacity,filter] duration-300 motion-reduce:transition-none group-hover:opacity-95 group-hover:brightness-110">Echoes</span>
           </Link>
 
           <div className="flex items-center gap-2 sm:gap-3">
@@ -46,10 +46,10 @@ const AppLayout = ({ children, headerVariant = "app" }: AppLayoutProps) => {
                     <Link
                       key={item.path}
                       to={item.path}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-body transition-colors ${
+                      className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-body transition-all ${
                         isActive
-                          ? "text-primary bg-primary/10"
-                          : "text-muted-foreground hover:text-foreground"
+                          ? "text-primary bg-primary/12 shadow-sm ring-1 ring-primary/15"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
                       }`}
                     >
                       <item.icon className="w-4 h-4" />
@@ -102,7 +102,7 @@ const AppLayout = ({ children, headerVariant = "app" }: AppLayoutProps) => {
       <main className="flex-1">{children}</main>
 
       {!isMarketing && (
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-border bg-background/90 backdrop-blur-xl">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-borderSubtle/80 bg-background/95 backdrop-blur-2xl pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_32px_-8px_rgba(0,0,0,0.12)]">
         <div className="flex items-center justify-around h-14">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
@@ -110,10 +110,13 @@ const AppLayout = ({ children, headerVariant = "app" }: AppLayoutProps) => {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex flex-col items-center gap-0.5 text-xs font-body transition-colors ${
+                className={`relative flex flex-col items-center gap-0.5 text-[11px] font-body transition-colors px-3 py-1.5 rounded-2xl ${
                   isActive ? "text-primary" : "text-muted-foreground"
                 }`}
               >
+                {isActive ? (
+                  <span className="absolute inset-x-1 -inset-y-0.5 rounded-2xl bg-primary/10 ring-1 ring-primary/15 -z-10" aria-hidden />
+                ) : null}
                 <item.icon className="w-5 h-5" />
                 {t(item.labelKey)}
               </Link>

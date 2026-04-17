@@ -314,10 +314,97 @@ interface TrackResult {
   releaseYear?: number;
 }
 
+const SEARCH_QUERY_LIMIT = 8;
+const EXACT_SUGGESTION_QUERY_LIMIT = 6;
+const SEARCH_RESULTS_PER_QUERY = 5;
+
+type SpotifySearchItem = {
+  id: string;
+  name: string;
+  uri?: string;
+  preview_url?: string | null;
+  artists?: Array<{ name: string }>;
+  album?: {
+    name?: string;
+    release_date?: string;
+    images?: Array<{ url?: string }>;
+  };
+};
+
+type AppleMusicSearchItem = {
+  id: string;
+  attributes: {
+    name: string;
+    artistName: string;
+    albumName?: string;
+    releaseDate?: string;
+    previews?: Array<{ url?: string }>;
+    artwork?: { url?: string };
+  };
+};
+
 function releaseYearFromDateString(d: string | undefined): number | undefined {
   if (!d || typeof d !== 'string') return undefined;
   const y = parseInt(d.slice(0, 4), 10);
   return y >= 1900 && y <= 2100 ? y : undefined;
+}
+
+function normalizeWhitespaceLower(s: string): string {
+  return normalizeWhitespace(s).toLowerCase();
+}
+
+function normalizePrimaryArtist(artist: string): string {
+  return normalizeWhitespaceLower(
+    artist
+      .split(/\s+(?:feat\.|ft\.|featuring|with)\s+/i)[0]
+      .split(/[,&/]/)[0] || artist,
+  );
+}
+
+function isVersionSuffix(inner: string): boolean {
+  const s = normalizeWhitespaceLower(inner);
+  return (
+    /\blive\b/.test(s) ||
+    /remaster/.test(s) ||
+    /\bmono\b|\bstereo\b/.test(s) ||
+    /\bedit\b|\bversion\b/.test(s) ||
+    /\bremix\b|\bre-?mix\b|club\s+mix|extended\s+mix|radio\s+mix|dub\s+mix/.test(s) ||
+    /extended|rework|vip\b|dub\b/.test(s) ||
+    /\bsingle\b|\bradio\b/.test(s) ||
+    /acoustic/.test(s) ||
+    /re-?record/.test(s) ||
+    /deluxe|bonus/.test(s) ||
+    /\d{4}\s*(remaster|version)/.test(s) ||
+    /clean|explicit/.test(s) ||
+    /^from\s/.test(s) ||
+    /soundtrack|\bost\b/.test(s) ||
+    /unplugged|session|demo/.test(s) ||
+    /instrumental/.test(s) ||
+    /karaoke|sped up|slowed|8d\b/.test(s)
+  );
+}
+
+function canonicalTitle(title: string): string {
+  let s = normalizeWhitespaceLower(title);
+  const dashVersion = /\s+-\s*(live|acoustic|remaster(?:ed)?|mono|stereo|radio edit|edit|version|mix|demo|session)\b/i;
+  if (dashVersion.test(s)) s = s.split(dashVersion)[0]?.trim() || s;
+  const paren = /\s*\(([^)]*)\)\s*$/;
+  for (let i = 0; i < 12; i++) {
+    const match = s.match(paren);
+    if (!match) break;
+    if (!isVersionSuffix(match[1])) break;
+    s = s.slice(0, match.index).trim();
+  }
+  return normalizeWhitespaceLower(s);
+}
+
+function workKey(title: string, artist: string): string {
+  return `${normalizePrimaryArtist(artist)}||${canonicalTitle(title)}`;
+}
+
+function titleLooksLikeVersion(title: string): boolean {
+  const lowered = normalizeWhitespaceLower(title);
+  return canonicalTitle(title) !== lowered || /\blive\b/.test(lowered);
 }
 
 async function searchSpotify(query: string, limit = 5): Promise<TrackResult[]> {
@@ -327,11 +414,11 @@ async function searchSpotify(query: string, limit = 5): Promise<TrackResult[]> {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) return [];
-  const data = await res.json();
-  return (data.tracks?.items || []).map((t: any) => ({
+  const data = await res.json() as { tracks?: { items?: SpotifySearchItem[] } };
+  return (data.tracks?.items || []).map((t) => ({
     trackId: t.id,
     title: t.name,
-    artist: t.artists.map((a: any) => a.name).join(', '),
+    artist: (t.artists || []).map((a) => a.name).join(', '),
     album: t.album?.name || '',
     artworkUrl: t.album?.images?.[0]?.url || '',
     provider: 'spotify' as const,
@@ -348,8 +435,8 @@ async function searchAppleMusic(query: string, limit = 5): Promise<TrackResult[]
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) return [];
-  const data = await res.json();
-  return (data.results?.songs?.data || []).map((s: any) => ({
+  const data = await res.json() as { results?: { songs?: { data?: AppleMusicSearchItem[] } } };
+  return (data.results?.songs?.data || []).map((s) => ({
     trackId: s.id,
     title: s.attributes.name,
     artist: s.attributes.artistName,
@@ -407,12 +494,12 @@ function sentenceCase(s: string): string {
 }
 
 function stripOuterQuotes(s: string): string {
-  return s.replace(/^[\"'«“”‘’]+|[\"'«“”‘’]+$/g, '');
+  return s.replace(/^["'«“”‘’]+|["'«“”‘’]+$/g, '');
 }
 
 function sanitizeAdjacentInterpretationText(value: string): string {
   let text = normalizeWhitespace(stripOuterQuotes(value));
-  text = text.replace(/^[\-\u2022\d.)\s]+/, '');
+  text = text.replace(/^[-\u2022\d.)\s]+/, '');
   text = text.replace(
     /^(?:forse\s+)?(?:l['’]utente|la richiesta|il prompt|this request|the user|the prompt|el usuario|la demande|o utilizador|der nutzer)\s+(?:potrebbe|could|might|may|would|seems to|podr[ií]a|pourrait|poderia|k[öo]nnte)\s+/i,
     '',
@@ -504,6 +591,81 @@ interface AIInterpretation {
   };
 }
 
+type PreparedSuggestion = {
+  title: string;
+  artist: string;
+  canonicalTitle: string;
+  primaryArtist: string;
+  relevanceScore: number;
+  explanation: string;
+  emotionalTags: string[];
+};
+
+type TrackAggregate = {
+  track: TrackResult;
+  score: number;
+  matched: PreparedSuggestion | null;
+  versions: TrackResult[];
+};
+
+function prepareSuggestion(suggestion: AIInterpretation['songSuggestions'][number]): PreparedSuggestion {
+  return {
+    title: suggestion.title,
+    artist: suggestion.artist,
+    canonicalTitle: canonicalTitle(suggestion.title),
+    primaryArtist: normalizePrimaryArtist(suggestion.artist),
+    relevanceScore: clampRelevance(suggestion.relevanceScore),
+    explanation: suggestion.explanation,
+    emotionalTags: suggestion.emotionalTags,
+  };
+}
+
+function scoreTrackAgainstSuggestion(track: TrackResult, suggestion: PreparedSuggestion): number {
+  const trackTitle = canonicalTitle(track.title);
+  const trackArtist = normalizePrimaryArtist(track.artist);
+  const exactTitle = trackTitle === suggestion.canonicalTitle;
+  const exactArtist = trackArtist === suggestion.primaryArtist;
+  const titleContains =
+    trackTitle.includes(suggestion.canonicalTitle) || suggestion.canonicalTitle.includes(trackTitle);
+  const versionPenalty = titleLooksLikeVersion(track.title) ? 4 : 0;
+
+  if (exactTitle && exactArtist) return suggestion.relevanceScore - versionPenalty;
+  if (exactTitle) return suggestion.relevanceScore - 18 - versionPenalty;
+  if (titleContains && exactArtist) return suggestion.relevanceScore - 10 - versionPenalty;
+  if (titleContains) return suggestion.relevanceScore - 26 - versionPenalty;
+  return 0;
+}
+
+function diversifySongsByArtist<T extends { artist: string }>(songs: T[], limit: number): T[] {
+  const selected: T[] = [];
+  const seenArtists = new Set<string>();
+
+  for (const song of songs) {
+    if (selected.length >= limit) break;
+    const artist = normalizePrimaryArtist(song.artist);
+    if (seenArtists.has(artist)) continue;
+    selected.push(song);
+    seenArtists.add(artist);
+  }
+
+  for (const song of songs) {
+    if (selected.length >= limit) break;
+    if (selected.includes(song)) continue;
+    selected.push(song);
+  }
+
+  return selected.slice(0, limit);
+}
+
+function variantSortValue(title: string): number {
+  const lowered = normalizeWhitespaceLower(title);
+  if (!titleLooksLikeVersion(title)) return 0;
+  if (/\blive\b/.test(lowered)) return 4;
+  if (/remaster/.test(lowered)) return 2;
+  if (/acoustic|demo|session|instrumental/.test(lowered)) return 3;
+  return 1;
+}
+
 const standardAxesSchema = {
   type: 'object',
   properties: {
@@ -580,8 +742,8 @@ ${memoryBlock}
 Given the user's message${params.image ? ' (and attached image)' : ''}:
 1. Detect the language of the active prompt (if any). If it's not English, respond with song suggestions primarily in that language unless the prompt explicitly asks for another language.
 2. Create an emotional profile analyzing themes, mood, energy, intimacy, catharsis, and emotional tension (rich text for UI).
-3. Generate 4-5 highly specific search queries optimized for Spotify/Apple Music search (use "artist name - song title" format when possible, or genre/mood keywords).
-4. Suggest 6-8 specific REAL songs with correct artists. Prioritize songs whose LYRICS match the user's intent. **Avoid suggesting multiple storefront variants of the same work** (e.g. same song as studio + remaster + remix + live) unless the user clearly wants versions; prefer one canonical cut per song. For each suggestion: emotional tags (3 words), a **distinct** poetic explanation tied to that song's lyrics or identity (never copy the same sentence across songs), and **relevanceScore** (0-100). **Score honestly**: weak or tangential fits must be **below 65**. Only strong, clearly justified picks should be **65 or above**. Do not inflate scores to fill the list.
+3. Generate 5-7 highly specific search queries optimized for Spotify/Apple Music search (use "artist name - song title" format when possible, or genre/mood keywords). At least 2 queries should intentionally go a bit deeper than the most obvious answer: hidden gems, deeper cuts, overlooked songs, niche adjacent scenes.
+4. Suggest 6-8 specific REAL songs with correct artists. Prioritize songs whose LYRICS match the user's intent. **Avoid suggesting multiple storefront variants of the same work** (e.g. same song as studio + remaster + remix + live) unless the user clearly wants versions; prefer one canonical cut per song. Diversify across artists whenever possible; avoid repeating the same primary artist unless the prompt strongly calls for it. Include at least 2 less-obvious, high-quality picks when the request allows it. For each suggestion: emotional tags (3 words), a **distinct** poetic explanation tied to that song's lyrics or identity (never copy the same sentence across songs), and **relevanceScore** (0-100). **Score honestly**: weak or tangential fits must be **below 65**. Only strong, clearly justified picks should be **65 or above**. Do not inflate scores to fill the list.
 5. Write **narrativeReply**: 2-5 sentences, same language as the user. One flowing paragraph: why this **cluster** fits the request emotionally (themes, arc, intent). Sound human and specific. **Do not** list every song, **do not** use «guillemets» or track-by-track blurbs — per-track reasoning lives only in each song's **explanation** field. You may name at most one anchor track if it feels natural; otherwise no titles. No bullet lists.
 6. Generate 2-3 adjacent interpretations — creative alternative readings of the prompt (or of the lucky pick).
    They must be SHORT USER INPUTS the person could actually type next.
@@ -992,33 +1154,82 @@ Deno.serve(async (req) => {
     });
     const interpretation = sanitizeInterpretation(discovery.interpretation, prompt);
 
-    // Step 2: Search both platforms using AI-generated queries + direct song lookups
+    const preparedSuggestions = interpretation.songSuggestions.map(prepareSuggestion);
+
+    // Step 2: search exact suggestions first, then the broader semantic queries.
     const allQueries = [
+      ...preparedSuggestions.slice(0, EXACT_SUGGESTION_QUERY_LIMIT).map((s) => `${s.artist} - ${s.title}`),
       ...interpretation.searchQueries,
-      ...interpretation.songSuggestions.slice(0, 3).map(s => `${s.title} ${s.artist}`),
     ];
 
-    // Deduplicate queries
-    const uniqueQueries = [...new Set(allQueries)].slice(0, 5);
+    // Deduplicate queries while preserving priority.
+    const uniqueQueries = [...new Set(allQueries.map((q) => normalizeWhitespace(q)).filter(Boolean))]
+      .slice(0, SEARCH_QUERY_LIMIT);
 
     // Search in parallel
     const searchPromises = uniqueQueries.flatMap(q => [
-      searchSpotify(q, 3),
-      searchAppleMusic(q, 3),
+      searchSpotify(q, SEARCH_RESULTS_PER_QUERY),
+      searchAppleMusic(q, SEARCH_RESULTS_PER_QUERY),
     ]);
     const searchResults = await Promise.all(searchPromises);
     const allTracks = searchResults.flat();
 
-    // Deduplicate by title+artist (case-insensitive)
-    const seen = new Set<string>();
-    const uniqueTracks: TrackResult[] = [];
+    // Deduplicate by canonical work, while merging provider-specific ids and keeping the strongest hit.
+    const mergedTracks = new Map<string, TrackAggregate>();
     for (const track of allTracks) {
-      const key = `${track.title.toLowerCase()}::${track.artist.toLowerCase()}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        uniqueTracks.push(track);
+      let bestSuggestion: PreparedSuggestion | null = null;
+      let bestScore = 0;
+      for (const suggestion of preparedSuggestions) {
+        const score = scoreTrackAgainstSuggestion(track, suggestion);
+        if (score > bestScore) {
+          bestScore = score;
+          bestSuggestion = suggestion;
+        }
       }
+      const entryScore = clampRelevance(bestSuggestion ? bestScore : 42 - (titleLooksLikeVersion(track.title) ? 4 : 0));
+      const key = workKey(track.title, track.artist);
+      const existing = mergedTracks.get(key);
+      if (!existing) {
+        mergedTracks.set(key, {
+          track,
+          score: entryScore,
+          matched: bestSuggestion,
+          versions: [track],
+        });
+        continue;
+      }
+
+      const versions = [...existing.versions];
+      if (!versions.some((version) => version.trackId === track.trackId && version.provider === track.provider)) {
+        versions.push(track);
+      }
+
+      mergedTracks.set(key, {
+        track: {
+          ...existing.track,
+          ...(entryScore > existing.score
+            ? {
+                title: track.title,
+                artist: track.artist,
+                album: track.album,
+                provider: track.provider,
+                trackId: track.trackId,
+                artworkUrl: track.artworkUrl || existing.track.artworkUrl,
+                releaseYear: track.releaseYear ?? existing.track.releaseYear,
+              }
+            : {}),
+          previewUrl: existing.track.previewUrl || track.previewUrl,
+          spotifyUri: existing.track.spotifyUri || track.spotifyUri,
+          appleMusicId: existing.track.appleMusicId || track.appleMusicId,
+          artworkUrl: existing.track.artworkUrl || track.artworkUrl,
+          releaseYear: existing.track.releaseYear ?? track.releaseYear,
+        },
+        score: Math.max(existing.score, entryScore),
+        matched: existing.matched ?? bestSuggestion,
+        versions,
+      });
     }
+    const uniqueTracks = [...mergedTracks.values()];
 
     const preferItFallback =
       typeof descriptionLanguage === 'string' && descriptionLanguage.trim().toLowerCase().startsWith('it');
@@ -1037,12 +1248,26 @@ Deno.serve(async (req) => {
     const explPool = preferItFallback ? explPoolIt : explPoolEn;
 
     // Enrich tracks with AI suggestions' emotional data (no fake-high scores for unrelated search hits)
-    const enrichedSongs = uniqueTracks.map((track, i) => {
-      const aiMatch = interpretation.songSuggestions.find(
-        s => s.title.toLowerCase() === track.title.toLowerCase() ||
-             track.title.toLowerCase().includes(s.title.toLowerCase())
-      );
-      const scored = aiMatch != null ? clampRelevance(aiMatch.relevanceScore) : 55;
+    const enrichedSongs = uniqueTracks.map(({ track, score, matched, versions }, i) => {
+      const alternateVersions = versions
+        .filter((version) => !(version.trackId === track.trackId && version.provider === track.provider))
+        .sort((a, b) => {
+          const kind = variantSortValue(a.title) - variantSortValue(b.title);
+          if (kind !== 0) return kind;
+          return a.title.localeCompare(b.title);
+        })
+        .map((version) => ({
+          id: `${version.provider}-${version.trackId}`,
+          title: version.title,
+          artist: version.artist,
+          album: version.album,
+          ...(version.releaseYear != null ? { releaseYear: version.releaseYear } : {}),
+          provider: version.provider,
+          ...(version.spotifyUri ? { spotifyUri: version.spotifyUri } : {}),
+          ...(version.appleMusicId ? { appleMusicId: version.appleMusicId } : {}),
+          ...(version.previewUrl ? { previewUrl: version.previewUrl } : {}),
+        }));
+
       return {
         id: `${track.provider}-${track.trackId}`,
         title: track.title,
@@ -1050,18 +1275,20 @@ Deno.serve(async (req) => {
         album: track.album,
         ...(track.releaseYear != null ? { releaseYear: track.releaseYear } : {}),
         artwork: track.artworkUrl,
-        emotionalTags: aiMatch?.emotionalTags || interpretation.emotionalProfile.themes.slice(0, 3),
-        explanation: aiMatch?.explanation || explPool[i % explPool.length],
-        relevanceScore: scored,
+        emotionalTags: matched?.emotionalTags || interpretation.emotionalProfile.themes.slice(0, 3),
+        explanation: matched?.explanation || explPool[i % explPool.length],
+        relevanceScore: score,
         provider: track.provider,
         spotifyUri: track.spotifyUri,
         appleMusicId: track.appleMusicId,
         previewUrl: track.previewUrl,
+        ...(alternateVersions.length ? { alternateVersions } : {}),
       };
     });
 
     const passed = enrichedSongs.filter((s) => s.relevanceScore >= MIN_RELEVANCE_SCORE);
     passed.sort((a, b) => b.relevanceScore - a.relevanceScore);
+    const diversified = diversifySongsByArtist(passed, 8);
 
     const cm = interpretation.conversationMemoryUpdate;
     const ut = interpretation.userTasteProfileUpdate;
@@ -1069,7 +1296,7 @@ Deno.serve(async (req) => {
     const result = {
       emotionalProfile: interpretation.emotionalProfile,
       narrativeReply: interpretation.narrativeReply || '',
-      songs: passed.slice(0, 8),
+      songs: diversified,
       adjacentInterpretations: interpretation.adjacentInterpretations,
       conversationMemoryUpdate: cm ? {
         threadSummary: cm.threadSummary,

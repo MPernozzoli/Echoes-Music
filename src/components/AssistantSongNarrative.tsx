@@ -16,6 +16,12 @@ function spotifyTrackIdFromSong(song: Song): string | undefined {
   return u.replace(/^spotify:track:/i, "");
 }
 
+function versionMeta(song: Pick<Song, "album" | "releaseYear">): string {
+  const year = song.releaseYear != null ? `${song.releaseYear}` : "";
+  if (song.album && year) return `${song.album} · ${year}`;
+  return song.album || year;
+}
+
 
 interface SongLinkPopoverProps {
   song: Song;
@@ -130,6 +136,29 @@ function SongLinkPopover({
             {song.explanation}
           </p>
         )}
+        {song.alternateVersions?.length ? (
+          <div className="px-3.5 py-3 border-t border-border/30 bg-card/40">
+            <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 font-body font-medium">
+              Versioni
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground font-body leading-relaxed">
+              Selezionata di default la versione principale; qui sotto trovi anche le altre cut trovate.
+            </p>
+            <div className="mt-2 space-y-1.5">
+              {song.alternateVersions.map((version) => (
+                <div
+                  key={version.id}
+                  className="rounded-xl border border-border/40 bg-background/40 px-2.5 py-2"
+                >
+                  <p className="text-[12px] font-medium text-foreground leading-tight">{version.title}</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground font-body">
+                    {versionMeta(version)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
         <div className="flex flex-wrap gap-1.5 px-3.5 py-3 border-t border-border/30">
           <Button
             type="button"

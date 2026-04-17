@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import AppLayout from "@/components/AppLayout";
 import { AppLogo } from "@/components/AppLogo";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { artworkTintFromId } from "@/lib/artworkTint";
 
 const Landing = () => {
   const { t } = useTranslation();
@@ -27,7 +29,7 @@ const Landing = () => {
   const landingPrompts = useMemo(() => {
     const completedSearchCount = conversations.reduce(
       (acc, c) => acc + c.messages.filter((m) => m.role === "assistant").length,
-      0
+      0,
     );
     return pickDiscoverPromptSuggestions({
       userTasteProfile,
@@ -118,152 +120,187 @@ const Landing = () => {
       { icon: Search, title: t("landing.step2Title"), desc: t("landing.step2Desc") },
       { icon: Music, title: t("landing.step3Title"), desc: t("landing.step3Desc") },
     ],
-    [t]
+    [t],
   );
+
+  const collage = mockSongs.slice(0, 4);
 
   return (
     <AppLayout headerVariant="marketing">
-    <div className="min-h-screen bg-background">
-      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
-        <img
-          src={heroBg}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover opacity-40"
-          width={1920}
-          height={1080}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/60 to-background" />
+      <div className="min-h-screen bg-background">
+        <section className="relative min-h-[92vh] flex items-center justify-center overflow-hidden">
+          <img
+            src={heroBg}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover opacity-35 scale-105 motion-reduce:scale-100"
+            width={1920}
+            height={1080}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/70 to-background" />
+          <div
+            className="absolute inset-0 opacity-[0.15] dark:opacity-[0.22] bg-brand-gradient bg-[length:200%_200%] animate-gradient-drift motion-reduce:animate-none"
+            aria-hidden
+          />
 
-        <div className="relative z-10 max-w-3xl mx-auto px-6 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border bg-card/50 text-muted-foreground text-sm font-body mb-8 animate-fade-in">
-            <Sparkles className="w-3.5 h-3.5 text-primary" />
-            {t("landing.badge")}
-          </div>
-
-          <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-foreground leading-[1.1] mb-6 animate-fade-up">
-            {t("landing.title")}{" "}
-            <span className="gradient-warm-text italic">{t("landing.titleItalic")}</span>
-          </h1>
-
-          <p className="text-lg md:text-xl text-muted-foreground font-body max-w-xl mx-auto mb-10 animate-fade-up" style={{ animationDelay: "100ms" }}>
-            {t("landing.subtitle")}
-          </p>
-
-          <div className="max-w-2xl mx-auto mb-4 animate-fade-up" style={{ animationDelay: "200ms" }}>
-            <PromptInput
-              onSubmit={handlePromptSubmit}
-              allowImageAttachment
-              size="hero"
-              placeholder={t("promptInput.placeholderDefault")}
-            />
-          </div>
-
-          <div className="flex justify-center mb-8 animate-fade-up" style={{ animationDelay: "250ms" }}>
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              className="rounded-full px-6 gap-2 border-primary/30 hover:bg-primary/10 font-body"
-              disabled={luckyLoading}
-              onClick={() => void handleLucky()}
-            >
-              {luckyLoading ? (
-                <span className="text-sm">{t("landing.luckyLoading")}</span>
-              ) : (
-                <>
-                  <Wand2 className="w-4 h-4 text-primary" />
-                  {t("landing.luckyButton")}
-                </>
-              )}
-            </Button>
-          </div>
-
-          <div className="flex flex-wrap justify-center gap-2 animate-fade-up" style={{ animationDelay: "300ms" }}>
-            {landingPrompts.map((prompt) => (
-              <button
-                key={prompt}
-                type="button"
-                onClick={() => handlePromptSubmit({ text: prompt })}
-                className="text-xs px-3 py-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all font-body"
+          {/* Silhouette copertine — parallax leggero */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
+            {collage.map((s, idx) => (
+              <div
+                key={s.id}
+                className={cn(
+                  "absolute rounded-3xl overflow-hidden shadow-2xl ring-1 ring-white/10 dark:ring-white/5 opacity-25 blur-[1px]",
+                  idx === 0 && "w-28 h-28 -left-4 top-[18%] rotate-[-8deg] animate-artwork-float",
+                  idx === 1 && "w-24 h-24 right-[8%] top-[22%] rotate-[10deg] animate-artwork-float [animation-delay:1s]",
+                  idx === 2 && "w-32 h-32 left-[12%] bottom-[20%] rotate-[6deg] animate-artwork-float [animation-delay:0.5s]",
+                  idx === 3 && "w-20 h-20 right-[18%] bottom-[28%] rotate-[-12deg] animate-artwork-float [animation-delay:1.5s]",
+                )}
+                style={{ animationDuration: `${5 + idx}s` }}
               >
-                {prompt}
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="py-24 px-6">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="font-display text-3xl md:text-4xl font-semibold text-center mb-16">
-            <Trans
-              i18nKey="landing.howHeading"
-              components={[<span key="e" className="gradient-warm-text" />]}
-            />
-          </h2>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {steps.map((step, i) => (
-              <div key={i} className="glass-card rounded-2xl p-6 text-center">
-                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <step.icon className="w-6 h-6 text-primary" />
-                </div>
-                <h3 className="font-display text-lg font-semibold mb-2">{step.title}</h3>
-                <p className="text-sm text-muted-foreground font-body leading-relaxed">{step.desc}</p>
+                <img src={s.artwork} alt="" className="w-full h-full object-cover" width={128} height={128} />
               </div>
             ))}
           </div>
-        </div>
-      </section>
 
-      <section className="py-24 px-6 gradient-warm rounded-t-3xl">
-        <div className="max-w-2xl mx-auto">
-          <p className="text-xs uppercase tracking-widest text-primary font-body mb-3 text-center">{t("landing.preview")}</p>
-          <h2 className="font-display text-3xl md:text-4xl font-semibold text-center mb-4">
-            {t("landing.resultsTitle")} <span className="italic">{t("landing.resultsTitleItalic")}</span>
-            {t("landing.resultsTitleEnd")}
-          </h2>
-          <p className="text-muted-foreground text-center font-body mb-12 max-w-lg mx-auto">
-            {t("landing.resultsSubtitle")}
-          </p>
+          <div className="relative z-10 max-w-3xl mx-auto px-6 text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/20 bg-card/60 backdrop-blur-md text-muted-foreground text-sm font-body mb-8 animate-fade-in shadow-soft">
+              <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
+              {t("landing.badge")}
+            </div>
 
-          <div className="space-y-4">
-            {mockSongs.slice(0, 3).map((song, i) => (
-              <SongCard key={song.id} {...song} index={i} />
-            ))}
-          </div>
+            <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-foreground leading-[1.08] mb-6 animate-fade-up text-balance">
+              {t("landing.title")}{" "}
+              <span className="gradient-warm-text italic">{t("landing.titleItalic")}</span>
+            </h1>
 
-          <div className="text-center mt-12">
-            <Link
-              to="/chat"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-body font-medium hover:opacity-90 transition-opacity"
+            <p
+              className="text-lg md:text-xl text-muted-foreground font-body max-w-xl mx-auto mb-10 animate-fade-up text-balance"
+              style={{ animationDelay: "100ms" }}
             >
-              {t("landing.enterEchoes")}
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </div>
-      </section>
+              {t("landing.subtitle")}
+            </p>
 
-      <footer className="py-12 px-6 text-center">
-        <div className="flex flex-col items-center gap-2 mb-2">
-          <AppLogo size={40} className="rounded-xl" />
-          <p className="font-display text-lg gradient-warm-text">Echoes</p>
-        </div>
-        <p className="text-xs text-muted-foreground font-body">{t("landing.footerTagline")}</p>
-        <nav className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs font-body">
-          <Link to="/privacy" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
-            {t("landing.footerPrivacy")}
-          </Link>
-          <span className="text-border" aria-hidden>
-            ·
-          </span>
-          <Link to="/cookies" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
-            {t("landing.footerCookies")}
-          </Link>
-        </nav>
-      </footer>
-    </div>
+            <div className="max-w-2xl mx-auto mb-4 animate-fade-up" style={{ animationDelay: "200ms" }}>
+              <PromptInput
+                onSubmit={handlePromptSubmit}
+                allowImageAttachment
+                size="hero"
+                placeholder={t("promptInput.placeholderDefault")}
+              />
+            </div>
+
+            <div className="flex justify-center mb-8 animate-fade-up" style={{ animationDelay: "250ms" }}>
+              <Button
+                type="button"
+                variant="soft"
+                size="lg"
+                className="rounded-full px-7 gap-2 font-body border-primary/20"
+                disabled={luckyLoading}
+                onClick={() => void handleLucky()}
+              >
+                {luckyLoading ? (
+                  <span className="text-sm">{t("landing.luckyLoading")}</span>
+                ) : (
+                  <>
+                    <Wand2 className="w-4 h-4 text-primary shrink-0" />
+                    {t("landing.luckyButton")}
+                  </>
+                )}
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap justify-center gap-2 animate-fade-up" style={{ animationDelay: "300ms" }}>
+              {landingPrompts.map((prompt, i) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => handlePromptSubmit({ text: prompt })}
+                  className="group text-xs px-4 py-2 rounded-full border border-border/70 bg-card/40 backdrop-blur-sm text-muted-foreground hover:text-foreground hover:border-primary/35 hover:bg-primary/[0.06] hover:shadow-md transition-all font-body hover:-rotate-1 hover:scale-[1.02] motion-reduce:hover:rotate-0 motion-reduce:hover:scale-100 animate-fade-slide-up"
+                  style={{ animationDelay: `${320 + i * 50}ms` }}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <Sparkles className="w-3 h-3 text-primary/60 group-hover:text-primary transition-colors shrink-0" />
+                    {prompt}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="py-24 md:py-28 px-6 relative">
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" aria-hidden />
+          <div className="max-w-5xl mx-auto">
+            <h2 className="font-display text-3xl md:text-4xl font-semibold text-center mb-16 text-balance">
+              <Trans i18nKey="landing.howHeading" components={[<span key="e" className="gradient-warm-text" />]} />
+            </h2>
+
+            <div className="grid md:grid-cols-3 gap-6 md:gap-8">
+              {steps.map((step, i) => (
+                <div
+                  key={i}
+                  className="surface-elevated rounded-2xl p-8 text-center hover:shadow-glow transition-shadow duration-300 border border-border/40 hover:border-primary/20 group"
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-emotional-tag/10 ring-1 ring-primary/20 flex items-center justify-center mx-auto mb-5 group-hover:scale-105 transition-transform motion-reduce:group-hover:scale-100">
+                    <step.icon className="w-7 h-7 text-primary" />
+                  </div>
+                  <h3 className="font-display text-xl font-semibold mb-3">{step.title}</h3>
+                  <p className="text-sm text-muted-foreground font-body leading-relaxed">{step.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section
+          className="py-24 md:py-28 px-6 relative overflow-hidden rounded-t-[2.5rem] md:rounded-t-[3rem]"
+          style={mockSongs[0] ? artworkTintFromId(mockSongs[0].id) : undefined}
+        >
+          <div className="absolute inset-0 gradient-warm rounded-t-[2.5rem] md:rounded-t-[3rem]" aria-hidden />
+          <div className="absolute inset-0 bg-artwork-radial opacity-50 pointer-events-none rounded-t-[2.5rem] md:rounded-t-[3rem]" aria-hidden />
+          <div className="relative max-w-2xl mx-auto">
+            <p className="text-xs uppercase tracking-widest text-primary font-body mb-3 text-center">{t("landing.preview")}</p>
+            <h2 className="font-display text-3xl md:text-4xl font-semibold text-center mb-4 text-balance">
+              {t("landing.resultsTitle")} <span className="italic">{t("landing.resultsTitleItalic")}</span>
+              {t("landing.resultsTitleEnd")}
+            </h2>
+            <p className="text-muted-foreground text-center font-body mb-12 max-w-lg mx-auto text-balance">{t("landing.resultsSubtitle")}</p>
+
+            <div className="space-y-5">
+              {mockSongs.slice(0, 3).map((song, i) => (
+                <SongCard key={song.id} {...song} index={i} />
+              ))}
+            </div>
+
+            <div className="text-center mt-14">
+              <Button variant="hero" size="lg" className="rounded-full px-8 gap-2 font-body" asChild>
+                <Link to="/chat">
+                  {t("landing.enterEchoes")}
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+
+        <footer className="py-14 px-6 text-center border-t border-border/40 bg-muted/20">
+          <div className="flex flex-col items-center gap-2 mb-2">
+            <AppLogo size={44} className="rounded-xl shadow-soft" />
+            <p className="font-display text-xl gradient-warm-text">Echoes</p>
+          </div>
+          <p className="text-xs text-muted-foreground font-body">{t("landing.footerTagline")}</p>
+          <nav className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs font-body">
+            <Link to="/privacy" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
+              {t("landing.footerPrivacy")}
+            </Link>
+            <span className="text-border" aria-hidden>
+              ·
+            </span>
+            <Link to="/cookies" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
+              {t("landing.footerCookies")}
+            </Link>
+          </nav>
+        </footer>
+      </div>
     </AppLayout>
   );
 };

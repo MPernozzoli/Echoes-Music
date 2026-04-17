@@ -90,6 +90,9 @@
     "streamingLoginRequired": "Accedi per collegare Spotify, Apple Music e la playlist Echoes.",
     "streamingLoginCta": "Vai al login",
     "signOut": "Esci",
+    "logoutShort": "Esci",
+    "advancedAiGuestTitle": "IA avanzata (OpenAI)",
+    "advancedAiGuestBody": "Per collegare la tua API key OpenAI accedi: la sezione completa apparirà qui sotto il tema.",
     "billingTitle": "Piano e token",
     "billingHint": "Abbonati o ricarica quando ti servono più ricerche.",
     "billingPlans": "Vedi piani",
@@ -123,7 +126,11 @@
     "chatWithTitle": "Chat: {{title}}",
     "fromQuote": "Da: \"{{prompt}}\""
   },
-  "notFound": { "title": "Pagina non trovata", "home": "Torna alla home" },
+  "notFound": {
+    "title": "Pagina non trovata",
+    "body": "Il link potrebbe essere errato o la pagina è stata spostata.",
+    "home": "Torna alla home"
+  },
   "insights": {
     "internal": "Interno",
     "title": "Insight prodotto",
@@ -239,6 +246,24 @@
     "addFavorite": "Aggiungi ai preferiti",
     "removeFavorite": "Rimuovi dai preferiti"
   },
+  "searchResultTrackList": {
+    "playNow": "Riproduci adesso",
+    "addToQueue": "Aggiungi in coda",
+    "playNext": "Come successivo",
+    "nowPlaying": "In riproduzione"
+  },
+  "musicPlayer": {
+    "fullPlaybackAvailable": "Riproduzione completa disponibile"
+  },
+  "emotionalProfile": {
+    "title": "Profilo emotivo",
+    "subtitle": "Come Echoes ha letto questo momento",
+    "mood": "Umore",
+    "energy": "Energia",
+    "intimacy": "Intimità",
+    "catharsis": "Catarsi",
+    "tension": "Tensione"
+  },
   "resultFb": {
     "thanks": "Grazie",
     "titleGood": "Ottimo abbinamento",
@@ -343,6 +368,7 @@
     "subscribe": "Abbonati",
     "subscribeYearly": "Abbonati annuale",
     "savePct": "Risparmia {{pct}}%",
+    "popularBadge": "Più scelto",
     "alreadyPremiumHint": "Sei su Premium. Gestisci carta o disdici dal portale di fatturazione.",
     "manageBilling": "Gestisci pagamenti",
     "checkoutSuccess": "Pagamento riuscito — piano o token si aggiorneranno a breve.",

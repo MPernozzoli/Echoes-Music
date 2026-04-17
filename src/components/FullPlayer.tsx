@@ -14,6 +14,8 @@ import { StreamingLibraryActions } from "@/components/StreamingLibraryActions";
 import { DockStreamingActions } from "@/components/DockStreamingActions";
 import { PlayerDockChrome, type DockRepeatMode } from "@/components/PlayerDockChrome";
 import { canUseWebKitAirPlayPicker, isAppleUserAgent, showWebKitAirPlayPicker } from "@/lib/airPlay";
+import { artworkTintFromId } from "@/lib/artworkTint";
+import { cn } from "@/lib/utils";
 
 interface FullPlayerProps {
   songs: Song[];
@@ -453,16 +455,17 @@ const FullPlayer = ({
   }
 
   return (
-    <div className="flex flex-col items-center w-full max-w-lg mx-auto animate-fade-up">
-      <div className="relative w-64 h-64 md:w-72 md:h-72 rounded-2xl overflow-hidden shadow-2xl mb-6 group">
+    <div style={artworkTintFromId(song.id)} className="relative flex flex-col items-center w-full max-w-lg mx-auto animate-fade-up px-2 pb-6">
+      <div className="pointer-events-none absolute inset-x-4 top-0 h-72 rounded-[2rem] gradient-artwork opacity-70 blur-3xl -z-10" aria-hidden />
+      <div className="relative w-64 h-64 md:w-72 md:h-72 rounded-3xl overflow-hidden shadow-elevated ring-1 ring-border/45 mb-6 group">
         <img
           src={song.artwork}
           alt={t("player.artworkAlt", { title: song.title, artist: song.artist })}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:group-hover:scale-100"
           width={288}
           height={288}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
       </div>
 
       <div className="w-full flex items-center justify-between px-2 mb-1">
@@ -548,9 +551,9 @@ const FullPlayer = ({
               className="w-full"
               disabled={!audioReady}
             />
-            <div className="flex justify-between mt-1">
-              <span className="text-[10px] font-body text-muted-foreground tabular-nums">{formatTime(currentTime)}</span>
-              <span className="text-[10px] font-body text-muted-foreground tabular-nums">{formatTime(duration)}</span>
+            <div className="flex justify-between mt-1.5">
+              <span className="text-xs font-body text-muted-foreground tabular-nums">{formatTime(currentTime)}</span>
+              <span className="text-xs font-body text-muted-foreground tabular-nums">{formatTime(duration)}</span>
             </div>
           </div>
 
@@ -568,9 +571,12 @@ const FullPlayer = ({
               type="button"
               onClick={togglePlay}
               disabled={!audioReady}
-              className="w-14 h-14 rounded-full bg-primary text-primary-foreground flex items-center justify-center hover:scale-105 active:scale-95 transition-transform disabled:opacity-50"
+              className={cn(
+                "w-16 h-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center",
+                "shadow-glow hover:scale-105 active:scale-95 transition-transform disabled:opacity-50 disabled:hover:scale-100",
+              )}
             >
-              {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
+              {isPlaying ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7 ml-0.5" />}
             </button>
 
             <button
@@ -616,7 +622,7 @@ const FullPlayer = ({
             frameBorder="0"
             allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
             loading="lazy"
-            className="rounded-xl"
+            className="rounded-2xl ring-1 ring-border/40 shadow-soft"
             title={t("player.artworkAlt", { title: song.title, artist: song.artist })}
           />
           {/* Still show prev/next */}

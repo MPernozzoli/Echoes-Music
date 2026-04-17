@@ -98,6 +98,9 @@
     "streamingLoginRequired": "Sign in to connect Spotify, Apple Music, and the Echoes playlist.",
     "streamingLoginCta": "Go to login",
     "signOut": "Sign out",
+    "logoutShort": "Log out",
+    "advancedAiGuestTitle": "Advanced AI (OpenAI)",
+    "advancedAiGuestBody": "To connect your OpenAI API key, sign in — the full section will appear here below theme.",
     "billingTitle": "Plan & tokens",
     "billingHint": "Subscribe or top up when you need more searches.",
     "billingPlans": "View plans",
@@ -133,6 +136,7 @@
   },
   "notFound": {
     "title": "Oops! Page not found",
+    "body": "The link may be wrong or the page has moved.",
     "home": "Return to Home"
   },
   "insights": {
@@ -250,6 +254,24 @@
     "addFavorite": "Add to favorites",
     "removeFavorite": "Remove from favorites"
   },
+  "searchResultTrackList": {
+    "playNow": "Play now",
+    "addToQueue": "Add to queue",
+    "playNext": "Play next",
+    "nowPlaying": "Now playing"
+  },
+  "musicPlayer": {
+    "fullPlaybackAvailable": "Full playback available"
+  },
+  "emotionalProfile": {
+    "title": "Emotional profile",
+    "subtitle": "How Echoes read this moment",
+    "mood": "Mood",
+    "energy": "Energy",
+    "intimacy": "Intimacy",
+    "catharsis": "Catharsis",
+    "tension": "Tension"
+  },
   "resultFb": {
     "thanks": "Thanks",
     "titleGood": "Good match",
@@ -354,6 +376,7 @@
     "subscribe": "Subscribe",
     "subscribeYearly": "Subscribe yearly",
     "savePct": "Save {{pct}}%",
+    "popularBadge": "Most popular",
     "alreadyPremiumHint": "You are on Premium. Manage payment method or cancel from the billing portal.",
     "manageBilling": "Manage billing",
     "checkoutSuccess": "Payment successful — your plan or tokens will update shortly.",

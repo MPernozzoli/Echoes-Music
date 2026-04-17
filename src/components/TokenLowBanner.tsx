@@ -14,7 +14,7 @@ const TokenLowBanner = () => {
 
   if (tokenBalance === 0) {
     return (
-      <div className="border-b border-destructive/40 bg-destructive/10 px-4 py-3">
+      <div className="border-b border-destructive/40 bg-destructive/10 px-4 py-3 backdrop-blur-sm">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-start gap-2 text-sm min-w-0">
             <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
@@ -59,8 +59,8 @@ const TokenLowBanner = () => {
 
   return (
     <div
-      className={`border-b px-4 py-2.5 ${
-        urgent ? "border-amber-500/50 bg-amber-500/10" : "border-primary/25 bg-primary/5"
+      className={`border-b px-4 py-2.5 backdrop-blur-sm ${
+        urgent ? "border-amber-500/50 bg-amber-500/10" : "border-primary/25 bg-primary/[0.06]"
       }`}
     >
       <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">

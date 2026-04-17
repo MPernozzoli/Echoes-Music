@@ -5,7 +5,8 @@ import { useAuth } from "@/context/useAuth";
 import { TOKEN_WARNING_THRESHOLD } from "@/constants/tokenAlerts";
 import { cn } from "@/lib/utils";
 
-const badgeClass = "flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-sm font-medium text-primary";
+const badgeClass =
+  "flex items-center gap-1.5 rounded-full border border-primary/25 bg-primary/8 px-3 py-1.5 text-sm font-medium text-primary shadow-sm ring-1 ring-primary/5";
 
 const TokenBadge = () => {
   const { t } = useTranslation();

@@ -60,20 +60,15 @@ function titleBaseForGrouping(title: string): string {
   return stripTrailingVersionSuffixes(title.toLowerCase());
 }
 
-/** True se il titolo originale indica una registrazione live (merita convivenza con lo studio). */
-function titleImpliesLiveRecording(title: string): boolean {
-  return /\([^)]*\blive\b[^)]*\)/i.test(title) || /\s-\s*live\s*$/i.test(title.trim());
-}
-
 function workGroupKey(song: Song): string {
   return `${normalizeArtist(song.artist)}||${titleBaseForGrouping(song.title)}`;
 }
 
 function compareCandidates(a: Song, b: Song): number {
   if (b.relevanceScore !== a.relevanceScore) return b.relevanceScore - a.relevanceScore;
-  const ar = /remaster/i.test(a.title) ? 1 : 0;
-  const br = /remaster/i.test(b.title) ? 1 : 0;
-  if (br !== ar) return br - ar;
+  const av = titleBaseForGrouping(a.title) !== a.title.toLowerCase() ? 1 : 0;
+  const bv = titleBaseForGrouping(b.title) !== b.title.toLowerCase() ? 1 : 0;
+  if (av !== bv) return av - bv;
   return a.title.localeCompare(b.title);
 }
 
@@ -81,42 +76,57 @@ type Indexed = { song: Song; index: number };
 
 /**
  * Riduce duplicati dello stesso brano (remaster, riedizioni, ecc.).
- * Mantiene al massimo una versione “studio” e una “live” per stesso titolo+artista,
- * scegliendo quella col punteggio più alto (a parità, preferenza remaster).
+ * Mantiene una sola versione canonica per stesso titolo+artista,
+ * scegliendo quella col punteggio piu alto (a parita, preferenza remaster).
+ * In UI, "studio" e "live" dello stesso pezzo vengono percepiti comunque come doppioni.
  */
 export function dedupeSongVersions(songs: Song[]): Song[] {
   if (songs.length <= 1) return songs;
 
-  const byKey = new Map<string, { studio: Indexed[]; live: Indexed[] }>();
+  const byKey = new Map<string, Indexed[]>();
   const keyOrder: string[] = [];
 
   songs.forEach((song, index) => {
     const key = workGroupKey(song);
     if (!byKey.has(key)) {
-      byKey.set(key, { studio: [], live: [] });
+      byKey.set(key, []);
       keyOrder.push(key);
     }
-    const bucket = byKey.get(key)!;
-    const entry = { song, index };
-    if (titleImpliesLiveRecording(song.title)) bucket.live.push(entry);
-    else bucket.studio.push(entry);
+    byKey.get(key)!.push({ song, index });
   });
 
-  const pickBest = (items: Indexed[]): Indexed[] => {
-    if (items.length === 0) return [];
-    const sorted = [...items].sort((a, b) => {
+  const pickBest = (items: Indexed[]): Indexed | null => {
+    if (items.length === 0) return null;
+    return [...items].sort((a, b) => {
       const c = compareCandidates(a.song, b.song);
       if (c !== 0) return c;
       return a.index - b.index;
-    });
-    return [sorted[0]];
+    })[0];
   };
 
   const out: Song[] = [];
   for (const key of keyOrder) {
-    const { studio, live } = byKey.get(key)!;
-    const merged = [...pickBest(studio), ...pickBest(live)].sort((a, b) => a.index - b.index);
-    out.push(...merged.map((x) => x.song));
+    const items = byKey.get(key)!;
+    const best = pickBest(items);
+    if (!best) continue;
+    const alternateVersions = items
+      .filter((item) => item.song.id !== best.song.id)
+      .map((item) => ({
+        id: item.song.id,
+        title: item.song.title,
+        artist: item.song.artist,
+        album: item.song.album,
+        ...(item.song.releaseYear != null ? { releaseYear: item.song.releaseYear } : {}),
+        ...(item.song.provider ? { provider: item.song.provider } : {}),
+        ...(item.song.spotifyUri ? { spotifyUri: item.song.spotifyUri } : {}),
+        ...(item.song.appleMusicId ? { appleMusicId: item.song.appleMusicId } : {}),
+        ...(item.song.previewUrl ? { previewUrl: item.song.previewUrl } : {}),
+      }));
+
+    out.push({
+      ...best.song,
+      ...(alternateVersions.length ? { alternateVersions } : {}),
+    });
   }
 
   return out;

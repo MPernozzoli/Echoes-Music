@@ -21,6 +21,7 @@ import {
   Crown,
   Gift,
   Copy,
+  Languages,
 } from "lucide-react";
 import { getUserSettings, persistThemePreference, setAllowAnonymizedData } from "@/services/tracking";
 import { getSpotifyAuthUrl, disconnectSpotify } from "@/services/spotify";
@@ -36,6 +37,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { REFERRAL_QUERY_PARAM } from "@/constants/referralStorage";
 import { REFERRAL_PRO_BONUS_RATE, REFERRAL_SIGNUP_BONUS_EACH } from "@/constants/tokenEconomy";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 
 const DESCRIPTION_LANGS: { value: string; label: string }[] = [
   { value: "it", label: "Italiano" },
@@ -127,10 +129,9 @@ const Profile = () => {
     };
   }, [refreshPreferencesFromServer, user?.id, setTheme]);
 
-  const handleToggle = async () => {
-    const next = !allowData;
-    setAllowData(next);
-    await setAllowAnonymizedData(next);
+  const handlePrivacySwitch = async (checked: boolean) => {
+    setAllowData(checked);
+    await setAllowAnonymizedData(checked);
   };
 
   const handleConnectSpotify = async () => {
@@ -187,25 +188,28 @@ const Profile = () => {
 
   return (
     <AppLayout>
-      <div className="max-w-2xl mx-auto px-4 md:px-6 py-8 pb-20 md:pb-8">
-        <h1 className="font-display text-3xl font-bold mb-8">{t("profile.title")}</h1>
+      <div className="max-w-2xl mx-auto px-4 md:px-6 py-8 pb-24 md:pb-10">
+        <div className="mb-10">
+          <h1 className="font-display text-3xl md:text-4xl font-bold mb-1">{t("profile.title")}</h1>
+          <p className="text-sm text-muted-foreground font-body">{user?.email ?? t("profile.demoEmail")}</p>
+        </div>
 
         {/* Account Section */}
-        <div className="glass-card rounded-2xl p-6 mb-6">
-          <div className="flex items-center gap-4">
+        <div className="surface-elevated rounded-3xl p-6 md:p-8 mb-8 border border-border/50 shadow-soft">
+          <div className="flex items-center gap-5">
             {user ? (
               <>
                 <img
                   src={user.user_metadata?.avatar_url || user.user_metadata?.picture}
                   alt=""
-                  className="w-14 h-14 rounded-full object-cover"
+                  className="w-20 h-20 rounded-2xl object-cover ring-2 ring-primary/15 shadow-md"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                 />
                 <div className="flex-1">
-                  <h2 className="font-display text-lg font-semibold">
+                  <h2 className="font-display text-xl font-semibold">
                     {user.user_metadata?.full_name || user.user_metadata?.name || user.email}
                   </h2>
-                  <p className="text-sm text-muted-foreground font-body">{user.email}</p>
+                  <p className="text-sm text-muted-foreground font-body truncate">{user.email}</p>
                   <div className="flex items-center gap-3 mt-1">
                     <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary capitalize">{plan}</span>
                     {tokenBalance !== null && (
@@ -215,13 +219,10 @@ const Profile = () => {
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={signOut}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-colors"
-                >
+                <Button variant="ghost" size="sm" onClick={signOut} className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0">
                   <LogOut className="w-4 h-4" />
-                  <span className="hidden md:inline">Logout</span>
-                </button>
+                  <span className="hidden md:inline">{t("profile.logoutShort")}</span>
+                </Button>
               </>
             ) : (
               <>
@@ -237,7 +238,7 @@ const Profile = () => {
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-primary hover:bg-primary/10 transition-colors"
                 >
                   <LogIn className="w-4 h-4" />
-                  Login
+                  {t("nav.login")}
                 </button>
               </>
             )}
@@ -245,84 +246,80 @@ const Profile = () => {
         </div>
 
         {user && (
-          <div className="glass-card rounded-2xl p-6 mb-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Crown className="w-5 h-5 text-primary" />
+          <div className="surface-card rounded-3xl p-6 md:p-7 mb-6 border border-border/50 space-y-6">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Crown className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-body text-sm font-medium text-foreground">{t("profile.billingTitle")}</h3>
+                  <p className="text-xs text-muted-foreground font-body">{t("profile.billingHint")}</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-body text-sm font-medium text-foreground">{t("profile.billingTitle")}</h3>
-                <p className="text-xs text-muted-foreground font-body">{t("profile.billingHint")}</p>
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-              <Link
-                to="/pricing/plan"
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl border border-border text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all"
-              >
-                <Crown className="w-3.5 h-3.5" />
-                {t("profile.billingPlans")}
-              </Link>
-              <Link
-                to="/pricing/tokens"
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl border border-border text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all"
-              >
-                <Coins className="w-3.5 h-3.5" />
-                {t("profile.billingTokens")}
-              </Link>
-              {plan === "premium" && (
-                <button
-                  type="button"
-                  onClick={() => void handleBillingPortal()}
-                  disabled={portalLoading}
-                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl border border-border text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all disabled:opacity-50"
+              <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+                <Link
+                  to="/pricing/plan"
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border border-border text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/35 transition-all"
                 >
-                  {portalLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ExternalLink className="w-3.5 h-3.5" />}
-                  {t("profile.billingManage")}
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {user && (
-          <div className="glass-card rounded-2xl p-6 mb-6">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Gift className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-body text-sm font-medium text-foreground">{t("referral.title")}</h3>
-                <p className="text-xs text-muted-foreground font-body mt-0.5">
-                  {t("referral.subtitle", {
-                    signup: REFERRAL_SIGNUP_BONUS_EACH,
-                    pct: Math.round(REFERRAL_PRO_BONUS_RATE * 100),
-                  })}
-                </p>
-              </div>
-            </div>
-            {referralLoading ? (
-              <p className="text-xs text-muted-foreground font-body">{t("referral.loading")}</p>
-            ) : referralUrl ? (
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Input readOnly value={referralUrl} className="font-mono text-xs h-10" />
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="shrink-0 gap-2 h-10"
-                  onClick={() => void handleCopyReferral()}
+                  <Crown className="w-3.5 h-3.5" />
+                  {t("profile.billingPlans")}
+                </Link>
+                <Link
+                  to="/pricing/tokens"
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border border-border text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/35 transition-all"
                 >
-                  {referralCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  {t("referral.copy")}
-                </Button>
+                  <Coins className="w-3.5 h-3.5" />
+                  {t("profile.billingTokens")}
+                </Link>
+                {plan === "premium" && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full gap-1.5"
+                    onClick={() => void handleBillingPortal()}
+                    disabled={portalLoading}
+                  >
+                    {portalLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ExternalLink className="w-3.5 h-3.5" />}
+                    {t("profile.billingManage")}
+                  </Button>
+                )}
               </div>
-            ) : null}
+            </div>
+            <div className="border-t border-border/40 pt-6">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Gift className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-body text-sm font-medium text-foreground">{t("referral.title")}</h3>
+                  <p className="text-xs text-muted-foreground font-body mt-0.5">
+                    {t("referral.subtitle", {
+                      signup: REFERRAL_SIGNUP_BONUS_EACH,
+                      pct: Math.round(REFERRAL_PRO_BONUS_RATE * 100),
+                    })}
+                  </p>
+                </div>
+              </div>
+              {referralLoading ? (
+                <p className="text-xs text-muted-foreground font-body">{t("referral.loading")}</p>
+              ) : referralUrl ? (
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Input readOnly value={referralUrl} className="font-mono text-xs h-10 rounded-xl" />
+                  <Button type="button" variant="outline" className="shrink-0 gap-2 h-10 rounded-full" onClick={() => void handleCopyReferral()}>
+                    {referralCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    {t("referral.copy")}
+                  </Button>
+                </div>
+              ) : null}
+            </div>
           </div>
         )}
 
         {user ? (
           <>
-            <div id="streaming-services" className="glass-card rounded-2xl p-6 mb-6 scroll-mt-24">
+            <div id="streaming-services" className="surface-card rounded-3xl p-6 mb-6 scroll-mt-24 border border-border/50">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-[hsl(141,73%,42%)]/10 flex items-center justify-center">
@@ -338,10 +335,10 @@ const Profile = () => {
                           <Check className="w-3 h-3" />
                           {spotifyName}
                         </p>
-                        <p className="text-[10px] text-muted-foreground font-body">
+                        <p className="text-xs text-muted-foreground font-body">
                           {isPremium ? t("profile.premiumFull") : t("profile.freePreview")}
                         </p>
-                        <p className="text-[10px] text-muted-foreground font-body mt-1 max-w-[220px]">{t("profile.libraryHint")}</p>
+                        <p className="text-xs text-muted-foreground font-body mt-1 max-w-[240px] leading-snug">{t("profile.libraryHint")}</p>
                       </div>
                     ) : (
                       <p className="text-xs text-muted-foreground font-body">{t("profile.connectPlayback")}</p>
@@ -371,7 +368,7 @@ const Profile = () => {
               </div>
             </div>
 
-            <div className="glass-card rounded-2xl p-6 mb-6">
+            <div className="surface-card rounded-3xl p-6 mb-6 border border-border/50">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-[hsl(350,80%,55%)]/10 flex items-center justify-center">
@@ -389,7 +386,7 @@ const Profile = () => {
                           <Check className="w-3 h-3" />
                           {t("profile.appleConnected")}
                         </p>
-                        <p className="text-[10px] text-muted-foreground font-body mt-1">
+                        <p className="text-xs text-muted-foreground font-body mt-1">
                           {t("profile.appleLinkedOnAccount")}
                         </p>
                       </div>
@@ -399,7 +396,7 @@ const Profile = () => {
                           <Check className="w-3 h-3" />
                           {t("profile.appleLinkedAccount")}
                         </p>
-                        <p className="text-[10px] text-muted-foreground font-body mt-1 max-w-[240px]">
+                        <p className="text-xs text-muted-foreground font-body mt-1 max-w-[260px] leading-snug">
                           {t("profile.appleLinkedNeedsBrowser")}
                         </p>
                       </div>
@@ -430,7 +427,7 @@ const Profile = () => {
               </div>
             </div>
 
-            <div className="glass-card rounded-2xl p-6 mb-6">
+            <div className="surface-card rounded-3xl p-6 mb-6 border border-border/50">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
@@ -441,15 +438,7 @@ const Profile = () => {
                     <p className="text-xs text-muted-foreground font-body">{t("profile.favoritesPlaylistHint")}</p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void setSyncFavoritesEchoesPlaylist(!syncFavoritesEchoesPlaylist)}
-                  className={`relative shrink-0 w-11 h-6 rounded-full transition-colors ${syncFavoritesEchoesPlaylist ? "bg-primary" : "bg-muted"}`}
-                >
-                  <span
-                    className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-primary-foreground transition-transform ${syncFavoritesEchoesPlaylist ? "translate-x-5" : "translate-x-0"}`}
-                  />
-                </button>
+                <Switch checked={syncFavoritesEchoesPlaylist} onCheckedChange={(v) => void setSyncFavoritesEchoesPlaylist(v)} />
               </div>
             </div>
           </>
@@ -477,7 +466,7 @@ const Profile = () => {
           </div>
         )}
 
-        <div className="glass-card rounded-2xl p-6 mb-6">
+        <div className="surface-card rounded-3xl p-6 mb-6 border border-border/50">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -502,11 +491,11 @@ const Profile = () => {
           </div>
         </div>
 
-        <div className="glass-card rounded-2xl p-6 mb-6">
+        <div className="surface-card rounded-3xl p-6 mb-6 border border-border/50">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Globe className="w-5 h-5 text-primary" />
+              <div className="w-10 h-10 rounded-xl bg-emotional-tag/15 flex items-center justify-center ring-1 ring-emotional-tag/20">
+                <Languages className="w-5 h-5 text-emotional-tag" />
               </div>
               <div>
                 <h3 className="font-body text-sm font-medium text-foreground">{t("profile.descriptionLanguage")}</h3>
@@ -528,7 +517,7 @@ const Profile = () => {
           </div>
         </div>
 
-        <div className="glass-card rounded-2xl p-6 mb-6">
+        <div className="surface-card rounded-3xl p-6 mb-6 border border-border/50">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -559,25 +548,18 @@ const Profile = () => {
         {user ? (
           <AdvancedAISettings />
         ) : (
-          <div className="glass-card rounded-2xl p-6 mb-6 border border-border/50">
-            <h3 className="font-body text-sm font-medium text-foreground">Advanced AI Settings</h3>
-            <p className="text-xs text-muted-foreground font-body mt-1 leading-relaxed">
-              Per collegare la tua API key OpenAI (modalità avanzata) devi essere loggato. Dopo il login la sezione completa apparirà qui,
-              sotto il tema.
-            </p>
-            <button
-              type="button"
-              onClick={() => navigate("/auth")}
-              className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-body border border-border text-primary hover:bg-primary/10"
-            >
+          <div className="surface-card rounded-3xl p-6 mb-6 border border-border/50">
+            <h3 className="font-display text-base font-semibold text-foreground">{t("profile.advancedAiGuestTitle")}</h3>
+            <p className="text-xs text-muted-foreground font-body mt-2 leading-relaxed">{t("profile.advancedAiGuestBody")}</p>
+            <Button type="button" variant="outline" size="sm" className="mt-4 rounded-full gap-1.5" onClick={() => navigate("/auth")}>
               <LogIn className="w-3.5 h-3.5" />
-              Accedi
-            </button>
+              {t("nav.login")}
+            </Button>
           </div>
         )}
 
-        <div className="glass-card rounded-2xl p-6 mb-6">
-          <div className="flex items-center justify-between">
+        <div className="surface-card rounded-3xl p-6 mb-6 border border-border/50">
+          <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                 <Shield className="w-5 h-5 text-primary" />
@@ -587,21 +569,14 @@ const Profile = () => {
                 <p className="text-xs text-muted-foreground font-body max-w-xs">{t("profile.privacyHint")}</p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={handleToggle}
-              disabled={loadingSettings}
-              className={`relative w-11 h-6 rounded-full transition-colors ${allowData ? "bg-primary" : "bg-muted"}`}
-            >
-              <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-primary-foreground transition-transform ${allowData ? "translate-x-5" : "translate-x-0"}`} />
-            </button>
+            <Switch checked={allowData} onCheckedChange={(v) => void handlePrivacySwitch(v)} disabled={loadingSettings} />
           </div>
         </div>
 
-        <button type="button" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-destructive font-body transition-colors mt-4">
+        <Button type="button" variant="ghost" className="gap-2 text-muted-foreground hover:text-destructive font-body mt-2" onClick={signOut}>
           <LogOut className="w-4 h-4" />
           {t("profile.signOut")}
-        </button>
+        </Button>
       </div>
     </AppLayout>
   );

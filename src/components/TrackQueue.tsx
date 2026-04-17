@@ -6,6 +6,16 @@ import { cn } from "@/lib/utils";
 
 const DRAG_MIME = "application/x-echoes-queue-index";
 
+function ActiveWaveIndicator({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-end justify-center gap-0.5 h-4 w-5" aria-label={label}>
+      <span className="w-0.5 rounded-full bg-primary origin-bottom h-2 animate-wave-bars [animation-delay:0ms]" />
+      <span className="w-0.5 rounded-full bg-primary origin-bottom h-3 animate-wave-bars [animation-delay:120ms]" />
+      <span className="w-0.5 rounded-full bg-primary origin-bottom h-2 animate-wave-bars [animation-delay:240ms]" />
+    </span>
+  );
+}
+
 interface TrackQueueProps {
   songs: Song[];
   currentIndex: number;
@@ -41,7 +51,7 @@ const TrackQueue = ({
       e.dataTransfer.setData(DRAG_MIME, String(index));
       e.dataTransfer.effectAllowed = "move";
     },
-    [onReorder]
+    [onReorder],
   );
 
   const handleDragOver = useCallback(
@@ -51,7 +61,7 @@ const TrackQueue = ({
       e.dataTransfer.dropEffect = "move";
       setDragOverIndex(index);
     },
-    [onReorder]
+    [onReorder],
   );
 
   const handleDragLeave = useCallback(() => {
@@ -68,7 +78,7 @@ const TrackQueue = ({
       if (Number.isNaN(from) || from === dropIndex) return;
       onReorder(from, dropIndex);
     },
-    [onReorder]
+    [onReorder],
   );
 
   const handleDragEnd = useCallback(() => {
@@ -78,35 +88,17 @@ const TrackQueue = ({
   const isDock = variant === "dock";
 
   return (
-    <div className="max-h-[min(50vh,22rem)] overflow-y-auto overflow-x-hidden pr-1 space-y-1 scroll-smooth">
+    <div className="max-h-[min(50vh,22rem)] overflow-y-auto overflow-x-hidden pr-1 space-y-1 scroll-smooth scrollbar-thin">
       {songs.map((song, i) => {
         const isActive = i === currentIndex;
-        const rowActive = isDock
-          ? isActive
-            ? "bg-[hsl(141,73%,48%)]/12 border border-[hsl(141,73%,48%)]/25"
-            : "hover:bg-muted/80 border border-transparent"
-          : isActive
-            ? "bg-primary/10 border border-primary/20"
-            : "hover:bg-muted/60 border border-transparent";
+        const rowActive = isActive
+          ? "bg-primary/12 border border-primary/25 shadow-sm bg-gradient-to-r from-primary/5 to-transparent"
+          : "hover:bg-muted/70 border border-transparent";
 
-        const titleClass = isDock
-          ? isActive
-            ? "text-[hsl(141,73%,52%)]"
-            : "text-foreground"
-          : isActive
-            ? "text-primary"
-            : "text-foreground";
-
-        const posClass = isDock
-          ? isActive
-            ? "text-[hsl(141,73%,52%)] font-semibold"
-            : "text-muted-foreground"
-          : isActive
-            ? "text-primary font-semibold"
-            : "text-muted-foreground";
+        const titleClass = isActive ? "text-primary font-semibold" : "text-foreground";
 
         const dragOverRing =
-          dragOverIndex === i && onReorder ? "ring-2 ring-primary/40 ring-inset rounded-xl" : "";
+          dragOverIndex === i && onReorder ? "ring-2 ring-primary/35 ring-inset rounded-xl" : "";
 
         return (
           <div
@@ -120,7 +112,7 @@ const TrackQueue = ({
             className={cn(
               "w-full flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 rounded-xl transition-all text-left group",
               rowActive,
-              dragOverRing
+              dragOverRing,
             )}
           >
             {onReorder && (
@@ -133,10 +125,7 @@ const TrackQueue = ({
                     e.stopPropagation();
                     onReorder(i, i - 1);
                   }}
-                  className={cn(
-                    "p-0.5 rounded-md disabled:opacity-25 disabled:pointer-events-none",
-                    isDock ? "text-muted-foreground hover:text-foreground" : "text-muted-foreground hover:text-foreground"
-                  )}
+                  className="p-0.5 rounded-md disabled:opacity-25 disabled:pointer-events-none text-muted-foreground hover:text-foreground"
                 >
                   <ChevronUp className="w-3.5 h-3.5" />
                 </button>
@@ -148,10 +137,7 @@ const TrackQueue = ({
                     e.stopPropagation();
                     onReorder(i, i + 1);
                   }}
-                  className={cn(
-                    "p-0.5 rounded-md disabled:opacity-25 disabled:pointer-events-none",
-                    isDock ? "text-muted-foreground hover:text-foreground" : "text-muted-foreground hover:text-foreground"
-                  )}
+                  className="p-0.5 rounded-md disabled:opacity-25 disabled:pointer-events-none text-muted-foreground hover:text-foreground"
                 >
                   <ChevronDown className="w-3.5 h-3.5" />
                 </button>
@@ -165,8 +151,8 @@ const TrackQueue = ({
                 onDragStart={(e) => handleDragStart(e, i)}
                 title={t("trackQueue.dragReorder")}
                 className={cn(
-                  "touch-none p-1 rounded-md cursor-grab active:cursor-grabbing shrink-0",
-                  isDock ? "text-muted-foreground/80 hover:text-muted-foreground" : "text-muted-foreground/70 hover:text-muted-foreground"
+                  "touch-none p-1.5 rounded-lg cursor-grab active:cursor-grabbing shrink-0",
+                  "bg-muted/50 border border-border/50 text-muted-foreground hover:text-foreground hover:border-primary/25",
                 )}
                 aria-label={t("trackQueue.dragReorder")}
               >
@@ -177,44 +163,35 @@ const TrackQueue = ({
             <button
               type="button"
               onClick={() => onSelect(i)}
-              className="flex flex-1 min-w-0 items-center gap-2 sm:gap-3 text-left py-0.5 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+              className="flex flex-1 min-w-0 items-center gap-2 sm:gap-3 text-left py-0.5 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ringGlow/40"
             >
-              <span className={cn("text-xs font-body w-5 text-center shrink-0 tabular-nums", posClass)}>
-                {isActive ? "▶" : i + 1}
+              <span
+                className={cn(
+                  "text-xs font-body w-6 sm:w-7 flex items-center justify-center shrink-0 tabular-nums",
+                  isActive ? "text-primary" : "text-muted-foreground",
+                )}
+              >
+                {isActive ? <ActiveWaveIndicator label={t("searchResultTrackList.nowPlaying")} /> : i + 1}
               </span>
 
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg overflow-hidden bg-muted shrink-0">
+              <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl overflow-hidden bg-muted shrink-0 ring-1 ring-border/40 shadow-sm">
                 <img
                   src={song.artwork}
                   alt={song.title}
                   className="w-full h-full object-cover"
                   loading="lazy"
-                  width={40}
-                  height={40}
+                  width={44}
+                  height={44}
                   draggable={false}
                 />
               </div>
 
               <div className="flex-1 min-w-0">
                 <p className={cn("text-sm font-body font-medium truncate", titleClass)}>{song.title}</p>
-                <p
-                  className={cn(
-                    "text-xs font-body truncate",
-                    isDock ? "text-muted-foreground" : "text-muted-foreground"
-                  )}
-                >
-                  {song.artist}
-                </p>
+                <p className="text-xs font-body truncate text-muted-foreground">{song.artist}</p>
               </div>
 
-              <span
-                className={cn(
-                  "text-[10px] font-body shrink-0 tabular-nums",
-                  isDock ? "text-muted-foreground" : "text-muted-foreground"
-                )}
-              >
-                {song.relevanceScore}%
-              </span>
+              <span className="text-[11px] font-body shrink-0 tabular-nums text-muted-foreground">{song.relevanceScore}%</span>
             </button>
 
             <div className="flex items-center gap-0.5 shrink-0">
@@ -227,17 +204,13 @@ const TrackQueue = ({
                 }}
                 className={cn(
                   "p-1.5 rounded-full transition-colors",
-                  isDock ? "hover:bg-muted text-muted-foreground" : "hover:bg-muted/80 text-muted-foreground"
+                  isDock ? "hover:bg-muted text-muted-foreground" : "hover:bg-muted/80 text-muted-foreground",
                 )}
               >
                 <Heart
                   className={cn(
                     "w-4 h-4",
-                    isFavorite(song.id)
-                      ? isDock
-                        ? "fill-[hsl(141,73%,48%)] text-[hsl(141,73%,48%)]"
-                        : "fill-primary text-primary"
-                      : ""
+                    isFavorite(song.id) ? "fill-primary text-primary" : "",
                   )}
                 />
               </button>
@@ -254,7 +227,7 @@ const TrackQueue = ({
                     "p-1.5 rounded-full transition-colors",
                     isDock
                       ? "hover:bg-destructive/15 text-muted-foreground hover:text-destructive"
-                      : "hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                      : "hover:bg-destructive/10 text-muted-foreground hover:text-destructive",
                   )}
                 >
                   <Trash2 className="w-4 h-4" />

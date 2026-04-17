@@ -108,24 +108,25 @@ const Insights = () => {
 
   return (
     <AppLayout>
-      <div className="max-w-4xl mx-auto px-4 md:px-6 py-8 pb-20 md:pb-8">
-        <div className="mb-10">
-          <p className="text-xs text-muted-foreground font-body uppercase tracking-wider mb-1">{t("insights.internal")}</p>
-          <h1 className="font-display text-3xl font-bold mb-2">{t("insights.title")}</h1>
-          <p className="text-muted-foreground font-body text-sm">{t("insights.subtitle")}</p>
+      <div className="relative max-w-4xl mx-auto px-4 md:px-6 py-8 md:py-10 pb-24 md:pb-10 overflow-hidden">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-artwork-radial opacity-25" aria-hidden />
+        <div className="relative mb-12">
+          <p className="text-xs text-muted-foreground font-body uppercase tracking-wider mb-2">{t("insights.internal")}</p>
+          <h1 className="font-display text-3xl md:text-4xl font-bold mb-2">{t("insights.title")}</h1>
+          <p className="text-muted-foreground font-body text-sm max-w-xl">{t("insights.subtitle")}</p>
         </div>
 
         {loading ? (
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="glass-card rounded-2xl p-6 animate-pulse-soft h-24" />
+              <div key={i} className="surface-card rounded-3xl p-6 animate-pulse-soft h-24 border border-border/40" />
             ))}
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-10">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-12">
               {stats.map((s) => (
-                <div key={s.labelKey} className="glass-card rounded-xl p-4 text-center">
+                <div key={s.labelKey} className="surface-card rounded-2xl p-4 md:p-5 text-center border border-border/50 shadow-soft">
                   <s.icon className="w-4 h-4 text-primary mx-auto mb-2" />
                   <p className="font-display text-2xl font-bold text-foreground">{s.value}</p>
                   <p className="text-xs text-muted-foreground font-body mt-0.5">{t(s.labelKey)}</p>
@@ -133,8 +134,8 @@ const Insights = () => {
               ))}
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6 mb-10">
-              <div className="glass-card rounded-2xl p-6">
+            <div className="grid md:grid-cols-2 gap-6 md:gap-8 mb-12">
+              <div className="surface-card rounded-3xl p-6 md:p-7 border border-border/50">
                 <div className="flex items-center gap-2 mb-4">
                   <Hash className="w-4 h-4 text-primary" />
                   <h3 className="font-display text-base font-semibold">{t("insights.topThemes")}</h3>
@@ -148,7 +149,7 @@ const Insights = () => {
                         <span className="text-sm font-body text-foreground w-28 truncate">{row.theme}</span>
                         <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-primary/60 rounded-full transition-all"
+                            className="h-full rounded-full bg-gradient-to-r from-primary/70 to-emotional-tag/50 transition-all"
                             style={{ width: `${(row.count / maxThemeCount) * 100}%` }}
                           />
                         </div>
@@ -159,7 +160,7 @@ const Insights = () => {
                 )}
               </div>
 
-              <div className="glass-card rounded-2xl p-6">
+              <div className="surface-card rounded-3xl p-6 md:p-7 border border-border/50">
                 <div className="flex items-center gap-2 mb-4">
                   <Activity className="w-4 h-4 text-primary" />
                   <h3 className="font-display text-base font-semibold">{t("insights.interactionTypes")}</h3>
@@ -185,7 +186,7 @@ const Insights = () => {
               </div>
             </div>
 
-            <div className="glass-card rounded-2xl p-6 mb-10">
+            <div className="surface-card rounded-3xl p-6 md:p-7 mb-12 border border-border/50">
               <div className="flex items-center gap-2 mb-4">
                 <MessageCircle className="w-4 h-4 text-primary" />
                 <h3 className="font-display text-base font-semibold">{t("insights.feedbackBreakdown")}</h3>
@@ -215,7 +216,7 @@ const Insights = () => {
               )}
             </div>
 
-            <div className="glass-card rounded-2xl p-6">
+            <div className="surface-card rounded-3xl p-6 md:p-7 border border-border/50">
               <div className="flex items-center gap-2 mb-4">
                 <Search className="w-4 h-4 text-primary" />
                 <h3 className="font-display text-base font-semibold">{t("insights.recentSearches")}</h3>

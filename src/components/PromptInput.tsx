@@ -84,11 +84,12 @@ const PromptInput = ({
       )}
       <div
         className={cn(
-          "relative group transition-all duration-300",
-          isHero && "input-glow rounded-2xl glass-card shadow-lg shadow-primary/[0.04]",
+          "relative group transition-all duration-300 rounded-2xl",
+          isHero && "input-glow glass-card shadow-lg shadow-primary/[0.06]",
+          isHero && isLoading && "ring-2 ring-primary/25 animate-glow-pulse motion-reduce:animate-none",
           !isHero && !isCompact && "input-glow rounded-2xl bg-card/80 border border-border/80 shadow-sm",
           isCompact &&
-            "rounded-2xl border border-border/60 bg-card/60 shadow-[0_1px_3px_rgba(0,0,0,0.08)] backdrop-blur-xl transition-shadow focus-within:shadow-[0_0_0_1px_hsl(var(--ring)/0.35),0_2px_12px_hsl(var(--ring)/0.08)] focus-within:border-primary/30"
+            "rounded-2xl border border-border/60 bg-card/60 shadow-[0_1px_3px_rgba(0,0,0,0.08)] backdrop-blur-xl transition-shadow focus-within:shadow-[0_0_0_1px_hsl(var(--ring)/0.35),0_2px_12px_hsl(var(--ring)/0.08)] focus-within:border-primary/30",
         )}
       >
         <div

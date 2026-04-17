@@ -636,7 +636,7 @@ const Chat = () => {
         <MessageSquarePlus className="w-4 h-4 text-primary/70" />
         {t("chat.newChat")}
       </Button>
-      <p className="text-[10px] text-muted-foreground/60 font-body uppercase tracking-[0.14em] font-medium mb-2 px-1">
+      <p className="text-xs text-muted-foreground/70 font-body uppercase tracking-wider font-medium mb-3 px-1">
         {t("chat.conversations")}
       </p>
       <div className="flex-1 overflow-y-auto space-y-0.5 -mx-1 px-1">
@@ -646,10 +646,10 @@ const Chat = () => {
             <div
               key={c.id}
               className={cn(
-                "group flex items-start gap-0.5 rounded-xl transition-all duration-200",
+                "group flex items-start gap-0.5 rounded-xl transition-all duration-200 border border-transparent",
                 isActive
-                  ? "bg-primary/8 ring-1 ring-primary/15"
-                  : "hover:bg-muted/60"
+                  ? "bg-primary/10 ring-1 ring-primary/20 shadow-sm border-primary/10"
+                  : "hover:bg-muted/70 hover:border-border/40"
               )}
             >
               <button
@@ -663,7 +663,7 @@ const Chat = () => {
                 )}>
                   {c.title}
                 </span>
-                <span className="text-[10px] text-muted-foreground/50 block mt-1 font-body">
+                <span className="text-xs text-muted-foreground/60 block mt-1 font-body">
                   {new Date(c.updatedAt).toLocaleDateString(i18n.language)}
                 </span>
               </button>
@@ -799,7 +799,7 @@ const Chat = () => {
         </aside>
 
         <div className="flex-1 flex flex-col min-w-0 min-h-0">
-          <header className="shrink-0 flex items-center justify-between gap-3 px-4 md:px-6 py-2.5 border-b border-border/30 bg-background/80 backdrop-blur-xl">
+          <header className="shrink-0 flex items-center justify-between gap-3 px-4 md:px-6 py-3 border-b border-borderSubtle/60 bg-background/85 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/70">
             <div className="flex items-center gap-2.5 min-w-0">
               <Button
                 type="button"
@@ -828,7 +828,7 @@ const Chat = () => {
                 </SheetContent>
               </Sheet>
               <div className="min-w-0">
-                <h1 className="font-body text-sm md:text-[15px] font-semibold text-foreground tracking-tight truncate">
+                <h1 className="font-display text-base md:text-lg font-semibold text-foreground tracking-tight truncate">
                   {t("chat.musicChat")}
                 </h1>
               </div>
@@ -851,18 +851,19 @@ const Chat = () => {
                 style={{ paddingBottom: scrollPadBottom }}
               >
               {!hasAnyMessage && !isLoading && (
-                <div className="flex flex-col items-center justify-center min-h-[60vh] gap-8 animate-fade-in">
-                  <div className="text-center max-w-md mx-auto px-4">
-                    <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center mx-auto mb-6 ring-1 ring-primary/10 shadow-lg shadow-primary/[0.04]">
-                      <Lightbulb className="w-8 h-8 text-primary/80" />
+                <div className="flex flex-col items-center justify-center min-h-[58vh] gap-10 animate-fade-in px-2">
+                  <div className="text-center max-w-md mx-auto px-4 relative">
+                    <div className="pointer-events-none absolute -inset-8 rounded-[2rem] bg-artwork-radial opacity-30 blur-2xl" aria-hidden />
+                    <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/25 via-emotional-tag/15 to-primary/5 flex items-center justify-center mx-auto mb-7 ring-1 ring-primary/20 shadow-glow">
+                      <Lightbulb className="w-9 h-9 text-primary" />
                     </div>
-                    <h2 className="font-display text-2xl md:text-3xl font-semibold mb-3 text-foreground/95">{t("chat.emptyTitle")}</h2>
-                    <p className="text-muted-foreground/70 font-body text-sm leading-relaxed max-w-sm mx-auto">
+                    <h2 className="font-display text-2xl md:text-3xl font-semibold mb-4 text-foreground text-balance">{t("chat.emptyTitle")}</h2>
+                    <p className="text-muted-foreground font-body text-sm md:text-base leading-relaxed max-w-sm mx-auto text-balance">
                       {t("chat.emptyBody")}
                     </p>
                   </div>
                   <div className="max-w-xl mx-auto w-full">
-                    <p className="text-[10px] text-muted-foreground/50 font-body uppercase tracking-[0.12em] font-medium mb-3 text-center">
+                    <p className="text-xs text-muted-foreground/70 font-body uppercase tracking-wider font-medium mb-4 text-center">
                       {t("chat.tryLike")}
                     </p>
                     <PromptSuggestions suggestions={discoverSuggestions} onSelect={handleSuggestionSelect} />
@@ -898,7 +899,7 @@ const Chat = () => {
                           style={{ animationDelay: `${mi * 30}ms` }}
                         >
                           <div className="max-w-[min(85%,480px)]">
-                            <div className="rounded-2xl rounded-br-sm bg-gradient-to-br from-primary/15 to-primary/6 border border-primary/15 px-4 py-3 text-[13px] font-body text-foreground leading-relaxed shadow-sm space-y-2">
+                            <div className="rounded-2xl rounded-br-sm bg-gradient-to-br from-primary/18 to-primary/8 border border-primary/20 px-5 py-3.5 text-sm font-body text-foreground leading-relaxed shadow-md space-y-2">
                               {m.imagePreviewUrl ? (
                                 <img
                                   src={m.imagePreviewUrl}
@@ -919,10 +920,10 @@ const Chat = () => {
                       <div
                         key={m.id}
                         className={cn(
-                          "mr-auto max-w-[min(100%,42rem)] rounded-2xl border p-4 md:p-5 backdrop-blur-md transition-shadow duration-300 animate-fade-slide-up",
+                          "mr-auto max-w-[min(100%,42rem)] rounded-2xl border p-5 md:p-6 backdrop-blur-xl transition-shadow duration-300 animate-fade-slide-up",
                           isLatest
-                            ? "border-primary/20 bg-gradient-to-br from-card/80 via-card/60 to-primary/[0.02] shadow-lg shadow-primary/[0.06] ring-1 ring-primary/10"
-                            : "border-border/30 bg-card/50 shadow-sm"
+                            ? "border-primary/25 bg-gradient-to-br from-card/90 via-card/70 to-primary/[0.04] shadow-elevated ring-1 ring-primary/12"
+                            : "border-border/40 bg-card/55 shadow-soft"
                         )}
                         style={{ animationDelay: `${mi * 30}ms` }}
                       >
@@ -961,7 +962,7 @@ const Chat = () => {
                         {isInlineLatest &&
                           r.playbackPresentation === "inline" &&
                           totalInlineAssistantTurns === 1 && (
-                          <p className="text-[11px] text-muted-foreground/60 font-body mt-3 leading-relaxed">
+                          <p className="text-xs sm:text-sm text-muted-foreground/75 font-body mt-4 leading-relaxed">
                             {isMobile ? t("chat.playbackHintMobile") : t("chat.playbackHintDesktop")}
                           </p>
                         )}
@@ -991,15 +992,15 @@ const Chat = () => {
                             <X className="w-3.5 h-3.5 text-muted-foreground" />
                           </button>
                           <EmotionalProfileCard profile={currentResult.emotionalProfile} />
-                          <div className="rounded-xl border border-border/30 bg-card/50 p-3.5 mt-3">
-                            <span className="text-[11px] font-body text-primary font-medium px-2.5 py-1 rounded-lg bg-primary/8">
+                          <div className="rounded-xl border border-border/40 bg-card/60 p-4 mt-3 shadow-sm">
+                            <span className="text-xs font-body text-primary font-medium px-3 py-1.5 rounded-full bg-primary/10 border border-primary/15">
                               {t("chat.matchLabel", { score: tagSong.relevanceScore })}
                             </span>
-                            <div className="flex flex-wrap gap-1 mt-2.5">
+                            <div className="flex flex-wrap gap-2 mt-3">
                               {tagSong.emotionalTags.map((tag) => (
                                 <span
                                   key={tag}
-                                  className="text-[10px] px-2 py-0.5 rounded-md bg-primary/6 text-primary/70 font-body font-medium"
+                                  className="text-xs px-2.5 py-1 rounded-full bg-emotional-tag/15 text-emotional-tag-foreground/90 font-body font-medium border border-emotional-tag/20"
                                 >
                                   {tag}
                                 </span>
@@ -1024,7 +1025,7 @@ const Chat = () => {
                             {showQueue ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                           </button>
                           {showQueue && (
-                            <div className="mt-3 rounded-2xl border border-border/30 bg-card/50 p-4 animate-fade-slide-up">
+                            <div className="mt-3 rounded-2xl border border-border/40 surface-card p-4 animate-fade-slide-up">
                               <TrackQueue
                                 songs={queue}
                                 currentIndex={currentIndex}
@@ -1070,45 +1071,45 @@ const Chat = () => {
 
             {activeConversation &&
               (isLuckyLatestTurn || memorySummary || standardAxes || activeConversation.conversationProfile) && (
-              <aside className="hidden lg:flex lg:w-64 shrink-0 flex-col gap-3 lg:border-l lg:border-border/20 lg:pl-5 lg:py-5 lg:overflow-y-auto lg:max-h-[calc(100dvh-3.5rem-3rem)]">
+              <aside className="hidden lg:flex lg:w-64 shrink-0 flex-col gap-3 lg:border-l lg:border-borderSubtle/50 lg:pl-5 lg:py-5 lg:overflow-y-auto lg:max-h-[calc(100dvh-3.5rem-3rem)] scrollbar-thin">
                 {isLuckyLatestTurn ? (
                   <>
-                    <p className="text-[10px] text-muted-foreground/50 font-body uppercase tracking-[0.14em] font-medium">
+                    <p className="text-xs text-muted-foreground/65 font-body uppercase tracking-wider font-medium">
                       {t("chat.luckySidebarTitle")}
                     </p>
-                    <div className="rounded-xl border border-border/20 bg-card/40 p-3.5 text-[12px] font-body text-secondary-foreground/80 leading-relaxed">
+                    <div className="rounded-xl border border-border/30 surface-card p-4 text-sm font-body text-secondary-foreground/85 leading-relaxed">
                       {t("chat.luckySidebarBody")}
                     </div>
                   </>
                 ) : (
                   <>
-                    <p className="text-[10px] text-muted-foreground/50 font-body uppercase tracking-[0.14em] font-medium">
+                    <p className="text-xs text-muted-foreground/65 font-body uppercase tracking-wider font-medium">
                       {t("chat.threadProfile")}
                     </p>
                     {memorySummary && (
-                      <div className="rounded-xl border border-border/20 bg-card/40 p-3.5 text-[12px] font-body text-secondary-foreground/80 leading-relaxed">
+                      <div className="rounded-xl border border-border/30 surface-card p-4 text-sm font-body text-secondary-foreground/85 leading-relaxed">
                         {memorySummary}
                       </div>
                     )}
                     {standardAxes && (
-                      <div className="rounded-xl border border-border/20 bg-card/40 p-3.5 text-[11px] font-body space-y-2 text-muted-foreground/70">
-                        <span className="uppercase tracking-[0.12em] text-[9px] font-medium text-muted-foreground/50">
+                      <div className="rounded-xl border border-border/30 surface-card p-4 text-xs font-body space-y-2 text-muted-foreground/80">
+                        <span className="uppercase tracking-wider text-[10px] font-semibold text-muted-foreground/55">
                           {t("chat.axes")}
                         </span>
-                        <p className="text-foreground/70 leading-relaxed">
+                        <p className="text-foreground/75 leading-relaxed text-sm">
                           {t("chat.axisEnergy")}: {standardAxes.energy} · {t("chat.axisIntimacy")}: {standardAxes.intimacy}/5 ·{" "}
                           {t("chat.axisTension")}: {standardAxes.emotionalTension} · {t("chat.axisCatharsis")}:{" "}
                           {standardAxes.catharsis}
                         </p>
                         {standardAxes.moodLabel && (
-                          <p className="text-foreground/60 text-[11px]">{standardAxes.moodLabel}</p>
+                          <p className="text-foreground/65 text-xs">{standardAxes.moodLabel}</p>
                         )}
                         {standardAxes.dominantThemes.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1.5">
+                          <div className="flex flex-wrap gap-1.5 mt-2">
                             {standardAxes.dominantThemes.map((tag) => (
                               <span
                                 key={tag}
-                                className="px-1.5 py-0.5 rounded-md bg-primary/6 text-primary/70 text-[10px] font-medium"
+                                className="px-2 py-0.5 rounded-full bg-primary/10 text-primary/80 text-xs font-medium border border-primary/15"
                               >
                                 {tag}
                               </span>
@@ -1147,7 +1148,7 @@ const Chat = () => {
         </div>
       </div>
       {queue.length > 0 ? (
-        <div className="border-t border-border/15 bg-card/80 backdrop-blur-2xl">
+        <div className="border-t border-borderSubtle/50 bg-gradient-to-t from-background via-background/95 to-transparent backdrop-blur-xl">
           <div className="max-w-[1600px] w-full mx-auto px-2 md:px-6 pt-1.5 pb-1.5">
             <FullPlayer
               variant={isMobile ? "default" : "dock"}

@@ -215,6 +215,24 @@
     "addFavorite": "Ajouter aux favoris",
     "removeFavorite": "Retirer des favoris"
   },
+  "searchResultTrackList": {
+    "playNow": "Lire maintenant",
+    "addToQueue": "Ajouter à la file",
+    "playNext": "Lire ensuite",
+    "nowPlaying": "En lecture"
+  },
+  "musicPlayer": {
+    "fullPlaybackAvailable": "Lecture complète disponible"
+  },
+  "emotionalProfile": {
+    "title": "Profil émotionnel",
+    "subtitle": "Comment Echoes a lu ce moment",
+    "mood": "Humeur",
+    "energy": "Énergie",
+    "intimacy": "Intimité",
+    "catharsis": "Catharsis",
+    "tension": "Tension"
+  },
   "resultFb": {
     "thanks": "Merci",
     "titleGood": "Bon choix",

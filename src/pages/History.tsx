@@ -84,7 +84,7 @@ const History = () => {
                   return (
                     <div
                       key={c.id}
-                      className="w-full glass-card rounded-2xl p-5 hover:border-primary/20 transition-all group animate-fade-up flex gap-3 items-stretch"
+                      className="w-full surface-card rounded-3xl p-5 md:p-6 hover:border-primary/30 transition-all group animate-fade-up flex gap-3 items-stretch border border-border/50"
                       style={{ animationDelay: `${i * 60}ms`, animationFillMode: "backwards" }}
                     >
                       <button
@@ -180,28 +180,28 @@ const History = () => {
                   return (
                     <li
                       key={e.id}
-                      className="glass-card rounded-2xl p-4 flex gap-3 items-center animate-fade-up"
+                      className="surface-card rounded-3xl p-4 md:p-5 flex gap-4 items-center animate-fade-up border border-border/50"
                       style={{ animationDelay: `${i * 40}ms`, animationFillMode: "backwards" }}
                     >
                       <img
                         src={e.song.artwork}
                         alt=""
-                        className="w-14 h-14 rounded-xl object-cover shrink-0 bg-muted"
-                        width={56}
-                        height={56}
+                        className="w-16 h-16 rounded-2xl object-cover shrink-0 bg-muted ring-1 ring-border/40 shadow-sm"
+                        width={64}
+                        height={64}
                       />
                       <div className="flex-1 min-w-0">
                         <p className="font-display text-sm font-semibold text-foreground truncate">{e.song.title}</p>
                         <p className="text-xs text-muted-foreground font-body truncate">
                           {e.song.artist} · {e.song.album}
                         </p>
-                        <p className="text-[10px] text-muted-foreground font-body mt-1 truncate" title={chatLabel}>
+                        <p className="text-xs text-muted-foreground font-body mt-1 truncate" title={chatLabel}>
                           {t("history.chatWithTitle", { title: chatLabel })}
                         </p>
-                        <p className="text-[11px] text-muted-foreground font-body mt-0.5 line-clamp-1">
+                        <p className="text-xs text-muted-foreground font-body mt-1 line-clamp-2 leading-snug">
                           {t("history.fromQuote", { prompt: e.prompt })}
                         </p>
-                        <p className="text-[10px] text-muted-foreground font-body mt-0.5">
+                        <p className="text-xs text-muted-foreground/80 font-body mt-1">
                           {new Date(e.listenedAt).toLocaleString(i18n.language, {
                             day: "numeric",
                             month: "short",
