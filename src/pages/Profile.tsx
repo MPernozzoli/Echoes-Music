@@ -80,7 +80,14 @@ const Profile = () => {
   } = useApp();
   const { user, tokenBalance, plan, signOut } = useAuth();
   const { isConnected: spotifyConnected, displayName: spotifyName, isPremium, loading: spotifyLoading, setDisconnected } = useSpotify();
-  const { isAvailable: appleMusicAvailable, isAuthorized: appleMusicAuthorized, loading: appleMusicLoading, authorize: authorizeApple, unauthorize: unauthorizeApple } = useAppleMusic();
+  const {
+    isAvailable: appleMusicAvailable,
+    isAuthorized: appleMusicAuthorized,
+    isLinkedAccount: appleMusicLinkedAccount,
+    loading: appleMusicLoading,
+    authorize: authorizeApple,
+    unauthorize: unauthorizeApple,
+  } = useAppleMusic();
 
   useEffect(() => setMounted(true), []);
 
@@ -377,10 +384,25 @@ const Profile = () => {
                     ) : !appleMusicAvailable ? (
                       <p className="text-xs text-muted-foreground font-body">{t("profile.musickitUnavailable")}</p>
                     ) : appleMusicAuthorized ? (
-                      <p className="text-xs text-[hsl(350,80%,55%)] font-body flex items-center gap-1">
-                        <Check className="w-3 h-3" />
-                        {t("profile.appleConnected")}
-                      </p>
+                      <div>
+                        <p className="text-xs text-[hsl(350,80%,55%)] font-body flex items-center gap-1">
+                          <Check className="w-3 h-3" />
+                          {t("profile.appleConnected")}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground font-body mt-1">
+                          {t("profile.appleLinkedOnAccount")}
+                        </p>
+                      </div>
+                    ) : appleMusicLinkedAccount ? (
+                      <div>
+                        <p className="text-xs text-[hsl(350,80%,55%)] font-body flex items-center gap-1">
+                          <Check className="w-3 h-3" />
+                          {t("profile.appleLinkedAccount")}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground font-body mt-1 max-w-[240px]">
+                          {t("profile.appleLinkedNeedsBrowser")}
+                        </p>
+                      </div>
                     ) : (
                       <p className="text-xs text-muted-foreground font-body">{t("profile.appleConnectHint")}</p>
                     )}
@@ -402,7 +424,7 @@ const Profile = () => {
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-border text-sm font-body text-muted-foreground hover:text-foreground hover:border-primary/30 transition-all"
                   >
                     <ExternalLink className="w-3 h-3" />
-                    {t("profile.connect")}
+                    {appleMusicLinkedAccount ? t("profile.appleConfirmBrowser") : t("profile.connect")}
                   </button>
                 ) : null}
               </div>

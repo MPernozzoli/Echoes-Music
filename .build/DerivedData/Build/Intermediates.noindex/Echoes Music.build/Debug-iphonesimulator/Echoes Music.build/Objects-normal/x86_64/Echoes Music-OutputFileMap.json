@@ -1,0 +1,119 @@
+{
+  "" : {
+    "diagnostics" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/Echoes Music-primary.dia",
+    "emit-module-dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/Echoes Music-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/Echoes Music-primary-emit-module.dia",
+    "pch" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/Echoes Music-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/Echoes Music-primary.swiftdeps"
+  },
+  "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/GeneratedAssetSymbols~partial.swiftmodule"
+  },
+  "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/Echoes Music/Echoes Music/AppConfig.swift" : {
+    "const-values" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/AppConfig.swiftconstvalues",
+    "dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/AppConfig.d",
+    "diagnostics" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/AppConfig.dia",
+    "index-unit-output-path" : "/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/AppConfig.o",
+    "llvm-bc" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/AppConfig.bc",
+    "object" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/AppConfig.o",
+    "swift-dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/AppConfig.swiftdeps",
+    "swiftmodule" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/AppConfig~partial.swiftmodule"
+  },
+  "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/Echoes Music/Echoes Music/ContentView.swift" : {
+    "const-values" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/ContentView.swiftconstvalues",
+    "dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/ContentView.d",
+    "diagnostics" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/ContentView.dia",
+    "index-unit-output-path" : "/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/ContentView.o",
+    "llvm-bc" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/ContentView.bc",
+    "object" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/ContentView.o",
+    "swift-dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/ContentView.swiftdeps",
+    "swiftmodule" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/ContentView~partial.swiftmodule"
+  },
+  "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/Echoes Music/Echoes Music/EchoesModels.swift" : {
+    "const-values" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesModels.swiftconstvalues",
+    "dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesModels.d",
+    "diagnostics" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesModels.dia",
+    "index-unit-output-path" : "/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesModels.o",
+    "llvm-bc" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesModels.bc",
+    "object" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesModels.o",
+    "swift-dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesModels.swiftdeps",
+    "swiftmodule" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesModels~partial.swiftmodule"
+  },
+  "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/Echoes Music/Echoes Music/EchoesStorage.swift" : {
+    "const-values" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesStorage.swiftconstvalues",
+    "dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesStorage.d",
+    "diagnostics" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesStorage.dia",
+    "index-unit-output-path" : "/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesStorage.o",
+    "llvm-bc" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesStorage.bc",
+    "object" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesStorage.o",
+    "swift-dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesStorage.swiftdeps",
+    "swiftmodule" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesStorage~partial.swiftmodule"
+  },
+  "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/Echoes Music/Echoes Music/EchoesStore.swift" : {
+    "const-values" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesStore.swiftconstvalues",
+    "dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesStore.d",
+    "diagnostics" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesStore.dia",
+    "index-unit-output-path" : "/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesStore.o",
+    "llvm-bc" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesStore.bc",
+    "object" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesStore.o",
+    "swift-dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesStore.swiftdeps",
+    "swiftmodule" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesStore~partial.swiftmodule"
+  },
+  "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/Echoes Music/Echoes Music/EchoesViews.swift" : {
+    "const-values" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesViews.swiftconstvalues",
+    "dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesViews.d",
+    "diagnostics" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesViews.dia",
+    "index-unit-output-path" : "/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesViews.o",
+    "llvm-bc" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesViews.bc",
+    "object" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesViews.o",
+    "swift-dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesViews.swiftdeps",
+    "swiftmodule" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/EchoesViews~partial.swiftmodule"
+  },
+  "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/Echoes Music/Echoes Music/Echoes_MusicApp.swift" : {
+    "const-values" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/Echoes_MusicApp.swiftconstvalues",
+    "dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/Echoes_MusicApp.d",
+    "diagnostics" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/Echoes_MusicApp.dia",
+    "index-unit-output-path" : "/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/Echoes_MusicApp.o",
+    "llvm-bc" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/Echoes_MusicApp.bc",
+    "object" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/Echoes_MusicApp.o",
+    "swift-dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/Echoes_MusicApp.swiftdeps",
+    "swiftmodule" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/Echoes_MusicApp~partial.swiftmodule"
+  },
+  "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/Echoes Music/Echoes Music/Item.swift" : {
+    "const-values" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/Item.swiftconstvalues",
+    "dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/Item.d",
+    "diagnostics" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/Item.dia",
+    "index-unit-output-path" : "/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/Item.o",
+    "llvm-bc" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/Item.bc",
+    "object" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/Item.o",
+    "swift-dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/Item.swiftdeps",
+    "swiftmodule" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/Item~partial.swiftmodule"
+  },
+  "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/Echoes Music/Echoes Music/PreviewPlayerStore.swift" : {
+    "const-values" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/PreviewPlayerStore.swiftconstvalues",
+    "dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/PreviewPlayerStore.d",
+    "diagnostics" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/PreviewPlayerStore.dia",
+    "index-unit-output-path" : "/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/PreviewPlayerStore.o",
+    "llvm-bc" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/PreviewPlayerStore.bc",
+    "object" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/PreviewPlayerStore.o",
+    "swift-dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/PreviewPlayerStore.swiftdeps",
+    "swiftmodule" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/PreviewPlayerStore~partial.swiftmodule"
+  },
+  "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/Echoes Music/Echoes Music/SupabaseService.swift" : {
+    "const-values" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/SupabaseService.swiftconstvalues",
+    "dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/SupabaseService.d",
+    "diagnostics" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/SupabaseService.dia",
+    "index-unit-output-path" : "/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/SupabaseService.o",
+    "llvm-bc" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/SupabaseService.bc",
+    "object" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/SupabaseService.o",
+    "swift-dependencies" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/SupabaseService.swiftdeps",
+    "swiftmodule" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/Echoes Music.build/Debug-iphonesimulator/Echoes Music.build/Objects-normal/x86_64/SupabaseService~partial.swiftmodule"
+  }
+}

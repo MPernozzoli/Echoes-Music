@@ -1,0 +1,64 @@
+{
+  "buildCommand" : {
+    "command" : "build",
+    "skipDependencies" : false,
+    "style" : "buildOnly"
+  },
+  "configuredTargets" : [
+    {
+      "guid" : "63c0f4bac8e50b05c3286ef24e16d4749cce158473ed2e37e3ad56a4860dadf9"
+    }
+  ],
+  "containerPath" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/Echoes Music/Echoes Music.xcodeproj",
+  "continueBuildingAfterErrors" : true,
+  "dependencyScope" : "workspace",
+  "enableIndexBuildArena" : false,
+  "hideShellScriptEnvironment" : false,
+  "parameters" : {
+    "action" : "build",
+    "activeArchitecture" : "undefined_arch",
+    "activeRunDestination" : {
+      "disableOnlyActiveArch" : true,
+      "hostTargetedPlatform" : null,
+      "platform" : "iphonesimulator",
+      "sdk" : "iphonesimulator26.4",
+      "sdkVariant" : "iphonesimulator",
+      "supportedArchitectures" : [
+        "i386",
+        "x86_64"
+      ],
+      "targetArchitecture" : "undefined_arch"
+    },
+    "arenaInfo" : {
+      "buildIntermediatesPath" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex",
+      "buildProductsPath" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Products",
+      "derivedDataPath" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData",
+      "indexDataStoreFolderPath" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Index.noindex/DataStore",
+      "indexEnableDataStore" : true,
+      "indexPCHPath" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Index.noindex/PrecompiledHeaders",
+      "pchPath" : "/Users/mpernozzoli/Documents/Unreal Projects/siti/echoes-music-for-the-soul/.build/DerivedData/Build/Intermediates.noindex/PrecompiledHeaders"
+    },
+    "configurationName" : "Debug",
+    "overrides" : {
+      "commandLine" : {
+        "table" : {
+
+        }
+      },
+      "synthesized" : {
+        "table" : {
+          "ACTION" : "build",
+          "ENABLE_PREVIEWS" : "NO",
+          "ENABLE_XOJIT_PREVIEWS" : "YES",
+          "ONLY_ACTIVE_ARCH" : "YES"
+        }
+      }
+    }
+  },
+  "schemeCommand" : "launch",
+  "showNonLoggedProgress" : true,
+  "useDryRun" : false,
+  "useImplicitDependencies" : true,
+  "useLegacyBuildLocations" : false,
+  "useParallelTargets" : true
+}

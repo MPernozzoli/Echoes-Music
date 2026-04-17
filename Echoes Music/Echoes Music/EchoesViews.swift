@@ -3,8 +3,14 @@
 //  Echoes Music
 //
 
+import AuthenticationServices
 import SwiftUI
 import MusicKit
+#if canImport(UIKit)
+import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 struct EchoesRootView: View {
     @EnvironmentObject private var store: EchoesStore
@@ -1379,7 +1385,7 @@ struct CompactPlayerBar: View {
 
 struct AuthScreen: View {
     @EnvironmentObject private var store: EchoesStore
-    @Environment(\.openURL) private var openURL
+    @StateObject private var authSession = NativeOAuthSession()
 
     private let highlights = [
         ("Same backend", "Your profile, tokens and preferences are shared with the web app."),
@@ -1451,7 +1457,19 @@ struct AuthScreen: View {
                             .foregroundStyle(.white)
 
                         Button {
-                            openURL(store.beginGoogleSignIn())
+                            authSession.start(
+                                url: store.beginGoogleSignIn(),
+                                callbackScheme: EchoesConfig.shared.redirectScheme,
+                                onCallback: { callbackURL in
+                                    Task {
+                                        await store.handleIncomingURL(callbackURL)
+                                    }
+                                },
+                                onError: { message in
+                                    store.globalError = message
+                                    store.isAuthenticating = false
+                                }
+                            )
                         } label: {
                             HStack(spacing: 12) {
                                 Image(systemName: "globe")
@@ -1486,6 +1504,58 @@ struct AuthScreen: View {
                 .frame(maxWidth: .infinity)
             }
         }
+    }
+}
+
+final class NativeOAuthSession: NSObject, ObservableObject, ASWebAuthenticationPresentationContextProviding {
+    private var session: ASWebAuthenticationSession?
+
+    func start(
+        url: URL,
+        callbackScheme: String,
+        onCallback: @escaping (URL) -> Void,
+        onError: @escaping (String) -> Void
+    ) {
+        session?.cancel()
+
+        let session = ASWebAuthenticationSession(url: url, callbackURLScheme: callbackScheme) { callbackURL, error in
+            defer { self.session = nil }
+
+            if let callbackURL {
+                onCallback(callbackURL)
+                return
+            }
+
+            if let error as? ASWebAuthenticationSessionError,
+               error.code == .canceledLogin {
+                onError("Google sign-in was cancelled.")
+                return
+            }
+
+            onError(error?.localizedDescription ?? "Google sign-in failed.")
+        }
+
+        session.presentationContextProvider = self
+        session.prefersEphemeralWebBrowserSession = false
+        self.session = session
+
+        if !session.start() {
+            self.session = nil
+            onError("Unable to start Google sign-in.")
+        }
+    }
+
+    func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+#if canImport(UIKit)
+        return UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first(where: \.isKeyWindow) ?? ASPresentationAnchor()
+#elseif canImport(AppKit)
+        return NSApplication.shared.keyWindow ?? ASPresentationAnchor()
+#else
+        return ASPresentationAnchor()
+#endif
     }
 }
 
