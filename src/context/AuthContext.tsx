@@ -73,7 +73,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(s?.user ?? null);
       setLoading(false);
       if (s?.user) {
-        linkAccountData(s.user.id);
         refreshTokenBalance();
         refreshPlan(s.user.id);
       }
