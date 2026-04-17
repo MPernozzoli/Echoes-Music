@@ -155,6 +155,7 @@
     "creatorSidebarTitle": "Modo creator",
     "creatorSidebarBody": "Esta búsqueda parte de canciones y sonidos en tendencia y luego los filtra para encontrar qué puede funcionar en TikTok y Reels de Instagram. Describe el tipo de video, edición, ritmo, payoff o letra que tienes en mente.",
     "threadProfile": "Memoria de este chat",
+    "threadProfileEmpty": "Aún vacía — envía un prompt para empezar a construirla.",
     "axes": "Matices emocionales",
     "axisEnergy": "Energía",
     "axisIntimacy": "Intimidad",
@@ -178,6 +179,8 @@
     "creatorPlaceholder": "Describe el video, el tipo de reel o la tendencia que quieres acompañar…",
     "modeSearch": "Búsqueda libre",
     "modeCreator": "TikTok & Reels",
+    "modeSearchHint": "Canciones que reflejan una emoción",
+    "modeCreatorHint": "Sonidos virales para tu video",
     "removeImage": "Quitar imagen",
     "imageHint": "Foto adjunta — envía para buscar canciones",
     "attachImage": "Adjuntar imagen"
@@ -309,7 +312,9 @@
     "removeFromFavorites": "Quitar de favoritos",
     "addToFavorites": "Favoritos",
     "nowPlayingAria": "En reproducción",
-    "previewUnavailable": "Vista previa no disponible para este tema"
+    "previewUnavailable": "Vista previa no disponible para este tema",
+    "appleConnectHint": "Estás escuchando una vista previa de 30 segundos. Abre Apple Music para el tema completo.",
+    "appleFallbackToPreview": "Apple Music no pudo reproducir este tema — cambiando a vista previa."
   },
   "appleMusic": {
     "compactLine": "{{action}} · cuenta Apple Music (sin nuevo inicio de sesión)"

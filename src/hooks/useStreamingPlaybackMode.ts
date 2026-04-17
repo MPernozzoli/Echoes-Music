@@ -8,9 +8,10 @@ export type StreamingPlaybackMode = "apple" | "spotify" | "guest";
  * Apple Music se l’utente ha autorizzato MusicKit; altrimenti Spotify se connesso; altrimenti ospite (es. embed Spotify free).
  */
 export function useStreamingPlaybackMode(): StreamingPlaybackMode {
-  const { isAuthorized } = useAppleMusic();
+  const { isAuthorized, isLinkedAccount } = useAppleMusic();
   const { isConnected } = useSpotify();
   if (isAuthorized) return "apple";
+  if (isLinkedAccount && !isConnected) return "apple";
   if (isConnected) return "spotify";
   return "guest";
 }

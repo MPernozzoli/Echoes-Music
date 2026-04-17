@@ -1,14 +1,30 @@
 /* @refresh skip */
 import { useState, type ReactNode } from "react";
-import type { Song } from "@/data/mockData";
+import type { Song, SongVersion } from "@/data/mockData";
 import type { QueueListenSource } from "@/context/PlaybackQueueContext";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { StreamingLibraryActions } from "@/components/StreamingLibraryActions";
-import { Heart, ListPlus, Pause, Play, SkipForward } from "lucide-react";
+import { ChevronDown, Heart, ListPlus, Pause, Play, SkipForward } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { requestPlaybackToggle } from "@/lib/playbackToggleBridge";
 import { trackResultFeedback } from "@/services/tracking";
+
+function versionToSong(version: SongVersion, parent: Song): Song {
+  return {
+    ...parent,
+    id: version.id,
+    title: version.title,
+    artist: version.artist,
+    album: version.album,
+    releaseYear: version.releaseYear,
+    provider: version.provider ?? parent.provider,
+    spotifyUri: version.spotifyUri,
+    appleMusicId: version.appleMusicId,
+    previewUrl: version.previewUrl,
+    alternateVersions: undefined,
+  };
+}
 
 function spotifyTrackIdFromSong(song: Song): string | undefined {
   const u = song.spotifyUri;
@@ -55,9 +71,11 @@ function SongLinkPopover({
   tracking,
 }: SongLinkPopoverProps) {
   const [open, setOpen] = useState(false);
+  const [versionsOpen, setVersionsOpen] = useState(false);
   const isCurrent = queue[currentIndex]?.id === song.id;
   const playingHere = isCurrent && isGloballyPlaying;
   const fav = isFavorite(song.id);
+  const versionsCount = song.alternateVersions?.length ?? 0;
 
   const onHeart = () => {
     const was = isFavorite(song.id);
@@ -136,27 +154,82 @@ function SongLinkPopover({
             {song.explanation}
           </p>
         )}
-        {song.alternateVersions?.length ? (
-          <div className="px-3.5 py-3 border-t border-border/30 bg-card/40">
-            <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 font-body font-medium">
-              Versioni
-            </p>
-            <p className="mt-1 text-[11px] text-muted-foreground font-body leading-relaxed">
-              Selezionata di default la versione principale; qui sotto trovi anche le altre cut trovate.
-            </p>
-            <div className="mt-2 space-y-1.5">
-              {song.alternateVersions.map((version) => (
-                <div
-                  key={version.id}
-                  className="rounded-xl border border-border/40 bg-background/40 px-2.5 py-2"
-                >
-                  <p className="text-[12px] font-medium text-foreground leading-tight">{version.title}</p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground font-body">
-                    {versionMeta(version)}
-                  </p>
+        {versionsCount > 0 && song.alternateVersions ? (
+          <div className="border-t border-border/30 bg-card/40">
+            <button
+              type="button"
+              onClick={() => setVersionsOpen((v) => !v)}
+              aria-expanded={versionsOpen}
+              className="w-full flex items-center justify-between gap-2 px-3.5 py-2.5 text-left hover:bg-primary/[0.04] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 rounded-none"
+            >
+              <span className="flex items-center gap-2">
+                <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 font-body font-medium">
+                  Versioni
+                </span>
+                <span className="text-[10px] font-body font-medium text-muted-foreground/80 bg-muted/60 rounded-full px-1.5 py-[1px] leading-none">
+                  {versionsCount}
+                </span>
+              </span>
+              <ChevronDown
+                className={cn(
+                  "w-3.5 h-3.5 text-muted-foreground transition-transform duration-200",
+                  versionsOpen && "rotate-180",
+                )}
+              />
+            </button>
+            {versionsOpen && (
+              <div className="px-3.5 pb-3 pt-0.5">
+                <p className="text-[11px] text-muted-foreground font-body leading-relaxed">
+                  Selezionata di default la versione principale; qui sotto trovi anche le altre cut trovate.
+                </p>
+                <div className="mt-2 space-y-1.5">
+                  {song.alternateVersions.map((version) => {
+                    const versionSong = versionToSong(version, song);
+                    return (
+                      <div
+                        key={version.id}
+                        className="rounded-xl border border-border/40 bg-background/40 px-2.5 py-2"
+                      >
+                        <div className="flex items-start gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[12px] font-medium text-foreground leading-tight truncate">
+                              {version.title}
+                            </p>
+                            <p className="mt-0.5 text-[11px] text-muted-foreground font-body truncate">
+                              {versionMeta(version)}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 rounded-lg hover:bg-primary/10 hover:text-primary"
+                              onClick={() => playTrackFromResult([versionSong], 0, source)}
+                              title="Riproduci"
+                              aria-label={`Riproduci ${version.title}`}
+                            >
+                              <Play className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 rounded-lg hover:bg-primary/10 hover:text-primary"
+                              onClick={() => appendToQueue([versionSong], source)}
+                              title="Aggiungi in coda"
+                              aria-label={`Aggiungi ${version.title} in coda`}
+                            >
+                              <ListPlus className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
         ) : null}
         <div className="flex flex-wrap gap-1.5 px-3.5 py-3 border-t border-border/30">

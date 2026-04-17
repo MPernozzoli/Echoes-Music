@@ -1,9 +1,15 @@
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowUp, ImagePlus, X } from "lucide-react";
+import { ArrowUp, Check, ImagePlus, Music2, Video, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { resizeImageForSearch } from "@/lib/resizeImageForSearch";
 import type { MusicSearchMode } from "@/services/musicSearchApi";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export type PromptSubmitPayload = {
   text: string;
@@ -84,36 +90,12 @@ const PromptInput = ({
       ? creatorPlaceholder || t("promptInput.creatorPlaceholder")
       : placeholder || t("promptInput.placeholderDefault");
 
+  const ModeIcon = mode === "creator_trends" ? Video : Music2;
+  const modeLabel =
+    mode === "creator_trends" ? t("promptInput.modeCreator") : t("promptInput.modeSearch");
+
   return (
     <form onSubmit={handleSubmit} className="w-full">
-      {allowModeSwitch && (
-        <div className="mb-2 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => handleModeChange("search")}
-            className={cn(
-              "rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
-              mode === "search"
-                ? "border-primary/30 bg-primary/10 text-primary"
-                : "border-border/60 bg-background/80 text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {t("promptInput.modeSearch")}
-          </button>
-          <button
-            type="button"
-            onClick={() => handleModeChange("creator_trends")}
-            className={cn(
-              "rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
-              mode === "creator_trends"
-                ? "border-primary/30 bg-primary/10 text-primary"
-                : "border-border/60 bg-background/80 text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {t("promptInput.modeCreator")}
-          </button>
-        </div>
-      )}
       {allowImageAttachment && image && (
         <div className="mb-2 flex items-center gap-2.5 animate-fade-slide-up">
           <div className="relative inline-block rounded-xl overflow-hidden border border-primary/20 ring-1 ring-primary/10 shadow-sm">
@@ -134,22 +116,99 @@ const PromptInput = ({
       )}
       <div
         className={cn(
-          "relative group transition-all duration-300 rounded-2xl",
-          isHero && "input-glow glass-card shadow-lg shadow-primary/[0.06]",
+          "relative group transition-all duration-300 rounded-full",
+          isHero && "input-glow glass-card shadow-lg shadow-primary/[0.06] rounded-[1.75rem]",
           isHero && isLoading && "ring-2 ring-primary/25 animate-glow-pulse motion-reduce:animate-none",
-          !isHero && !isCompact && "input-glow rounded-2xl bg-card/80 border border-border/80 shadow-sm",
+          !isHero && !isCompact && "input-glow rounded-[1.75rem] bg-card/80 border border-border/80 shadow-sm",
           isCompact &&
-            "rounded-2xl border border-border/60 bg-card/60 shadow-[0_1px_3px_rgba(0,0,0,0.08)] backdrop-blur-xl transition-shadow focus-within:shadow-[0_0_0_1px_hsl(var(--ring)/0.35),0_2px_12px_hsl(var(--ring)/0.08)] focus-within:border-primary/30",
+            "border border-borderSubtle/70 bg-background/90 backdrop-blur-xl shadow-[0_2px_8px_-2px_rgba(0,0,0,0.08)] transition-shadow focus-within:shadow-[0_0_0_1px_hsl(var(--ring-glow)/0.45),0_4px_18px_-6px_hsl(var(--ring-glow)/0.25)] focus-within:border-primary/35",
         )}
       >
         <div
           className={cn(
             "flex items-center gap-2",
-            isHero && "px-5 py-4",
+            isHero && "px-4 py-3 sm:px-5 sm:py-4",
             !isHero && !isCompact && "px-5 py-4",
-            isCompact && "px-3 py-2 sm:px-4 sm:py-2.5"
+            isCompact && "px-2.5 py-1.5 sm:px-3 sm:py-2"
           )}
         >
+          {allowModeSwitch && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                type="button"
+                disabled={isLoading || imageBusy}
+                className={cn(
+                  "shrink-0 rounded-full flex items-center justify-center transition-colors border",
+                  mode === "creator_trends"
+                    ? "border-primary/30 bg-primary/10 text-primary"
+                    : "border-borderSubtle/70 bg-muted/40 text-muted-foreground hover:text-foreground hover:bg-muted/70",
+                  isCompact ? "h-8 w-8" : "h-9 w-9",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ringGlow",
+                )}
+                aria-label={modeLabel}
+                title={modeLabel}
+              >
+                <ModeIcon className={cn(isCompact ? "w-3.5 h-3.5" : "w-4 h-4")} />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                side="top"
+                sideOffset={8}
+                className="w-56 rounded-2xl border-border/60 bg-card/95 backdrop-blur-xl shadow-elevated p-1.5"
+              >
+                <DropdownMenuItem
+                  onSelect={() => handleModeChange("search")}
+                  className="gap-3 rounded-xl px-3 py-2 focus:bg-muted/70 data-[highlighted]:bg-muted/70"
+                >
+                  <span
+                    className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-lg shrink-0",
+                      mode === "search"
+                        ? "bg-primary/12 text-primary"
+                        : "bg-muted/60 text-muted-foreground",
+                    )}
+                  >
+                    <Music2 className="h-4 w-4" />
+                  </span>
+                  <span className="flex-1 min-w-0 flex flex-col leading-tight">
+                    <span className="text-[13px] font-body font-medium text-foreground">
+                      {t("promptInput.modeSearch")}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground/75 font-body truncate">
+                      {t("promptInput.modeSearchHint")}
+                    </span>
+                  </span>
+                  {mode === "search" ? <Check className="h-3.5 w-3.5 text-primary shrink-0" /> : null}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => handleModeChange("creator_trends")}
+                  className="gap-3 rounded-xl px-3 py-2 focus:bg-muted/70 data-[highlighted]:bg-muted/70"
+                >
+                  <span
+                    className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-lg shrink-0",
+                      mode === "creator_trends"
+                        ? "bg-primary/12 text-primary"
+                        : "bg-muted/60 text-muted-foreground",
+                    )}
+                  >
+                    <Video className="h-4 w-4" />
+                  </span>
+                  <span className="flex-1 min-w-0 flex flex-col leading-tight">
+                    <span className="text-[13px] font-body font-medium text-foreground">
+                      {t("promptInput.modeCreator")}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground/75 font-body truncate">
+                      {t("promptInput.modeCreatorHint")}
+                    </span>
+                  </span>
+                  {mode === "creator_trends" ? (
+                    <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                  ) : null}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           <input
             type="text"
             value={value}
@@ -199,9 +258,9 @@ const PromptInput = ({
             type="submit"
             disabled={!canSend}
             className={cn(
-              "shrink-0 rounded-xl bg-primary text-primary-foreground transition-all disabled:opacity-20 disabled:scale-95",
-              canSend && "hover:brightness-110 active:scale-95 shadow-sm shadow-primary/20",
-              isCompact ? "p-1.5 sm:p-2" : "p-2.5"
+              "shrink-0 rounded-full bg-primary text-primary-foreground flex items-center justify-center transition-all disabled:opacity-25 disabled:scale-95",
+              canSend && "hover:brightness-110 active:scale-95 shadow-md shadow-primary/25",
+              isCompact ? "h-8 w-8 sm:h-9 sm:w-9" : "h-10 w-10"
             )}
           >
             {isLoading ? (

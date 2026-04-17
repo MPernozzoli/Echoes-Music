@@ -155,6 +155,7 @@
     "creatorSidebarTitle": "Mode creator",
     "creatorSidebarBody": "Cette recherche part des morceaux et sons du moment, puis les filtre pour trouver ce qui peut fonctionner sur TikTok et les Reels Instagram. Décris le type de vidéo, le montage, le rythme, le payoff ou les paroles que tu as en tête.",
     "threadProfile": "Mémoire de cette conversation",
+    "threadProfileEmpty": "Encore vide — envoie un prompt pour commencer à la construire.",
     "axes": "Nuances émotionnelles",
     "axisEnergy": "Énergie",
     "axisIntimacy": "Intimité",
@@ -178,6 +179,8 @@
     "creatorPlaceholder": "Décrivez la vidéo, le type de reel ou la tendance à accompagner…",
     "modeSearch": "Recherche libre",
     "modeCreator": "TikTok & Reels",
+    "modeSearchHint": "Morceaux qui reflètent une émotion",
+    "modeCreatorHint": "Sons viraux pour ta vidéo",
     "removeImage": "Retirer l’image",
     "imageHint": "Photo jointe — envoyez pour chercher des morceaux",
     "attachImage": "Joindre une image"
@@ -309,7 +312,9 @@
     "removeFromFavorites": "Retirer des favoris",
     "addToFavorites": "Favoris",
     "nowPlayingAria": "Lecture en cours",
-    "previewUnavailable": "Aperçu indisponible pour ce morceau"
+    "previewUnavailable": "Aperçu indisponible pour ce morceau",
+    "appleConnectHint": "Vous écoutez un aperçu de 30 secondes. Ouvrez Apple Music pour le titre complet.",
+    "appleFallbackToPreview": "Apple Music n’a pas pu lire ce titre — passage à l’aperçu."
   },
   "appleMusic": {
     "compactLine": "{{action}} · compte Apple Music (pas de nouvelle connexion)"

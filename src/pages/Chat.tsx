@@ -646,22 +646,21 @@ const Chat = () => {
 
   const sidebar = (
     <div className="flex flex-col h-full min-h-0">
-      <Button
-        variant="soft"
-        className="mb-5 w-full justify-start gap-2 rounded-2xl h-11 font-body text-sm shadow-sm hover:shadow-md transition-shadow"
-        onClick={handleNewChat}
-      >
-        <MessageSquarePlus className="w-4 h-4 text-primary" />
-        {t("chat.newChat")}
-      </Button>
-      <div className="flex items-center gap-2 mb-3 px-0.5">
-        <span className="h-px flex-1 bg-gradient-to-r from-transparent via-borderSubtle to-borderSubtle/40" aria-hidden />
-        <p className="text-[11px] text-muted-foreground/80 font-body uppercase tracking-[0.14em] font-semibold shrink-0">
+      <div className="flex items-center justify-between mb-4 px-1">
+        <p className="text-[11px] text-muted-foreground/75 font-body uppercase tracking-[0.16em] font-semibold">
           {t("chat.conversations")}
         </p>
-        <span className="h-px flex-1 bg-gradient-to-l from-transparent via-borderSubtle to-borderSubtle/40" aria-hidden />
+        <button
+          type="button"
+          onClick={handleNewChat}
+          className="inline-flex items-center justify-center h-8 w-8 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+          aria-label={t("chat.newChat")}
+          title={t("chat.newChat")}
+        >
+          <MessageSquarePlus className="w-4 h-4" />
+        </button>
       </div>
-      <div className="flex-1 overflow-y-auto space-y-1 -mx-1 px-1 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto space-y-0.5 -mx-1 px-1 scrollbar-thin">
         {conversations.map((c) => {
           const isActive = c.id === activeConversationId;
           const previewArt = conversationPreviewArtwork(c);
@@ -669,41 +668,47 @@ const Chat = () => {
             <div
               key={c.id}
               className={cn(
-                "group flex items-stretch gap-1 rounded-2xl transition-all duration-200 border",
+                "group relative flex items-center gap-2.5 rounded-xl px-2 py-2 transition-colors",
                 isActive
-                  ? "bg-gradient-to-br from-primary/[0.12] to-primary/[0.04] ring-1 ring-primary/25 shadow-md border-primary/15"
-                  : "border-transparent hover:bg-muted/60 hover:border-borderSubtle/50"
+                  ? "bg-foreground/[0.06] dark:bg-foreground/[0.07]"
+                  : "hover:bg-foreground/[0.03] dark:hover:bg-foreground/[0.04]"
               )}
             >
+              {isActive && (
+                <span
+                  className="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-full bg-primary"
+                  aria-hidden
+                />
+              )}
               <button
                 type="button"
                 onClick={() => handleSelectChat(c.id)}
-                className="flex flex-1 text-left gap-3 min-w-0 items-center px-2.5 py-2 rounded-2xl"
+                className="flex flex-1 text-left gap-2.5 min-w-0 items-center focus-visible:outline-none"
               >
                 <div
                   className={cn(
-                    "relative h-11 w-11 shrink-0 rounded-xl overflow-hidden ring-1 ring-inset ring-black/5 dark:ring-white/10",
-                    previewArt ? "bg-muted" : "bg-gradient-to-br from-muted to-muted/50"
+                    "relative h-9 w-9 shrink-0 rounded-lg overflow-hidden",
+                    previewArt ? "bg-muted" : "bg-muted/60"
                   )}
                 >
                   {previewArt ? (
                     <img src={previewArt} alt="" className="h-full w-full object-cover" loading="lazy" />
                   ) : (
                     <div className="h-full w-full flex items-center justify-center">
-                      <MessageSquarePlus className="w-4 h-4 text-muted-foreground/45" />
+                      <MessageSquarePlus className="w-3.5 h-3.5 text-muted-foreground/50" />
                     </div>
                   )}
                 </div>
-                <div className="min-w-0 py-0.5">
+                <div className="min-w-0 flex-1 flex flex-col leading-tight">
                   <span
                     className={cn(
-                      "line-clamp-2 text-[13px] font-body leading-snug block",
-                      isActive ? "font-semibold text-foreground" : "font-medium text-foreground/85"
+                      "truncate text-[13px] font-body",
+                      isActive ? "font-semibold text-foreground" : "font-medium text-foreground/80"
                     )}
                   >
                     {c.title}
                   </span>
-                  <span className="text-[11px] text-muted-foreground/65 block mt-0.5 font-body tabular-nums">
+                  <span className="text-[11px] text-muted-foreground/60 font-body tabular-nums mt-0.5">
                     {new Date(c.updatedAt).toLocaleDateString(i18n.language, {
                       day: "numeric",
                       month: "short",
@@ -713,7 +718,7 @@ const Chat = () => {
               </button>
               <button
                 type="button"
-                className="p-2 self-center opacity-0 group-hover:opacity-60 hover:!opacity-100 text-muted-foreground hover:text-destructive shrink-0 transition-opacity rounded-xl hover:bg-destructive/10"
+                className="p-1.5 opacity-0 group-hover:opacity-50 hover:!opacity-100 text-muted-foreground hover:text-destructive shrink-0 transition-opacity rounded-lg"
                 aria-label={t("chat.deleteChatAria")}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -763,12 +768,12 @@ const Chat = () => {
       <div className="relative flex flex-col md:flex-row w-full max-w-[1600px] mx-auto min-h-[calc(100vh-3.5rem)] isolate">
         <aside
           className={cn(
-            "hidden md:flex shrink-0 flex-col border-r border-borderSubtle/60 bg-gradient-to-b from-card/95 via-card/40 to-background transition-[width] duration-300 ease-out overflow-hidden shadow-[inset_-1px_0_0_0_hsl(var(--border-subtle)/0.35)]",
-            conversationsPanelOpen ? "w-[272px]" : "w-0 border-transparent shadow-none"
+            "hidden md:flex shrink-0 flex-col border-r border-borderSubtle/50 bg-background/40 transition-[width] duration-300 ease-out overflow-hidden",
+            conversationsPanelOpen ? "w-[260px]" : "w-0 border-transparent"
           )}
           aria-hidden={!conversationsPanelOpen}
         >
-          <div className="w-[272px] h-full min-h-[calc(100vh-3.5rem)] max-h-[calc(100vh-3.5rem)] flex flex-col p-4 pt-5 box-border">
+          <div className="w-[260px] h-full min-h-[calc(100vh-3.5rem)] max-h-[calc(100vh-3.5rem)] flex flex-col px-3 pt-5 pb-4 box-border">
             {sidebar}
           </div>
         </aside>
@@ -808,7 +813,7 @@ const Chat = () => {
                 </SheetTrigger>
                 <SheetContent
                   side="left"
-                  className="w-[min(100%,320px)] pt-14 border-borderSubtle/60 bg-gradient-to-b from-background via-card/30 to-background"
+                  className="w-[min(100%,300px)] pt-14 px-3 border-borderSubtle/50 bg-background"
                 >
                   {sidebar}
                 </SheetContent>
@@ -1075,66 +1080,87 @@ const Chat = () => {
 
             {activeConversation &&
               (isLuckyLatestTurn || isCreatorLatestTurn || memorySummary || standardAxes || activeConversation.conversationProfile) && (
-              <aside className="hidden lg:flex lg:w-[17rem] shrink-0 flex-col gap-4 lg:border-l lg:border-borderSubtle/60 lg:pl-6 lg:pr-2 lg:py-6 lg:overflow-y-auto lg:max-h-[calc(100dvh-3.5rem-3rem)] scrollbar-thin bg-gradient-to-b from-transparent via-card/[0.15] to-transparent">
+              <aside className="hidden lg:flex lg:w-[16rem] xl:w-[18rem] shrink-0 flex-col gap-5 lg:border-l lg:border-borderSubtle/50 lg:pl-5 lg:pr-3 lg:py-7 lg:overflow-y-auto lg:max-h-[calc(100dvh-3.5rem-3rem)] scrollbar-thin">
                 {isLuckyLatestTurn ? (
-                  <>
-                    <p className="text-[11px] text-muted-foreground/70 font-body uppercase tracking-[0.12em] font-semibold">
+                  <section className="space-y-2.5">
+                    <p className="text-[10.5px] text-muted-foreground/65 font-body uppercase tracking-[0.18em] font-semibold">
                       {t("chat.luckySidebarTitle")}
                     </p>
-                    <div className="rounded-2xl border border-borderSubtle/60 surface-card p-4 text-sm font-body text-secondary-foreground/90 leading-relaxed shadow-sm">
+                    <p className="text-sm font-body text-foreground/80 leading-relaxed">
                       {t("chat.luckySidebarBody")}
-                    </div>
-                  </>
+                    </p>
+                  </section>
                 ) : isCreatorLatestTurn ? (
-                  <>
-                    <p className="text-[11px] text-muted-foreground/70 font-body uppercase tracking-[0.12em] font-semibold">
+                  <section className="space-y-2.5">
+                    <p className="text-[10.5px] text-muted-foreground/65 font-body uppercase tracking-[0.18em] font-semibold">
                       {t("chat.creatorSidebarTitle")}
                     </p>
-                    <div className="rounded-2xl border border-borderSubtle/60 surface-card p-4 text-sm font-body text-secondary-foreground/90 leading-relaxed shadow-sm">
+                    <p className="text-sm font-body text-foreground/80 leading-relaxed">
                       {t("chat.creatorSidebarBody")}
-                    </div>
-                  </>
+                    </p>
+                  </section>
                 ) : (
                   <>
-                    <p className="text-[11px] text-muted-foreground/70 font-body uppercase tracking-[0.12em] font-semibold">
-                      {t("chat.threadProfile")}
-                    </p>
-                    {memorySummary && (
-                      <div className="rounded-2xl border border-borderSubtle/60 surface-card p-4 text-sm font-body text-secondary-foreground/90 leading-relaxed shadow-sm">
-                        {memorySummary}
-                      </div>
-                    )}
-                    {standardAxes && (
-                      <div className="rounded-2xl border border-borderSubtle/60 surface-card p-4 text-xs font-body space-y-2 text-muted-foreground/85 shadow-sm">
-                        <span className="uppercase tracking-[0.1em] text-[11px] font-semibold text-muted-foreground/60">
-                          {t("chat.axes")}
-                        </span>
-                        <p className="text-foreground/75 leading-relaxed text-sm">
-                          {t("chat.axisEnergy")}: {standardAxes.energy} · {t("chat.axisIntimacy")}: {standardAxes.intimacy}/5 ·{" "}
-                          {t("chat.axisTension")}: {standardAxes.emotionalTension} · {t("chat.axisCatharsis")}:{" "}
-                          {standardAxes.catharsis}
+                    <section className="space-y-2.5">
+                      <p className="text-[10.5px] text-muted-foreground/65 font-body uppercase tracking-[0.18em] font-semibold">
+                        {t("chat.threadProfile")}
+                      </p>
+                      {memorySummary ? (
+                        <p className="text-sm font-body text-foreground/80 leading-relaxed">
+                          {memorySummary}
                         </p>
+                      ) : (
+                        <p className="text-[13px] font-body text-muted-foreground/60 italic leading-relaxed">
+                          {t("chat.threadProfileEmpty")}
+                        </p>
+                      )}
+                    </section>
+                    {standardAxes && (
+                      <section className="space-y-3 pt-1">
+                        <p className="text-[10.5px] text-muted-foreground/65 font-body uppercase tracking-[0.18em] font-semibold">
+                          {t("chat.axes")}
+                        </p>
+                        <dl className="space-y-2">
+                          {[
+                            { k: t("chat.axisEnergy"), v: standardAxes.energy },
+                            { k: t("chat.axisIntimacy"), v: `${standardAxes.intimacy}/5` },
+                            { k: t("chat.axisTension"), v: standardAxes.emotionalTension },
+                            { k: t("chat.axisCatharsis"), v: standardAxes.catharsis },
+                          ].map((row) => (
+                            <div
+                              key={row.k}
+                              className="flex items-center justify-between text-[12.5px] font-body"
+                            >
+                              <dt className="text-muted-foreground/70">{row.k}</dt>
+                              <dd className="text-foreground/85 font-medium tabular-nums">
+                                {row.v}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
                         {standardAxes.moodLabel && (
-                          <p className="text-foreground/65 text-xs">{standardAxes.moodLabel}</p>
+                          <p className="text-[12.5px] font-body text-foreground/70 leading-relaxed pt-1 border-t border-borderSubtle/40">
+                            {standardAxes.moodLabel}
+                          </p>
                         )}
                         {standardAxes.dominantThemes.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mt-2">
+                          <div className="flex flex-wrap gap-1.5 pt-1">
                             {standardAxes.dominantThemes.map((tag) => (
                               <span
                                 key={tag}
-                                className="px-2 py-0.5 rounded-full bg-primary/10 text-primary/80 text-xs font-medium border border-primary/15"
+                                className="px-2 py-0.5 rounded-full bg-primary/10 text-primary/85 text-[11px] font-medium font-body"
                               >
                                 {tag}
                               </span>
                             ))}
                           </div>
                         )}
-                      </div>
+                      </section>
                     )}
                     {activeConversation.conversationProfile && (
-                      <div className="hidden xl:block">
+                      <section className="hidden xl:block pt-1">
                         <EmotionalProfileCard profile={activeConversation.conversationProfile} />
-                      </div>
+                      </section>
                     )}
                   </>
                 )}
@@ -1147,15 +1173,21 @@ const Chat = () => {
 
     <div
       ref={chatDockRef}
-      className="fixed inset-x-0 z-[42] flex flex-col surface-player backdrop-blur-2xl border-t border-borderSubtle/70 shadow-player rounded-t-3xl md:rounded-t-[1.75rem] ring-1 ring-black/[0.04] dark:ring-white/[0.06]"
+      className="fixed inset-x-0 z-[42] pointer-events-none"
       style={{ bottom: `var(--global-player-offset, ${isMobile ? "56px" : "0px"})` }}
     >
-      <div className="px-4 md:px-8 pt-3 pb-2.5 md:pb-3">
-        <div className="max-w-[1600px] w-full mx-auto">
-          <div className="max-w-3xl w-full mx-auto space-y-2">
-            {dbSearchId && <SearchFeedback searchId={dbSearchId} />}
-            <PromptInput {...composerProps} />
-          </div>
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-background via-background/85 to-transparent"
+        aria-hidden
+      />
+      <div className="relative px-3 md:px-8 pt-3 pb-3 md:pb-5">
+        <div className="max-w-3xl w-full mx-auto space-y-2 pointer-events-auto">
+          {dbSearchId && (
+            <div className="flex justify-center">
+              <SearchFeedback searchId={dbSearchId} />
+            </div>
+          )}
+          <PromptInput {...composerProps} />
         </div>
       </div>
     </div>

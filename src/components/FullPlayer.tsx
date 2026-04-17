@@ -8,6 +8,7 @@ import { Slider } from "@/components/ui/slider";
 import type { Song } from "@/data/mockData";
 import { useAppleMusic } from "@/context/useAppleMusic";
 import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
+import { useAppleEnrichedSong } from "@/hooks/useAppleMusicResolution";
 import { AppleMusicEmbed } from "@/components/AppleMusicEmbed";
 import { AppleMusicKitPlayer, type AppleMusicKitPlayerHandle } from "@/components/AppleMusicKitPlayer";
 import { StreamingLibraryActions } from "@/components/StreamingLibraryActions";
@@ -58,7 +59,9 @@ const FullPlayer = ({
   dockPanelActions,
 }: FullPlayerProps) => {
   const { t } = useTranslation();
-  const song = songs[currentIndex];
+  const rawSong = songs[currentIndex];
+  const enrichedSong = useAppleEnrichedSong(rawSong);
+  const song = enrichedSong ?? rawSong;
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const autoplayTried = useRef(false);
   const indexRef = useRef(currentIndex);
@@ -83,13 +86,19 @@ const FullPlayer = ({
   const playbackMode = useStreamingPlaybackMode();
   const appleMusic = useAppleMusic();
 
+  const [kitUnavailableSongIds, setKitUnavailableSongIds] = useState<Set<string>>(() => new Set());
+  const kitFailedForCurrent = song ? kitUnavailableSongIds.has(song.id) : false;
+
   // Determine playback source
   const previewUrl = song?.previewUrl;
   const spotifyTrackId = song?.spotifyUri?.replace("spotify:track:", "");
   const appleMusicId = song?.appleMusicId;
   const useApplePlayback = playbackMode === "apple" && !!appleMusicId;
   const useAppleKitPlayer =
-    useApplePlayback && appleMusic.isAuthorized && appleMusic.isAvailable;
+    useApplePlayback &&
+    appleMusic.isAuthorized &&
+    appleMusic.isAvailable &&
+    !kitFailedForCurrent;
 
   const kitPlayerRef = useRef<AppleMusicKitPlayerHandle>(null);
   const [kitTelemetry, setKitTelemetry] = useState({ current: 0, duration: 0, isPlaying: false });
@@ -149,6 +158,23 @@ const FullPlayer = ({
     setKitAutoplayNonce(0);
   }, []);
 
+  const handleKitPlaybackError = useCallback(
+    (err: unknown) => {
+      const sid = songs[indexRef.current]?.id ?? rawSong?.id;
+      if (!sid) return;
+      setKitUnavailableSongIds((prev) => {
+        if (prev.has(sid)) return prev;
+        const next = new Set(prev);
+        next.add(sid);
+        return next;
+      });
+      toast.info(t("player.appleFallbackToPreview"), {
+        description: err instanceof Error ? err.message : undefined,
+      });
+    },
+    [songs, rawSong?.id, t],
+  );
+
   // Reset state when song changes
   useEffect(() => {
     autoplayTried.current = false;
@@ -163,7 +189,8 @@ const FullPlayer = ({
       audioRef.current.src = "";
     }
 
-    if (useApplePlayback) {
+    // Quando MusicKit gestisce direttamente il brano, niente HTML5: è il Kit Player a suonare.
+    if (useAppleKitPlayer) {
       queueContinueAfterLoad.current = false;
       return;
     }
@@ -223,10 +250,10 @@ const FullPlayer = ({
       queueContinueAfterLoad.current = false;
       setUseEmbed(true);
     }
-  }, [song?.id, previewUrl, useApplePlayback]);
+  }, [song?.id, previewUrl, useAppleKitPlayer]);
 
   useEffect(() => {
-    if (useApplePlayback || useEmbed || !audioReady || !audioRef.current) return;
+    if (useAppleKitPlayer || useEmbed || !audioReady || !audioRef.current) return;
 
     if (queueContinueAfterLoad.current) {
       queueContinueAfterLoad.current = false;
@@ -252,7 +279,7 @@ const FullPlayer = ({
       .catch(() => {
         onAutoplayConsumed?.();
       });
-  }, [autoplay, audioReady, useApplePlayback, useEmbed, song?.id, onAutoplayConsumed]);
+  }, [autoplay, audioReady, useAppleKitPlayer, useEmbed, song?.id, onAutoplayConsumed]);
 
   // Volume sync
   useEffect(() => {
@@ -302,16 +329,13 @@ const FullPlayer = ({
   }, [currentIndex, songs.length, onChangeIndex, dockRepeat]);
 
   const onDockPlayPause = useCallback(() => {
-    const s = songs[currentIndex];
+    const s = song ?? songs[currentIndex];
     if (!s) return;
     const sp = s.spotifyUri?.replace("spotify:track:", "");
     const am = s.appleMusicId;
-    const embedOnly =
-      isDock &&
-      ((!useApplePlayback && useEmbed && Boolean(sp)) ||
-        (useApplePlayback && Boolean(am) && !(appleMusic.isAuthorized && appleMusic.isAvailable)));
-    if (embedOnly) {
-      // Con preferenza Apple non aprire mai Spotify solo perché c’è anche spotifyUri sulla canzone.
+    const hasInlineAudio = useAppleKitPlayer || (!!s.previewUrl && !useEmbed);
+    if (isDock && !hasInlineAudio) {
+      // Fallback: niente audio inline nel dock → apri lo streaming esterno (priorità al provider preferito)
       if (useApplePlayback && am) {
         window.open(`https://music.apple.com/us/song/${am}`, "_blank", "noopener,noreferrer");
       } else if (sp) {
@@ -324,14 +348,13 @@ const FullPlayer = ({
     if (useAppleKitPlayer) void kitPlayerRef.current?.togglePlay();
     else void togglePlay();
   }, [
+    song,
     songs,
     currentIndex,
     isDock,
     useApplePlayback,
     useEmbed,
     useAppleKitPlayer,
-    appleMusic.isAuthorized,
-    appleMusic.isAvailable,
     togglePlay,
   ]);
 
@@ -365,10 +388,8 @@ const FullPlayer = ({
   const fav = isFavorite(song.id);
   const yearSuffix = song.releaseYear != null ? ` · ${song.releaseYear}` : "";
 
-  const embedOnlyDock =
-    isDock &&
-    ((!useApplePlayback && useEmbed && Boolean(spotifyTrackId)) ||
-      (useApplePlayback && Boolean(appleMusicId) && !(appleMusic.isAuthorized && appleMusic.isAvailable)));
+  const hasInlineAudio = useAppleKitPlayer || (!!previewUrl && !useEmbed);
+  const embedOnlyDock = isDock && !hasInlineAudio;
 
   const openExternalStream = () => {
     if (useApplePlayback && appleMusicId) {
@@ -412,6 +433,7 @@ const FullPlayer = ({
             onTrackEnded={handleKitTrackEnded}
             queueAutoplayNonce={kitAutoplayNonce}
             onQueueAutoplayConsumed={onKitQueueAutoplayConsumed}
+            onPlaybackError={handleKitPlaybackError}
           />
         )}
         <div className="w-full">
@@ -520,36 +542,12 @@ const FullPlayer = ({
           onTrackEnded={handleKitTrackEnded}
           queueAutoplayNonce={kitAutoplayNonce}
           onQueueAutoplayConsumed={onKitQueueAutoplayConsumed}
+          onPlaybackError={handleKitPlaybackError}
         />
       )}
 
-      {/* Apple Music solo embed (MusicKit è il blocco sopra) */}
-      {useApplePlayback && appleMusicId && !useAppleKitPlayer && (
-        <div className="w-full px-2 mb-4 space-y-3">
-          <AppleMusicEmbed trackId={appleMusicId} trackTitle={song.title} height={152} />
-          <div className="flex items-center justify-center gap-6">
-            <button
-              type="button"
-              onClick={handlePrev}
-              disabled={currentIndex === 0}
-              className="p-2 rounded-full text-foreground hover:bg-muted transition-colors disabled:opacity-30"
-            >
-              <SkipBack className="w-5 h-5" />
-            </button>
-            <button
-              type="button"
-              onClick={handleNext}
-              disabled={currentIndex === songs.length - 1}
-              className="p-2 rounded-full text-foreground hover:bg-muted transition-colors disabled:opacity-30"
-            >
-              <SkipForward className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Native audio controls */}
-      {!useApplePlayback && !useEmbed && (
+      {/* HTML5 preview (in Apple mode usa la preview Apple, altrimenti quella Spotify) */}
+      {!useAppleKitPlayer && !useEmbed && (
         <>
           <div className="w-full px-2 mb-2">
             <Slider
@@ -619,11 +617,31 @@ const FullPlayer = ({
               className="flex-1"
             />
           </div>
+
+          {useApplePlayback && appleMusicId && (
+            <p className="text-[11px] text-muted-foreground/80 font-body mt-1 px-2 text-center">
+              {t("player.appleConnectHint")}
+            </p>
+          )}
         </>
       )}
 
-      {/* Fallback: Spotify embed (ospite o account Spotify) */}
-      {!useApplePlayback && useEmbed && spotifyTrackId && (
+      {/* Fallback iframe: nessun audio inline. Prima Apple (se preferito / disponibile), poi Spotify. */}
+      {!useAppleKitPlayer && useEmbed && appleMusicId && (useApplePlayback || !spotifyTrackId) && (
+        <div className="w-full px-2 mt-2 space-y-3">
+          <AppleMusicEmbed trackId={appleMusicId} trackTitle={song.title} height={152} />
+          <div className="flex items-center justify-center gap-6">
+            <button onClick={handlePrev} disabled={currentIndex === 0} className="p-2 rounded-full text-foreground hover:bg-muted transition-colors disabled:opacity-30">
+              <SkipBack className="w-5 h-5" />
+            </button>
+            <button onClick={handleNext} disabled={currentIndex === songs.length - 1} className="p-2 rounded-full text-foreground hover:bg-muted transition-colors disabled:opacity-30">
+              <SkipForward className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!useAppleKitPlayer && useEmbed && spotifyTrackId && !(appleMusicId && (useApplePlayback || !spotifyTrackId)) && (
         <div className="w-full px-2 mt-2">
           <iframe
             src={`https://open.spotify.com/embed/track/${spotifyTrackId}?utm_source=generator&theme=0`}
@@ -635,7 +653,6 @@ const FullPlayer = ({
             className="rounded-2xl ring-1 ring-border/40 shadow-soft"
             title={t("player.artworkAlt", { title: song.title, artist: song.artist })}
           />
-          {/* Still show prev/next */}
           <div className="flex items-center justify-center gap-6 mt-3">
             <button onClick={handlePrev} disabled={currentIndex === 0} className="p-2 rounded-full text-foreground hover:bg-muted transition-colors disabled:opacity-30">
               <SkipBack className="w-5 h-5" />
@@ -647,8 +664,7 @@ const FullPlayer = ({
         </div>
       )}
 
-      {/* Fallback: no preview and no spotify */}
-      {!useApplePlayback && useEmbed && !spotifyTrackId && (
+      {!useAppleKitPlayer && useEmbed && !appleMusicId && !spotifyTrackId && (
         <div className="w-full px-2 mt-2 text-center">
           <p className="text-xs text-muted-foreground font-body py-4">{t("player.previewUnavailable")}</p>
           <div className="flex items-center justify-center gap-6">

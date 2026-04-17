@@ -155,6 +155,7 @@
     "creatorSidebarTitle": "Creator-Modus",
     "creatorSidebarBody": "Diese Suche startet von trendenden Songs und Sounds und filtert sie danach, was auf TikTok und Instagram Reels funktionieren kann. Beschreibe die Art des Videos, Schnitt, Rhythmus, Payoff oder den Text, den du im Kopf hast.",
     "threadProfile": "Gedächtnis dieses Chats",
+    "threadProfileEmpty": "Noch leer — sende einen Prompt, um es aufzubauen.",
     "axes": "Emotionale Nuancen",
     "axisEnergy": "Energie",
     "axisIntimacy": "Intimität",
@@ -178,6 +179,8 @@
     "creatorPlaceholder": "Beschreibe das Video, die Reel-Art oder den Trend, den du vertonen willst…",
     "modeSearch": "Freie Suche",
     "modeCreator": "TikTok & Reels",
+    "modeSearchHint": "Songs, die eine Emotion einfangen",
+    "modeCreatorHint": "Virale Sounds für dein Video",
     "removeImage": "Bild entfernen",
     "imageHint": "Foto angehängt — senden, um Songs zu suchen",
     "attachImage": "Bild anhängen"
@@ -309,7 +312,8 @@
     "removeFromFavorites": "Aus Favoriten entfernen",
     "addToFavorites": "Favoriten",
     "nowPlayingAria": "Wird abgespielt",
-    "previewUnavailable": "Vorschau für diesen Titel nicht verfügbar"
+    "previewUnavailable": "Vorschau für diesen Titel nicht verfügbar",
+    "appleConnectHint": "Du hörst eine 30‑Sekunden‑Vorschau. Öffne Apple Music für den vollständigen Titel."
   },
   "appleMusic": {
     "compactLine": "{{action}} · Apple Music-Konto (keine neue Anmeldung)"

@@ -79,6 +79,7 @@ const NowPlaying = ({ song, isFavorite, onToggleFavorite }: NowPlayingProps) => 
 
       <div className="relative w-full max-w-md">
         <MusicPlayer
+          songId={song.id}
           trackTitle={song.title}
           artistName={song.artist}
           spotifyTrackId={song.spotifyUri?.replace("spotify:track:", "")}

@@ -46,6 +46,8 @@ interface AppleMusicKitPlayerProps {
   onQueueAutoplayConsumed?: () => void;
   /** Throttled (~120ms) per UI esterna (barra dock) */
   onTelemetry?: (t: AppleMusicKitTelemetry) => void;
+  /** Emesso quando MusicKit rifiuta la riproduzione (es. niente abbonamento / geo-blocco / rete). */
+  onPlaybackError?: (err: unknown) => void;
 }
 
 function formatTime(seconds: number): string {
@@ -69,12 +71,15 @@ export const AppleMusicKitPlayer = forwardRef<AppleMusicKitPlayerHandle, AppleMu
       queueAutoplayNonce = 0,
       onQueueAutoplayConsumed,
       onTelemetry,
+      onPlaybackError,
     },
     ref
   ) {
     const { t } = useTranslation();
     const { isAuthorized, isAvailable } = useAppleMusic();
     const resolvedMode = chromeModeProp ?? (compact ? "compact" : "default");
+    const onPlaybackErrorRef = useRef(onPlaybackError);
+    onPlaybackErrorRef.current = onPlaybackError;
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
@@ -107,6 +112,7 @@ export const AppleMusicKitPlayer = forwardRef<AppleMusicKitPlayerHandle, AppleMu
             }
           } catch (err) {
             console.error("MusicKit togglePlay:", err);
+            onPlaybackErrorRef.current?.(err);
           }
         },
         seek: (seconds: number) => {
@@ -227,6 +233,7 @@ export const AppleMusicKitPlayer = forwardRef<AppleMusicKitPlayerHandle, AppleMu
           }
         } catch (err) {
           console.error("MusicKit sync queue:", err);
+          onPlaybackErrorRef.current?.(err);
         } finally {
           if (!cancelled && forcePlay) onQueueAutoplayConsumed?.();
         }
@@ -252,6 +259,7 @@ export const AppleMusicKitPlayer = forwardRef<AppleMusicKitPlayerHandle, AppleMu
         }
       } catch (err) {
         console.error("MusicKit play error:", err);
+        onPlaybackErrorRef.current?.(err);
       }
     }, [isPlaying, trackId]);
 

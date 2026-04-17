@@ -194,6 +194,7 @@
     "creatorSidebarTitle": "Creator mode",
     "creatorSidebarBody": "This search starts from trending songs and sounds, then filters them for what can work in TikTok and Instagram Reels. Describe the kind of video, cut, pacing, payoff, or lyrics you have in mind.",
     "threadProfile": "Memory for this chat",
+    "threadProfileEmpty": "Still empty — send a prompt to start shaping it.",
     "axes": "Emotional nuances",
     "axisEnergy": "Energy",
     "axisIntimacy": "Intimacy",
@@ -217,6 +218,8 @@
     "creatorPlaceholder": "Describe the video, reel style, or trend you want to score…",
     "modeSearch": "Open search",
     "modeCreator": "TikTok & Reels",
+    "modeSearchHint": "Tracks that match an emotion",
+    "modeCreatorHint": "Viral sounds for your video",
     "removeImage": "Remove image",
     "imageHint": "Photo attached — send to search for songs",
     "attachImage": "Attach image"
@@ -348,7 +351,9 @@
     "removeFromFavorites": "Remove from favorites",
     "addToFavorites": "Favorites",
     "nowPlayingAria": "Now playing",
-    "previewUnavailable": "Preview not available for this track"
+    "previewUnavailable": "Preview not available for this track",
+    "appleConnectHint": "You’re hearing a 30-second preview. Open Apple Music for the full track.",
+    "appleFallbackToPreview": "Apple Music couldn’t play this track — switching to preview."
   },
   "appleMusic": {
     "compactLine": "{{action}} · Apple Music account (no new sign-in)"

@@ -155,6 +155,7 @@
     "creatorSidebarTitle": "Modo creator",
     "creatorSidebarBody": "Esta busca parte de músicas e sons em tendência e depois filtra o que pode funcionar no TikTok e nos Reels do Instagram. Descreve o tipo de vídeo, edição, ritmo, payoff ou letra que tens em mente.",
     "threadProfile": "Memória deste chat",
+    "threadProfileEmpty": "Ainda vazia — envia um prompt para começar a construí-la.",
     "axes": "Nuances emocionais",
     "axisEnergy": "Energia",
     "axisIntimacy": "Intimidade",
@@ -309,7 +310,9 @@
     "removeFromFavorites": "Remover dos favoritos",
     "addToFavorites": "Favoritos",
     "nowPlayingAria": "A reproduzir",
-    "previewUnavailable": "Pré-visualização indisponível para esta faixa"
+    "previewUnavailable": "Pré-visualização indisponível para esta faixa",
+    "appleConnectHint": "Estás a ouvir uma pré-visualização de 30 segundos. Abre o Apple Music para a faixa completa.",
+    "appleFallbackToPreview": "O Apple Music não conseguiu reproduzir esta faixa — a mudar para a pré-visualização."
   },
   "appleMusic": {
     "compactLine": "{{action}} · conta Apple Music (sem novo login)"

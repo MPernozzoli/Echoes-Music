@@ -186,6 +186,7 @@
     "creatorSidebarTitle": "Modalità creator",
     "creatorSidebarBody": "Questa ricerca parte da brani e suoni di tendenza e li filtra per capire cosa può funzionare meglio in TikTok e Reels. Descrivi il tipo di video, il montaggio, il ritmo, il payoff o il testo che hai in mente.",
     "threadProfile": "Memoria di questa chat",
+    "threadProfileEmpty": "Ancora vuota — scrivi un prompt per iniziare a costruire il profilo.",
     "axes": "Sfumature emotive",
     "axisEnergy": "Energia",
     "axisIntimacy": "Intimità",
@@ -209,6 +210,8 @@
     "creatorPlaceholder": "Descrivi il video, il tipo di reel o il trend che vuoi accompagnare…",
     "modeSearch": "Ricerca libera",
     "modeCreator": "TikTok & Reels",
+    "modeSearchHint": "Brani che riflettono un'emozione",
+    "modeCreatorHint": "Suoni virali per il tuo video",
     "removeImage": "Rimuovi immagine",
     "imageHint": "Foto allegata — invia per cercare brani",
     "attachImage": "Allega immagine"
@@ -340,7 +343,9 @@
     "removeFromFavorites": "Rimuovi dai preferiti",
     "addToFavorites": "Preferiti",
     "nowPlayingAria": "In riproduzione",
-    "previewUnavailable": "Anteprima non disponibile per questo brano"
+    "previewUnavailable": "Anteprima non disponibile per questo brano",
+    "appleConnectHint": "Stai ascoltando l’anteprima di 30 secondi. Apri Apple Music per la versione completa.",
+    "appleFallbackToPreview": "Apple Music non ha potuto riprodurre il brano — passo all’anteprima."
   },
   "appleMusic": {
     "compactLine": "{{action}} · account Apple Music (nessun nuovo accesso)"

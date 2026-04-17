@@ -189,6 +189,7 @@ const SongCard = ({
 
             {showPlayer && (
               <MusicPlayer
+                songId={id}
                 trackTitle={title}
                 artistName={artist}
                 spotifyTrackId={spotifyUri?.replace("spotify:track:", "")}
