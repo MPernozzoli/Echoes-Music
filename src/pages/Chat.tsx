@@ -107,6 +107,7 @@ const Chat = () => {
   const {
     isAvailable: appleMusicAvailable,
     isAuthorized: appleMusicAuthorized,
+    isLinkedAccount: appleMusicLinkedAccount,
     loading: appleMusicLoading,
   } = useAppleMusic();
   const {
@@ -186,12 +187,13 @@ const Chat = () => {
   );
   const currentSong = queue[currentIndex] ?? currentResult?.songs[0] ?? null;
   const hasAnyMessage = (activeConversation?.messages.length ?? 0) > 0;
-  const streamingLinked =
-    spotifyConnected || (appleMusicAvailable && appleMusicAuthorized);
+  const appleMusicLinked =
+    appleMusicAuthorized || appleMusicLinkedAccount || (appleMusicAvailable && appleMusicAuthorized);
+  const streamingLinked = spotifyConnected || appleMusicLinked;
   const streamingProviderPreference =
-    appleMusicAvailable && appleMusicAuthorized && !spotifyConnected
+    appleMusicLinked && !spotifyConnected
       ? "apple_music"
-      : spotifyConnected && !(appleMusicAvailable && appleMusicAuthorized)
+      : spotifyConnected && !appleMusicLinked
         ? "spotify"
         : "auto";
   const showStreamingConnectBanner =

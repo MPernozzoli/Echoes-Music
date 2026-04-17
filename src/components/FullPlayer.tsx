@@ -106,6 +106,16 @@ const FullPlayer = ({
     if (!useAppleKitPlayer) setKitAutoplayNonce(0);
   }, [useAppleKitPlayer]);
 
+  /** Autoplay iniziale su MusicKit: bumpa il nonce una sola volta per brano quando autoplay è richiesto */
+  const kitAutoplayTriedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!autoplay || !useAppleKitPlayer || !song?.id) return;
+    if (kitAutoplayTriedRef.current === song.id) return;
+    kitAutoplayTriedRef.current = song.id;
+    setKitAutoplayNonce((n) => n + 1);
+    onAutoplayConsumed?.();
+  }, [autoplay, useAppleKitPlayer, song?.id, onAutoplayConsumed]);
+
   useEffect(() => {
     if (!isDock || !useAppleKitPlayer) return;
     kitPlayerRef.current?.setVolume(isMuted ? 0 : volume / 100);
