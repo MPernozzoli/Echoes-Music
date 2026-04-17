@@ -1,27 +1,89 @@
+import { normalizeQueryKey } from "@/lib/trackKeyNormalize";
 import { getAppleMusicDeveloperToken } from "@/services/appleMusic";
+import {
+  fetchAppleMatchFromStreamingCache,
+  mergeStreamingIdsToCache,
+} from "@/services/trackStreamingIdCache";
+import type { AppleMusicCatalogMatch } from "@/services/streamingCatalogTypes";
 
-export interface AppleMusicCatalogMatch {
-  id: string;
-  previewUrl?: string;
-  artworkUrl?: string;
-  storefront: string;
-}
+export type { AppleMusicCatalogMatch } from "@/services/streamingCatalogTypes";
 
 type Listener = (songId: string) => void;
+
+const SESSION_PREFIX = "echoes_am_v1:";
+const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 7; // 7 giorni
 
 /** Cache in memoria: songId → match Apple Music catalog */
 const songIdCache = new Map<string, AppleMusicCatalogMatch | null>();
 /** Cache parallela per query (title|artist) — evita round-trip duplicati tra card e dock */
 const queryCache = new Map<string, AppleMusicCatalogMatch | null>();
-const inflight = new Map<string, Promise<AppleMusicCatalogMatch | null>>();
+type InflightResult = { match: AppleMusicCatalogMatch | null };
+
+const inflight = new Map<string, Promise<InflightResult>>();
 const listeners = new Set<Listener>();
+
+function stableQueryHash(key: string): string {
+  let h = 5381;
+  for (let i = 0; i < key.length; i++) h = Math.imul(h, 33) ^ key.charCodeAt(i);
+  return (h >>> 0).toString(36);
+}
+
+type SessionPayload = { id: string; previewUrl?: string; artworkUrl?: string; storefront: string; savedAt: number };
+
+function readSessionMatch(qKey: string): AppleMusicCatalogMatch | null {
+  if (typeof sessionStorage === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(SESSION_PREFIX + stableQueryHash(qKey));
+    if (!raw) return null;
+    const p = JSON.parse(raw) as SessionPayload;
+    if (!p?.id || !p.storefront || typeof p.savedAt !== "number") return null;
+    if (Date.now() - p.savedAt > SESSION_MAX_AGE_MS) {
+      sessionStorage.removeItem(SESSION_PREFIX + stableQueryHash(qKey));
+      return null;
+    }
+    return {
+      id: p.id,
+      previewUrl: p.previewUrl,
+      artworkUrl: p.artworkUrl,
+      storefront: p.storefront,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeSessionMatch(qKey: string, m: AppleMusicCatalogMatch): void {
+  if (typeof sessionStorage === "undefined") return;
+  try {
+    const payload: SessionPayload = {
+      id: m.id,
+      previewUrl: m.previewUrl,
+      artworkUrl: m.artworkUrl,
+      storefront: m.storefront,
+      savedAt: Date.now(),
+    };
+    sessionStorage.setItem(SESSION_PREFIX + stableQueryHash(qKey), JSON.stringify(payload));
+  } catch {
+    // quota / private mode
+  }
+}
+
+function clearSessionAppleMatches(): void {
+  if (typeof sessionStorage === "undefined") return;
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const k = sessionStorage.key(i);
+      if (k?.startsWith(SESSION_PREFIX)) keys.push(k);
+    }
+    for (const k of keys) sessionStorage.removeItem(k);
+  } catch {
+    /* ignore */
+  }
+}
 
 function notify(songId: string) {
   for (const fn of listeners) fn(songId);
-}
-
-function normalizeQueryKey(title: string, artist: string): string {
-  return `${title.trim().toLowerCase()}||${artist.trim().toLowerCase()}`;
 }
 
 function storefrontFromHint(hint?: string): string {
@@ -43,11 +105,12 @@ async function searchAppleCatalog(
   query: string,
   storefront: string,
   token: string,
+  signal?: AbortSignal,
 ): Promise<AppleMusicCatalogMatch | null> {
   try {
     const res = await fetch(
-      `https://api.music.apple.com/v1/catalog/${storefront}/search?types=songs&limit=5&term=${encodeURIComponent(query)}`,
-      { headers: { Authorization: `Bearer ${token}` } },
+      `https://api.music.apple.com/v1/catalog/${storefront}/search?types=songs&limit=3&term=${encodeURIComponent(query)}`,
+      { headers: { Authorization: `Bearer ${token}` }, signal },
     );
     if (!res.ok) return null;
     const data = (await res.json()) as {
@@ -76,11 +139,49 @@ async function searchAppleCatalog(
   }
 }
 
+/** Primo storefront che risponde con un match; annulla le altre richieste in corso. */
+async function searchFirstAcrossStorefronts(
+  query: string,
+  storefronts: string[],
+  token: string,
+): Promise<AppleMusicCatalogMatch | null> {
+  if (storefronts.length === 0) return null;
+  if (storefronts.length === 1) {
+    return searchAppleCatalog(query, storefronts[0], token);
+  }
+  const ac = new AbortController();
+  return new Promise((resolve) => {
+    let settled = false;
+    let pending = storefronts.length;
+    const finish = (m: AppleMusicCatalogMatch | null) => {
+      if (settled) return;
+      if (m) {
+        settled = true;
+        ac.abort();
+        resolve(m);
+        return;
+      }
+      pending -= 1;
+      if (pending <= 0) {
+        settled = true;
+        resolve(null);
+      }
+    };
+    for (const sf of storefronts) {
+      void searchAppleCatalog(query, sf, token, ac.signal)
+        .then((m) => finish(m))
+        .catch(() => finish(null));
+    }
+  });
+}
+
 export interface ResolveInput {
   songId: string;
   title: string;
   artist: string;
   languageHint?: string;
+  /** ID traccia Spotify (senza prefisso `spotify:track:`) se noto — accoppiato in cache con l’ID Apple. */
+  spotifyTrackId?: string;
 }
 
 /** Cerca il brano nel catalogo Apple Music lato client. Risolutore “best-effort”, risultato memorizzato in cache. */
@@ -94,34 +195,51 @@ export async function resolveAppleMusicSong(input: ResolveInput): Promise<AppleM
     return cached;
   }
 
+  const fromSession = readSessionMatch(qKey);
+  if (fromSession) {
+    queryCache.set(qKey, fromSession);
+    songIdCache.set(input.songId, fromSession);
+    notify(input.songId);
+    return fromSession;
+  }
+
   const existing = inflight.get(qKey);
   if (existing) {
-    const cached = await existing;
+    const { match: cached } = await existing;
     songIdCache.set(input.songId, cached);
     if (cached) notify(input.songId);
     return cached;
   }
 
-  const pending = (async () => {
+  const pending = (async (): Promise<InflightResult> => {
+    const fromDb = await fetchAppleMatchFromStreamingCache(input.title, input.artist);
+    if (fromDb) return { match: fromDb };
+
     const token = await getAppleMusicDeveloperToken();
-    if (!token) return null;
+    if (!token) return { match: null };
     const query = `${input.artist} ${input.title}`.trim();
-    if (!query) return null;
+    if (!query) return { match: null };
     const primary = storefrontFromHint(input.languageHint);
-    for (const storefront of uniqueStorefronts(primary)) {
-      const match = await searchAppleCatalog(query, storefront, token);
-      if (match) return match;
+    const m = await searchFirstAcrossStorefronts(query, uniqueStorefronts(primary), token);
+    if (m) {
+      void mergeStreamingIdsToCache({
+        title: input.title,
+        artist: input.artist,
+        match: m,
+        spotifyTrackId: input.spotifyTrackId,
+      });
     }
-    return null;
+    return { match: m };
   })();
   inflight.set(qKey, pending);
 
-  const result = await pending;
+  const { match: result } = await pending;
   inflight.delete(qKey);
   // Solo i match positivi vengono messi in cache: i null vengono riprovati se cambiano token/rete.
   if (result) {
     queryCache.set(qKey, result);
     songIdCache.set(input.songId, result);
+    writeSessionMatch(qKey, result);
     notify(input.songId);
   }
   return result;
@@ -143,4 +261,5 @@ export function clearAppleMusicEnrichmentCache(): void {
   songIdCache.clear();
   queryCache.clear();
   inflight.clear();
+  clearSessionAppleMatches();
 }

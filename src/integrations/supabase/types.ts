@@ -551,6 +551,45 @@ export type Database = {
         }
         Relationships: []
       }
+      track_streaming_id_cache: {
+        Row: {
+          apple_music_catalog_id: string | null
+          apple_music_storefront: string | null
+          artist_normalized: string
+          artwork_url_template: string | null
+          created_at: string
+          hit_count: number
+          last_hit_at: string
+          preview_url: string | null
+          spotify_track_id: string | null
+          title_normalized: string
+        }
+        Insert: {
+          apple_music_catalog_id?: string | null
+          apple_music_storefront?: string | null
+          artist_normalized: string
+          artwork_url_template?: string | null
+          created_at?: string
+          hit_count?: number
+          last_hit_at?: string
+          preview_url?: string | null
+          spotify_track_id?: string | null
+          title_normalized: string
+        }
+        Update: {
+          apple_music_catalog_id?: string | null
+          apple_music_storefront?: string | null
+          artist_normalized?: string
+          artwork_url_template?: string | null
+          created_at?: string
+          hit_count?: number
+          last_hit_at?: string
+          preview_url?: string | null
+          spotify_track_id?: string | null
+          title_normalized?: string
+        }
+        Relationships: []
+      }
       user_byo_ai_secrets: {
         Row: {
           ciphertext: string
@@ -708,12 +747,39 @@ export type Database = {
         Returns: Json
       }
       claim_referral: { Args: { p_code: string }; Returns: Json }
+      get_track_streaming_id_cache: {
+        Args: { p_artist_normalized: string; p_title_normalized: string }
+        Returns: {
+          apple_music_catalog_id: string | null
+          apple_music_storefront: string | null
+          artist_normalized: string
+          artwork_url_template: string | null
+          created_at: string
+          hit_count: number
+          last_hit_at: string
+          preview_url: string | null
+          spotify_track_id: string | null
+          title_normalized: string
+        }[]
+      }
       grant_tokens: {
         Args: {
           p_amount: number
           p_description?: string
           p_type: string
           p_user_id: string
+        }
+        Returns: undefined
+      }
+      merge_track_streaming_id_cache: {
+        Args: {
+          p_apple_music_catalog_id?: string | null
+          p_apple_music_storefront?: string | null
+          p_artist_normalized: string
+          p_artwork_url_template?: string | null
+          p_preview_url?: string | null
+          p_spotify_track_id?: string | null
+          p_title_normalized: string
         }
         Returns: undefined
       }

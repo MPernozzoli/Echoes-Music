@@ -1,6 +1,5 @@
 import { useEffect, useReducer, useRef } from "react";
 import type { Song } from "@/data/mockData";
-import { useAppleMusic } from "@/context/useAppleMusic";
 import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
 import { useApp } from "@/context/useApp";
 import {
@@ -9,6 +8,7 @@ import {
   subscribeAppleMusicResolution,
   type AppleMusicCatalogMatch,
 } from "@/services/appleMusicEnrichment";
+import { parseSpotifyTrackIdFromUri } from "@/services/trackStreamingIdCache";
 
 /**
  * Arricchisce un brano con `appleMusicId` risolto lato client (catalogo Apple Music)
@@ -17,7 +17,6 @@ import {
  */
 export function useAppleEnrichedSong(song: Song | null | undefined): Song | null {
   const mode = useStreamingPlaybackMode();
-  const { developerToken } = useAppleMusic();
   const { descriptionLanguage } = useApp();
   const [, force] = useReducer((x: number) => x + 1, 0);
   const attemptedRef = useRef<Set<string>>(new Set());
@@ -29,7 +28,7 @@ export function useAppleEnrichedSong(song: Song | null | undefined): Song | null
   }, [song, force]);
 
   useEffect(() => {
-    if (!song || !developerToken || mode !== "apple") return;
+    if (!song || mode !== "apple") return;
     if (song.appleMusicId) return;
     if (attemptedRef.current.has(song.id)) return;
     attemptedRef.current.add(song.id);
@@ -38,8 +37,9 @@ export function useAppleEnrichedSong(song: Song | null | undefined): Song | null
       title: song.title,
       artist: song.artist,
       languageHint: descriptionLanguage,
+      spotifyTrackId: parseSpotifyTrackIdFromUri(song.spotifyUri),
     });
-  }, [song, developerToken, mode, descriptionLanguage]);
+  }, [song, mode, descriptionLanguage]);
 
   if (!song) return null;
   if (song.appleMusicId) return song;

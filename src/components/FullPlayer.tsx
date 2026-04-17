@@ -7,8 +7,11 @@ import { Play, Pause, SkipBack, SkipForward, Heart, Volume2, VolumeX, Info } fro
 import { Slider } from "@/components/ui/slider";
 import type { Song } from "@/data/mockData";
 import { useAppleMusic } from "@/context/useAppleMusic";
+import { useApp } from "@/context/useApp";
 import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
 import { useAppleEnrichedSong } from "@/hooks/useAppleMusicResolution";
+import { resolveAppleMusicSong } from "@/services/appleMusicEnrichment";
+import { parseSpotifyTrackIdFromUri } from "@/services/trackStreamingIdCache";
 import { AppleMusicEmbed } from "@/components/AppleMusicEmbed";
 import { AppleMusicKitPlayer, type AppleMusicKitPlayerHandle } from "@/components/AppleMusicKitPlayer";
 import { StreamingLibraryActions } from "@/components/StreamingLibraryActions";
@@ -84,6 +87,7 @@ const FullPlayer = ({
   const [audioReady, setAudioReady] = useState(false);
   const [useEmbed, setUseEmbed] = useState(false);
   const playbackMode = useStreamingPlaybackMode();
+  const { descriptionLanguage } = useApp();
   const appleMusic = useAppleMusic();
   const applePreferred = appleMusic.isAuthorized || appleMusic.isLinkedAccount;
 
@@ -95,6 +99,7 @@ const FullPlayer = ({
   const spotifyTrackId = song?.spotifyUri?.replace("spotify:track:", "");
   const appleMusicId = song?.appleMusicId;
   const useApplePlayback = applePreferred && !!appleMusicId;
+  const appleResolutionPending = applePreferred && !appleMusicId;
   const useAppleKitPlayer =
     useApplePlayback &&
     appleMusic.isAuthorized &&
@@ -115,6 +120,25 @@ const FullPlayer = ({
   useEffect(() => {
     if (!useAppleKitPlayer) setKitAutoplayNonce(0);
   }, [useAppleKitPlayer]);
+
+  /** Risolve in anticipo gli ID Apple per il brano corrente e i prossimi in coda (meno attesa al play). */
+  useEffect(() => {
+    if (!applePreferred || playbackMode !== "apple" || songs.length === 0) return;
+    const start = Math.max(0, currentIndex - 1);
+    const end = Math.min(songs.length, currentIndex + 6);
+    for (let i = start; i < end; i++) {
+      const s = songs[i];
+      if (s && !s.appleMusicId) {
+        void resolveAppleMusicSong({
+          songId: s.id,
+          title: s.title,
+          artist: s.artist,
+          languageHint: descriptionLanguage,
+          spotifyTrackId: parseSpotifyTrackIdFromUri(s.spotifyUri),
+        });
+      }
+    }
+  }, [songs, currentIndex, applePreferred, playbackMode, descriptionLanguage]);
 
   /** Autoplay iniziale su MusicKit: bumpa il nonce una sola volta per brano quando autoplay è richiesto */
   const kitAutoplayTriedRef = useRef<string | null>(null);
@@ -642,7 +666,7 @@ const FullPlayer = ({
         </div>
       )}
 
-      {!useAppleKitPlayer && useEmbed && spotifyTrackId && !(appleMusicId && (useApplePlayback || !spotifyTrackId)) && (
+      {!appleResolutionPending && !useAppleKitPlayer && useEmbed && spotifyTrackId && !(appleMusicId && (useApplePlayback || !spotifyTrackId)) && (
         <div className="w-full px-2 mt-2">
           <iframe
             src={`https://open.spotify.com/embed/track/${spotifyTrackId}?utm_source=generator&theme=0`}
@@ -654,6 +678,22 @@ const FullPlayer = ({
             className="rounded-2xl ring-1 ring-border/40 shadow-soft"
             title={t("player.artworkAlt", { title: song.title, artist: song.artist })}
           />
+          <div className="flex items-center justify-center gap-6 mt-3">
+            <button onClick={handlePrev} disabled={currentIndex === 0} className="p-2 rounded-full text-foreground hover:bg-muted transition-colors disabled:opacity-30">
+              <SkipBack className="w-5 h-5" />
+            </button>
+            <button onClick={handleNext} disabled={currentIndex === songs.length - 1} className="p-2 rounded-full text-foreground hover:bg-muted transition-colors disabled:opacity-30">
+              <SkipForward className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {appleResolutionPending && (
+        <div className="w-full px-2 mt-2">
+          <div className="rounded-2xl ring-1 ring-border/40 shadow-soft min-h-[152px] flex items-center justify-center bg-card/60">
+            <p className="text-xs text-muted-foreground font-body">{t("profile.loadingMusickit")}</p>
+          </div>
           <div className="flex items-center justify-center gap-6 mt-3">
             <button onClick={handlePrev} disabled={currentIndex === 0} className="p-2 rounded-full text-foreground hover:bg-muted transition-colors disabled:opacity-30">
               <SkipBack className="w-5 h-5" />

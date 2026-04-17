@@ -48,7 +48,7 @@ const MusicPlayer = ({
   }, [resolverKey, force]);
 
   useEffect(() => {
-    if (!applePreferred || appleMusicTrackId || !appleMusic.developerToken) return;
+    if (!applePreferred || appleMusicTrackId) return;
     if (attemptedRef.current.has(resolverKey)) return;
     attemptedRef.current.add(resolverKey);
     void resolveAppleMusicSong({
@@ -56,11 +56,13 @@ const MusicPlayer = ({
       title: trackTitle,
       artist: artistName,
       languageHint: descriptionLanguage,
+      spotifyTrackId: spotifyTrackId?.trim() || undefined,
     });
-  }, [applePreferred, appleMusicTrackId, appleMusic.developerToken, resolverKey, trackTitle, artistName, descriptionLanguage]);
+  }, [applePreferred, appleMusicTrackId, resolverKey, trackTitle, artistName, descriptionLanguage]);
 
   const resolvedAppleId = appleMusicTrackId || getResolvedAppleMusic(resolverKey)?.id || undefined;
   const preferApple = applePreferred && !!resolvedAppleId;
+  const appleResolutionPending = applePreferred && !resolvedAppleId;
   const preferSpotifyEmbed =
     !!spotifyTrackId && !applePreferred && (playbackMode === "spotify" || playbackMode === "guest");
   const appleOnlyFallback = !spotifyTrackId && !!resolvedAppleId;
@@ -109,6 +111,21 @@ const MusicPlayer = ({
             {t("musicPlayer.fullPlaybackAvailable")}
           </p>
         )}
+        <StreamingLibraryActions
+          spotifyTrackId={spotifyTrackId}
+          appleMusicTrackId={resolvedAppleId}
+          className="mt-2"
+        />
+      </div>
+    );
+  }
+
+  if (appleResolutionPending) {
+    return (
+      <div className={cn(chrome, "overflow-hidden")} onClick={(e) => e.stopPropagation()}>
+        <div className="px-3 py-4 text-center">
+          <p className="text-xs text-muted-foreground font-body">{t("profile.loadingMusickit")}</p>
+        </div>
         <StreamingLibraryActions
           spotifyTrackId={spotifyTrackId}
           appleMusicTrackId={resolvedAppleId}
