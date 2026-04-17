@@ -19,15 +19,15 @@
 	<string>echoesmusic</string>
 	<key>SUPABASE_ANON_KEY</key>
 	<string>eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhkYWlmYmlxeGhzZHF0aXBkZXBtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1NDQ5NjQsImV4cCI6MjA5MTEyMDk2NH0.yS2t4SWlu16KjZxaEvPA4RyQHK-u54nxDDmjMujGW_g</string>
-		<key>SUPABASE_PROJECT_ID</key>
-		<string>hdaifbiqxhsdqtipdepm</string>
-		<key>SUPABASE_URL</key>
-		<string>https://hdaifbiqxhsdqtipdepm.supabase.co</string>
-		<key>NSAppleMusicUsageDescription</key>
-		<string>Echoes uses Apple Music to authorize playback, save songs, and sync your favorites playlist across devices.</string>
-		<key>UIBackgroundModes</key>
-		<array>
-			<string>remote-notification</string>
-		</array>
-	</dict>
+	<key>SUPABASE_PROJECT_ID</key>
+	<string>hdaifbiqxhsdqtipdepm</string>
+	<key>SUPABASE_URL</key>
+	<string>https://hdaifbiqxhsdqtipdepm.supabase.co</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+		<string>fetch</string>
+		<string>audio</string>
+	</array>
+</dict>
 </plist>

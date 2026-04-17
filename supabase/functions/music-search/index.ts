@@ -397,6 +397,77 @@ function clampSummary(s: string, max: number): string {
   return t.length <= max ? t : t.slice(0, max - 1) + '…';
 }
 
+function normalizeWhitespace(s: string): string {
+  return s.replace(/\s+/g, ' ').trim();
+}
+
+function sentenceCase(s: string): string {
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function stripOuterQuotes(s: string): string {
+  return s.replace(/^[\"'«“”‘’]+|[\"'«“”‘’]+$/g, '');
+}
+
+function sanitizeAdjacentInterpretationText(value: string): string {
+  let text = normalizeWhitespace(stripOuterQuotes(value));
+  text = text.replace(/^[\-\u2022\d.)\s]+/, '');
+  text = text.replace(
+    /^(?:forse\s+)?(?:l['’]utente|la richiesta|il prompt|this request|the user|the prompt|el usuario|la demande|o utilizador|der nutzer)\s+(?:potrebbe|could|might|may|would|seems to|podr[ií]a|pourrait|poderia|k[öo]nnte)\s+/i,
+    '',
+  );
+  text = text.replace(
+    /^(?:forse\s+)?(?:potrebbe esserci|potresti cercare|maybe you're looking for|perhaps you're looking for|quiz[aá] buscas|vous cherchez peut-[êe]tre|talvez procures)\s+/i,
+    '',
+  );
+  text = text.replace(/^(?:qualcosa|something|algo|quelque chose|etwas)\s+di\s+/i, 'Qualcosa di ');
+  text = text.replace(/[.?!]+$/g, '');
+  return sentenceCase(normalizeWhitespace(text));
+}
+
+function isUsableAdjacentInterpretation(value: string, originalPrompt: string): boolean {
+  if (!value) return false;
+  const words = value.split(/\s+/).filter(Boolean);
+  if (words.length < 4 || words.length > 18) return false;
+  if (value.length > 120) return false;
+  if (originalPrompt && value.toLowerCase() === originalPrompt.trim().toLowerCase()) return false;
+  if (/\b(?:utente|user|request|richiesta|prompt|message|messaggio)\b/i.test(value)) return false;
+  if (/[.:;](?:\s|$)/.test(value)) return false;
+  return true;
+}
+
+function fallbackAdjacentInterpretations(
+  searchQueries: string[] | undefined,
+  originalPrompt: string,
+): string[] {
+  const promptLower = originalPrompt.trim().toLowerCase();
+  return (searchQueries || [])
+    .map((query) => normalizeWhitespace(stripOuterQuotes(query)))
+    .filter(Boolean)
+    .filter((query) => query.toLowerCase() !== promptLower)
+    .filter((query) => !/^[^-]+ - [^-]+$/.test(query))
+    .map((query) => sentenceCase(query.replace(/[.?!]+$/g, '')))
+    .filter((query) => isUsableAdjacentInterpretation(query, originalPrompt))
+    .slice(0, 3);
+}
+
+function normalizeAdjacentInterpretations(
+  adjacentInterpretations: string[] | undefined,
+  searchQueries: string[] | undefined,
+  originalPrompt: string,
+): string[] {
+  const cleaned = (adjacentInterpretations || [])
+    .map((value) => sanitizeAdjacentInterpretationText(value))
+    .filter((value) => isUsableAdjacentInterpretation(value, originalPrompt));
+  const deduped = Array.from(new Set(cleaned.map((value) => value.trim())));
+  if (deduped.length >= 2) return deduped.slice(0, 3);
+
+  const fallback = fallbackAdjacentInterpretations(searchQueries, originalPrompt);
+  const merged = Array.from(new Set([...deduped, ...fallback]));
+  return merged.slice(0, 3);
+}
+
 /** Sotto questa soglia il brano non va in UI né in coda (allineato al client). */
 const MIN_RELEVANCE_SCORE = 65;
 
@@ -513,6 +584,10 @@ Given the user's message${params.image ? ' (and attached image)' : ''}:
 4. Suggest 6-8 specific REAL songs with correct artists. Prioritize songs whose LYRICS match the user's intent. **Avoid suggesting multiple storefront variants of the same work** (e.g. same song as studio + remaster + remix + live) unless the user clearly wants versions; prefer one canonical cut per song. For each suggestion: emotional tags (3 words), a **distinct** poetic explanation tied to that song's lyrics or identity (never copy the same sentence across songs), and **relevanceScore** (0-100). **Score honestly**: weak or tangential fits must be **below 65**. Only strong, clearly justified picks should be **65 or above**. Do not inflate scores to fill the list.
 5. Write **narrativeReply**: 2-5 sentences, same language as the user. One flowing paragraph: why this **cluster** fits the request emotionally (themes, arc, intent). Sound human and specific. **Do not** list every song, **do not** use «guillemets» or track-by-track blurbs — per-track reasoning lives only in each song's **explanation** field. You may name at most one anchor track if it feels natural; otherwise no titles. No bullet lists.
 6. Generate 2-3 adjacent interpretations — creative alternative readings of the prompt (or of the lucky pick).
+   They must be SHORT USER INPUTS the person could actually type next.
+   Good: "Più viscerale e meno levigato", "Rock sporco con senso di vittoria", "Cantautorato italiano meno mainstream".
+   Bad: "L'utente potrebbe desiderare qualcosa di più viscerale", "La richiesta potrebbe virare verso...", "Potrebbe esserci il desiderio di...".
+   Never describe the user, the request, or your reasoning. No explanatory full sentences.
 7. Fill conversationMemoryUpdate and userTasteProfileUpdate as described.
 
 CRITICAL: Only suggest songs that actually exist. Use correct artist names and song titles. When the user asks about lyrical content, your explanation MUST reference actual lyrics or themes from the song.${visionAddendum}`;
@@ -561,7 +636,12 @@ CRITICAL: Only suggest songs that actually exist. Use correct artist names and s
               required: ['themes', 'mood', 'energy', 'intimacy', 'catharsis', 'emotionalTension'],
             },
             searchQueries: { type: 'array', items: { type: 'string' }, description: 'Search queries to find matching songs on Spotify/Apple Music' },
-            adjacentInterpretations: { type: 'array', items: { type: 'string' } },
+            adjacentInterpretations: {
+              type: 'array',
+              items: { type: 'string' },
+              description:
+                '2-3 short alternative prompts the user could type next. They must read like direct search inputs, not commentary about the user or the request.',
+            },
             narrativeReply: {
               type: 'string',
               description:
@@ -723,7 +803,7 @@ function buildUserContent(
   return parts.join('\n\n');
 }
 
-function sanitizeInterpretation(i: AIInterpretation): AIInterpretation {
+function sanitizeInterpretation(i: AIInterpretation, originalPrompt = ''): AIInterpretation {
   const cm = i.conversationMemoryUpdate;
   if (cm?.standardAxes) {
     cm.standardAxes = normalizeStandardAxes(cm.standardAxes as Record<string, unknown>) as unknown as Record<string, unknown>;
@@ -737,6 +817,11 @@ function sanitizeInterpretation(i: AIInterpretation): AIInterpretation {
   if (typeof i.narrativeReply === 'string') {
     i.narrativeReply = clampSummary(i.narrativeReply, 2800);
   }
+  i.adjacentInterpretations = normalizeAdjacentInterpretations(
+    i.adjacentInterpretations,
+    i.searchQueries,
+    originalPrompt,
+  );
   return i;
 }
 
@@ -905,7 +990,7 @@ Deno.serve(async (req) => {
         ? { provider: 'byo_openai', model: routeDisc.model }
         : {}),
     });
-    const interpretation = sanitizeInterpretation(discovery.interpretation);
+    const interpretation = sanitizeInterpretation(discovery.interpretation, prompt);
 
     // Step 2: Search both platforms using AI-generated queries + direct song lookups
     const allQueries = [

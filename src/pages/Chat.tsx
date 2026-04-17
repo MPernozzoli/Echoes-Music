@@ -476,10 +476,11 @@ const Chat = () => {
     const hasImg = Boolean(ls.imageBase64 && ls.imageMimeType);
     if (!text && !hasImg) return;
     landingFromHomeProcessed.current = true;
-    const id =
-      activeConversationId ??
-      conversations[0]?.id ??
-      createConversation();
+    const id = createConversation();
+    if (!id) {
+      landingFromHomeProcessed.current = false;
+      return;
+    }
     navigate(`${CHAT_PATH}?conversation=${encodeURIComponent(id)}`, { replace: true, state: {} });
     const displayText = text || t("chat.imageSearchLabel");
     const previewUrl =
@@ -508,17 +509,16 @@ const Chat = () => {
     const q = searchParams.get("q");
     if (!q) return;
     qProcessed.current = true;
-    const id =
-      activeConversationId ??
-      conversations[0]?.id ??
-      createConversation();
+    const id = createConversation();
+    if (!id) {
+      qProcessed.current = false;
+      return;
+    }
     navigate(`${CHAT_PATH}?conversation=${encodeURIComponent(id)}`, { replace: true });
     appendUserMessage(id, q);
     setTimeout(() => void runSearch(id, q), 0);
   }, [
     searchParams,
-    activeConversationId,
-    conversations,
     createConversation,
     navigate,
     appendUserMessage,
