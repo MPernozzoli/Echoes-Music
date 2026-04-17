@@ -31,6 +31,7 @@ import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
 import Insights from "./pages/Insights";
 import SpotifyCallback from "./pages/SpotifyCallback";
+import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import CookiePolicy from "./pages/CookiePolicy";
@@ -59,6 +60,7 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/pricing/plan" element={<SubscribePlan />} />
                 <Route path="/pricing/tokens" element={<BuyTokens />} />
