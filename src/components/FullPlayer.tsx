@@ -85,6 +85,7 @@ const FullPlayer = ({
   const [useEmbed, setUseEmbed] = useState(false);
   const playbackMode = useStreamingPlaybackMode();
   const appleMusic = useAppleMusic();
+  const applePreferred = appleMusic.isAuthorized || appleMusic.isLinkedAccount;
 
   const [kitUnavailableSongIds, setKitUnavailableSongIds] = useState<Set<string>>(() => new Set());
   const kitFailedForCurrent = song ? kitUnavailableSongIds.has(song.id) : false;
@@ -93,7 +94,7 @@ const FullPlayer = ({
   const previewUrl = song?.previewUrl;
   const spotifyTrackId = song?.spotifyUri?.replace("spotify:track:", "");
   const appleMusicId = song?.appleMusicId;
-  const useApplePlayback = playbackMode === "apple" && !!appleMusicId;
+  const useApplePlayback = applePreferred && !!appleMusicId;
   const useAppleKitPlayer =
     useApplePlayback &&
     appleMusic.isAuthorized &&

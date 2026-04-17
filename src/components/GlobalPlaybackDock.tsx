@@ -87,10 +87,15 @@ export function GlobalPlaybackDock() {
 
   useEffect(() => {
     const updateVars = () => {
-      const height = queue.length > 0 && rootRef.current ? rootRef.current.getBoundingClientRect().height : 0;
+      const rect = queue.length > 0 && rootRef.current ? rootRef.current.getBoundingClientRect() : null;
+      const height = rect ? rect.height : 0;
       const mobileNavOffset = isMobile && queue.length > 0 ? 56 : 0;
+      const floatingMargin = queue.length > 0 ? (isMobile ? 8 : 16) : 0;
       document.documentElement.style.setProperty(PLAYER_HEIGHT_VAR, `${height}px`);
-      document.documentElement.style.setProperty(PLAYER_OFFSET_VAR, `${height + mobileNavOffset}px`);
+      document.documentElement.style.setProperty(
+        PLAYER_OFFSET_VAR,
+        `${height + mobileNavOffset + floatingMargin}px`,
+      );
     };
 
     updateVars();
@@ -113,22 +118,24 @@ export function GlobalPlaybackDock() {
   return (
     <>
       <div
-        ref={rootRef}
-        className="fixed inset-x-0 bottom-14 md:bottom-0 z-[43] border-t border-borderSubtle/60 bg-background/95 backdrop-blur-2xl shadow-[0_-10px_40px_-12px_rgba(0,0,0,0.28)]"
+        className="fixed inset-x-0 z-[43] pointer-events-none"
+        style={{ bottom: `calc(${isMobile ? 56 : 0}px + ${isMobile ? 8 : 16}px)` }}
       >
-        <div className="max-w-[1600px] w-full mx-auto px-2 md:px-6 pt-1.5 pb-1.5">
-          <FullPlayer
-            variant="dock"
-            songs={queue}
-            currentIndex={currentIndex}
-            onChangeIndex={setCurrentIndex}
-            isFavorite={isFavorite}
-            onToggleFavorite={handleToggleFavorite}
-            autoplay={pendingAutoplay}
-            onAutoplayConsumed={() => setPendingAutoplay(false)}
-            onPlaybackStateChange={handlePlaybackStateChange}
-            onOpenQueue={() => setQueueOpen(true)}
-          />
+        <div ref={rootRef} className="mx-auto w-full max-w-[1180px] px-3 md:px-5 pointer-events-auto">
+          <div className="relative rounded-[1.75rem] border border-borderSubtle/60 bg-background/90 backdrop-blur-2xl shadow-[0_28px_70px_-20px_rgba(0,0,0,0.55)] ring-1 ring-black/[0.04] dark:ring-white/[0.05] overflow-visible">
+            <FullPlayer
+              variant="dock"
+              songs={queue}
+              currentIndex={currentIndex}
+              onChangeIndex={setCurrentIndex}
+              isFavorite={isFavorite}
+              onToggleFavorite={handleToggleFavorite}
+              autoplay={pendingAutoplay}
+              onAutoplayConsumed={() => setPendingAutoplay(false)}
+              onPlaybackStateChange={handlePlaybackStateChange}
+              onOpenQueue={() => setQueueOpen(true)}
+            />
+          </div>
         </div>
       </div>
 

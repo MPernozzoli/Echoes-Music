@@ -123,8 +123,8 @@ export function PlayerDockChrome({
   const maxT = duration > 0 ? duration : 1;
 
   return (
-    <div className="relative w-full rounded-t-2xl border-t border-borderSubtle/60 surface-player text-foreground shadow-player">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-primary/[0.06] to-transparent rounded-t-2xl" aria-hidden />
+    <div className="relative w-full rounded-[1.7rem] surface-player text-foreground">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-primary/[0.06] to-transparent rounded-t-[1.7rem]" aria-hidden />
       <div className="relative w-full">
         {/* Spazio per la copertina che esce dalla barra */}
         <div className="h-4 sm:h-5 md:h-6 shrink-0" aria-hidden />

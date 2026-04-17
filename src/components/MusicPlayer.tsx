@@ -36,6 +36,7 @@ const MusicPlayer = ({
   const appleMusic = useAppleMusic();
   const { descriptionLanguage } = useApp();
   const playbackMode = useStreamingPlaybackMode();
+  const applePreferred = appleMusic.isAuthorized || appleMusic.isLinkedAccount;
   const resolverKey = songId ?? `${trackTitle}|${artistName}`;
   const [, force] = useReducer((x: number) => x + 1, 0);
   const attemptedRef = useRef<Set<string>>(new Set());
@@ -47,7 +48,7 @@ const MusicPlayer = ({
   }, [resolverKey, force]);
 
   useEffect(() => {
-    if (playbackMode !== "apple" || appleMusicTrackId || !appleMusic.developerToken) return;
+    if (!applePreferred || appleMusicTrackId || !appleMusic.developerToken) return;
     if (attemptedRef.current.has(resolverKey)) return;
     attemptedRef.current.add(resolverKey);
     void resolveAppleMusicSong({
@@ -56,12 +57,12 @@ const MusicPlayer = ({
       artist: artistName,
       languageHint: descriptionLanguage,
     });
-  }, [playbackMode, appleMusicTrackId, appleMusic.developerToken, resolverKey, trackTitle, artistName, descriptionLanguage]);
+  }, [applePreferred, appleMusicTrackId, appleMusic.developerToken, resolverKey, trackTitle, artistName, descriptionLanguage]);
 
   const resolvedAppleId = appleMusicTrackId || getResolvedAppleMusic(resolverKey)?.id || undefined;
-  const preferApple = playbackMode === "apple" && !!resolvedAppleId;
+  const preferApple = applePreferred && !!resolvedAppleId;
   const preferSpotifyEmbed =
-    !!spotifyTrackId && (playbackMode === "spotify" || playbackMode === "guest");
+    !!spotifyTrackId && !applePreferred && (playbackMode === "spotify" || playbackMode === "guest");
   const appleOnlyFallback = !spotifyTrackId && !!resolvedAppleId;
   const lastResortSpotify = !preferApple && !preferSpotifyEmbed && !appleOnlyFallback && !!spotifyTrackId;
 
