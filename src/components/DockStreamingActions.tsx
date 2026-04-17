@@ -7,16 +7,13 @@ import { DOCK_ICON_BTN } from "@/components/PlayerDockChrome";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAppleMusic } from "@/context/useAppleMusic";
 import { useSpotify } from "@/context/useSpotify";
+import { getAppleMusicUserToken } from "@/services/appleMusicSession";
 import {
   addAppleMusicSongToLibrary,
   addAppleMusicSongToPlaylist,
   listAppleMusicPlaylists,
 } from "@/services/appleMusicLibrary";
 import { spotifyAddTrackToPlaylist, spotifyListPlaylists, spotifySaveTracks } from "@/services/spotify";
-
-function getMusicKitInstance(): { musicUserToken?: string | null } | undefined {
-  return (window as unknown as { MusicKit?: { getInstance: () => { musicUserToken?: string | null } } }).MusicKit?.getInstance();
-}
 
 const popClass =
   "w-[min(100vw-1.5rem,18rem)] border border-border bg-popover p-2 text-popover-foreground shadow-2xl";
@@ -59,8 +56,7 @@ export function DockStreamingActions({ spotifyTrackId, appleMusicTrackId }: Dock
 
   const onAppleLibrary = useCallback(async () => {
     if (!appleMusicTrackId) return;
-    const mk = getMusicKitInstance();
-    const token = mk?.musicUserToken;
+    const token = await getAppleMusicUserToken();
     if (!token) {
       toast.error(t("streaming.appleSessionUnavailable"));
       return;
@@ -100,8 +96,7 @@ export function DockStreamingActions({ spotifyTrackId, appleMusicTrackId }: Dock
         setPlaylists(r.playlists);
         return;
       }
-      const mk = getMusicKitInstance();
-      const token = mk?.musicUserToken;
+      const token = await getAppleMusicUserToken();
       if (!token) {
         setPlaylistsLoading(false);
         toast.error(t("streaming.appleSessionUnavailable"));
@@ -159,8 +154,7 @@ export function DockStreamingActions({ spotifyTrackId, appleMusicTrackId }: Dock
         return;
       }
       if (!appleMusicTrackId) return;
-      const mk = getMusicKitInstance();
-      const token = mk?.musicUserToken;
+      const token = await getAppleMusicUserToken();
       if (!token) {
         toast.error(t("streaming.appleSessionUnavailable"));
         return;

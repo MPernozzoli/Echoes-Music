@@ -5,11 +5,8 @@ import { toast } from "sonner";
 import { useApp } from "@/context/useApp";
 import { useAppleMusic } from "@/context/useAppleMusic";
 import { useSpotify } from "@/context/useSpotify";
+import { getAppleMusicUserToken } from "@/services/appleMusicSession";
 import { runEchoesFavoritesPlaylistSync } from "@/services/favoritesEchoesPlaylistSync";
-
-function getMusicKitInstance(): { musicUserToken?: string | null } | undefined {
-  return (window as unknown as { MusicKit?: { getInstance: () => { musicUserToken?: string | null } } }).MusicKit?.getInstance();
-}
 
 export function FavoritesEchoesPlaylistSync() {
   const { t } = useTranslation();
@@ -35,7 +32,7 @@ export function FavoritesEchoesPlaylistSync() {
             appleAuthorized,
             appleAvailable,
             appleLoading,
-            getAppleToken: () => getMusicKitInstance()?.musicUserToken ?? null,
+            getAppleToken: () => getAppleMusicUserToken(),
           });
         } catch (e) {
           if (runId.current !== id) return;

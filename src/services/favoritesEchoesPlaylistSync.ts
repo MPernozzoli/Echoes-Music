@@ -25,7 +25,7 @@ export async function runEchoesFavoritesPlaylistSync(params: {
   appleAuthorized: boolean;
   appleAvailable: boolean;
   appleLoading: boolean;
-  getAppleToken: () => string | undefined | null;
+  getAppleToken: () => Promise<string | undefined | null>;
 }): Promise<void> {
   const {
     favorites,
@@ -65,7 +65,7 @@ export async function runEchoesFavoritesPlaylistSync(params: {
   }
 
   if (appleAvailable && appleAuthorized) {
-    const token = getAppleToken();
+    const token = await getAppleToken();
     if (!token) throw new Error("apple:no_token");
 
     let pid = localStorage.getItem(LS_APPLE_PLAYLIST);

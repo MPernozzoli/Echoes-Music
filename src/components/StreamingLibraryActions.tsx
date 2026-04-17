@@ -6,13 +6,10 @@ import { cn } from "@/lib/utils";
 import { useAppleMusic } from "@/context/useAppleMusic";
 import { useSpotify } from "@/context/useSpotify";
 import { addAppleMusicSongToLibrary } from "@/services/appleMusicLibrary";
+import { getAppleMusicUserToken } from "@/services/appleMusicSession";
 import { spotifyAddTrackToPlaylist, spotifyListPlaylists, spotifySaveTracks } from "@/services/spotify";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-
-function getMusicKitInstance(): { musicUserToken?: string | null } | undefined {
-  return (window as unknown as { MusicKit?: { getInstance: () => { musicUserToken?: string | null } } }).MusicKit?.getInstance();
-}
 
 interface StreamingLibraryActionsProps {
   spotifyTrackId?: string;
@@ -52,8 +49,7 @@ export function StreamingLibraryActions({
 
   const onAppleLibrary = useCallback(async () => {
     if (!appleMusicTrackId) return;
-    const mk = getMusicKitInstance();
-    const token = mk?.musicUserToken;
+    const token = await getAppleMusicUserToken();
     if (!token) {
       toast.error("Sessione Apple Music non disponibile");
       return;

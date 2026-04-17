@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Gift, Loader2, Sparkles, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -16,7 +16,6 @@ const Invite = () => {
   const { t } = useTranslation();
   const { user, loading } = useAuth();
   const [startingAuth, setStartingAuth] = useState(false);
-  const attemptedAutoStart = useRef(false);
 
   useEffect(() => {
     const trimmed = code?.trim();
@@ -32,18 +31,6 @@ const Invite = () => {
       /* ignore */
     }
   }, [code, navigate]);
-
-  useEffect(() => {
-    if (loading || user || attemptedAutoStart.current || !code?.trim()) return;
-    attemptedAutoStart.current = true;
-    setStartingAuth(true);
-    void startGoogleAuth().then((result) => {
-      if (result.error) {
-        setStartingAuth(false);
-        toast.error(t("invite.loginError", "Unable to start Google sign-in. Please try again."));
-      }
-    });
-  }, [code, loading, t, user]);
 
   useEffect(() => {
     if (!loading && user) {
