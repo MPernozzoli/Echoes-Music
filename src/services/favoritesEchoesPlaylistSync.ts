@@ -7,11 +7,29 @@ import {
 import { spotifyEnsureEchoesPlaylist, spotifyReplacePlaylistTracks } from "@/services/spotify";
 
 const LS_SPOTIFY_PLAYLIST = "echoes_playlist_echoes_spotify_id";
-const LS_APPLE_PLAYLIST = "echoes_playlist_echoes_apple_id";
+const LS_APPLE_PLAYLIST_PREFIX = "echoes_playlist_echoes_apple_id";
 
 function looksLikeNotFound(msg: string): boolean {
   const m = msg.toLowerCase();
-  return m.includes("404") || m.includes("not found") || m.includes("nonexistent") || m.includes("invalid id");
+  return (
+    m.includes("404") ||
+    m.includes("not found") ||
+    m.includes("nonexistent") ||
+    m.includes("invalid id") ||
+    m.includes("resource not found") ||
+    m.includes("does not exist")
+  );
+}
+
+function applePlaylistStorageKey(musicUserToken: string): string {
+  // Scope the cached playlist id to the current Apple Music session so a prior account
+  // cannot poison syncs after a re-authorization in the same browser.
+  let hash = 2166136261;
+  for (let i = 0; i < musicUserToken.length; i += 1) {
+    hash ^= musicUserToken.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `${LS_APPLE_PLAYLIST_PREFIX}:${(hash >>> 0).toString(36)}`;
 }
 
 /**
@@ -67,21 +85,22 @@ export async function runEchoesFavoritesPlaylistSync(params: {
   if (appleAvailable && appleAuthorized) {
     const token = await getAppleToken();
     if (!token) throw new Error("apple:no_token");
+    const applePlaylistStorage = applePlaylistStorageKey(token);
 
-    let pid = localStorage.getItem(LS_APPLE_PLAYLIST);
+    let pid = localStorage.getItem(applePlaylistStorage);
     if (!pid) {
       const en = await ensureAppleMusicEchoesPlaylist(token);
       if ("error" in en) throw new Error(`apple:${en.error}`);
       pid = en.playlist_id;
-      localStorage.setItem(LS_APPLE_PLAYLIST, pid);
+      localStorage.setItem(applePlaylistStorage, pid);
     }
     let sync = await syncAppleMusicPlaylistToCatalogIds(pid, appleIds, token);
     if ("error" in sync && looksLikeNotFound(sync.error)) {
-      localStorage.removeItem(LS_APPLE_PLAYLIST);
+      localStorage.removeItem(applePlaylistStorage);
       const en = await ensureAppleMusicEchoesPlaylist(token);
       if ("error" in en) throw new Error(`apple:${en.error}`);
       pid = en.playlist_id;
-      localStorage.setItem(LS_APPLE_PLAYLIST, pid);
+      localStorage.setItem(applePlaylistStorage, pid);
       sync = await syncAppleMusicPlaylistToCatalogIds(pid, appleIds, token);
     }
     if ("error" in sync) throw new Error(`apple:${sync.error}`);

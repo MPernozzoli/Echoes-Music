@@ -7,6 +7,11 @@ import {
   getAppleMusicConnection,
   upsertAppleMusicConnection,
 } from "@/services/appleMusicConnection";
+import {
+  clearCachedAppleMusicUserToken,
+  getCachedAppleMusicUserToken,
+  setCachedAppleMusicUserToken,
+} from "@/services/appleMusicSession";
 
 interface AppleMusicState {
   isAvailable: boolean;
@@ -141,7 +146,10 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
 
       syncAuth = () => {
         if (cancelledRef.current || !instance) return;
-        setIsAuthorized(Boolean(instance.isAuthorized || hasMusicUserToken(instance)));
+        const liveToken = instance.musicUserToken?.trim();
+        if (liveToken) setCachedAppleMusicUserToken(liveToken, user?.id);
+        const cachedToken = getCachedAppleMusicUserToken(user?.id);
+        setIsAuthorized(Boolean(instance.isAuthorized || liveToken || cachedToken));
       };
 
       syncAuth();
@@ -205,9 +213,16 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
     try {
       const mk = getMKGlobal()?.getInstance();
       if (mk) {
-        await mk.authorize();
-        setIsAuthorized(!!mk.isAuthorized);
-        if (mk.isAuthorized) {
+        const authResult = await mk.authorize();
+        const token =
+          (typeof authResult === "string" && authResult.trim()) ||
+          mk.musicUserToken?.trim() ||
+          null;
+        if (token) {
+          setCachedAppleMusicUserToken(token, user.id);
+        }
+        setIsAuthorized(Boolean(mk.isAuthorized || token));
+        if (mk.isAuthorized || token) {
           await upsertAppleMusicConnection(user.id);
           setIsLinkedAccount(true);
         }
@@ -227,6 +242,7 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
       } catch (err) {
         console.error("Apple Music disconnect error:", err);
       }
+      clearCachedAppleMusicUserToken(user?.id);
       const mk = getMKGlobal()?.getInstance();
       if (mk) {
         void mk.unauthorize();
