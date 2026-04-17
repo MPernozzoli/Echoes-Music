@@ -3,32 +3,41 @@ import { useTranslation } from "react-i18next";
 import { ArrowUp, ImagePlus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { resizeImageForSearch } from "@/lib/resizeImageForSearch";
+import type { MusicSearchMode } from "@/services/musicSearchApi";
 
 export type PromptSubmitPayload = {
   text: string;
   imageBase64?: string;
   imageMimeType?: string;
+  mode?: Extract<MusicSearchMode, "search" | "creator_trends">;
 };
 
 interface PromptInputProps {
   onSubmit: (payload: PromptSubmitPayload) => void;
   placeholder?: string;
+  creatorPlaceholder?: string;
   size?: "default" | "hero" | "compact";
   isLoading?: boolean;
   allowImageAttachment?: boolean;
+  allowModeSwitch?: boolean;
+  initialMode?: Extract<MusicSearchMode, "search" | "creator_trends">;
 }
 
 const PromptInput = ({
   onSubmit,
   placeholder,
+  creatorPlaceholder,
   size = "default",
   isLoading = false,
   allowImageAttachment = false,
+  allowModeSwitch = false,
+  initialMode = "search",
 }: PromptInputProps) => {
   const { t } = useTranslation();
   const [value, setValue] = useState("");
   const [image, setImage] = useState<{ dataUrl: string; base64: string; mimeType: string } | null>(null);
   const [imageBusy, setImageBusy] = useState(false);
+  const [mode, setMode] = useState<Extract<MusicSearchMode, "search" | "creator_trends">>(initialMode);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -37,10 +46,18 @@ const PromptInput = ({
     if ((!t && !image) || isLoading || imageBusy) return;
     onSubmit({
       text: value,
+      mode,
       ...(image ? { imageBase64: image.base64, imageMimeType: image.mimeType } : {}),
     });
     setValue("");
     setImage(null);
+  };
+
+  const handleModeChange = (nextMode: Extract<MusicSearchMode, "search" | "creator_trends">) => {
+    setMode(nextMode);
+    if (nextMode === "creator_trends") {
+      setImage(null);
+    }
   };
 
   const onPickFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -61,9 +78,42 @@ const PromptInput = ({
   const isHero = size === "hero";
   const isCompact = size === "compact";
   const canSend = (value.trim().length > 0 || !!image) && !isLoading && !imageBusy;
+  const imagesEnabled = allowImageAttachment && mode === "search";
+  const activePlaceholder =
+    mode === "creator_trends"
+      ? creatorPlaceholder || t("promptInput.creatorPlaceholder")
+      : placeholder || t("promptInput.placeholderDefault");
 
   return (
     <form onSubmit={handleSubmit} className="w-full">
+      {allowModeSwitch && (
+        <div className="mb-2 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => handleModeChange("search")}
+            className={cn(
+              "rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
+              mode === "search"
+                ? "border-primary/30 bg-primary/10 text-primary"
+                : "border-border/60 bg-background/80 text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {t("promptInput.modeSearch")}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleModeChange("creator_trends")}
+            className={cn(
+              "rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors",
+              mode === "creator_trends"
+                ? "border-primary/30 bg-primary/10 text-primary"
+                : "border-border/60 bg-background/80 text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {t("promptInput.modeCreator")}
+          </button>
+        </div>
+      )}
       {allowImageAttachment && image && (
         <div className="mb-2 flex items-center gap-2.5 animate-fade-slide-up">
           <div className="relative inline-block rounded-xl overflow-hidden border border-primary/20 ring-1 ring-primary/10 shadow-sm">
@@ -104,7 +154,7 @@ const PromptInput = ({
             type="text"
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            placeholder={placeholder || t("promptInput.placeholderDefault")}
+            placeholder={activePlaceholder}
             className={cn(
               "flex-1 min-w-0 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/60 font-body",
               isHero && "text-lg",
@@ -113,7 +163,7 @@ const PromptInput = ({
             )}
             disabled={isLoading || imageBusy}
           />
-          {allowImageAttachment && (
+          {imagesEnabled && (
             <>
               <input
                 ref={fileRef}

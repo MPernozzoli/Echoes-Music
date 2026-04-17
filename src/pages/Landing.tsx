@@ -1,11 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Sparkles, Search, Music, Wand2 } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
 import PromptInput, { type PromptSubmitPayload } from "@/components/PromptInput";
 import SongCard from "@/components/SongCard";
-import { mockSongs } from "@/data/mockData";
+import { mockSongs, type Song } from "@/data/mockData";
+import { fetchRecentSearchArtworks, fetchRecentSearchPreviewSongs } from "@/services/recentSearchGallery";
 import { pickDiscoverPromptSuggestions } from "@/lib/discoverPromptSuggestions";
 import { useApp } from "@/context/useApp";
 import { useAuth } from "@/context/useAuth";
@@ -25,6 +26,42 @@ const Landing = () => {
   const { refreshTokenBalance } = useAuth();
   const { userTasteProfile, conversations, activeConversationId } = useConversations();
   const [luckyLoading, setLuckyLoading] = useState(false);
+  const [heroArtworkUrls, setHeroArtworkUrls] = useState<string[]>(() => mockSongs.slice(0, 4).map((s) => s.artwork));
+  const [previewSongs, setPreviewSongs] = useState<Song[]>(() => mockSongs.slice(0, 3));
+  const [communityGalleryActive, setCommunityGalleryActive] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [urls, songs] = await Promise.all([
+          fetchRecentSearchArtworks(4),
+          fetchRecentSearchPreviewSongs(3),
+        ]);
+        if (cancelled) return;
+        const fromDb = urls.length > 0 || songs.length > 0;
+        setCommunityGalleryActive(fromDb);
+
+        if (urls.length >= 4) setHeroArtworkUrls(urls.slice(0, 4));
+        else if (urls.length > 0) {
+          const pad = mockSongs.map((s) => s.artwork).filter((u) => !urls.includes(u));
+          setHeroArtworkUrls([...urls, ...pad].slice(0, 4));
+        }
+
+        if (songs.length >= 3) setPreviewSongs(songs.slice(0, 3));
+        else if (songs.length > 0) {
+          const ids = new Set(songs.map((s) => s.id));
+          const pad = mockSongs.filter((s) => !ids.has(s.id));
+          setPreviewSongs([...songs, ...pad].slice(0, 3));
+        }
+      } catch {
+        if (!cancelled) setCommunityGalleryActive(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const landingPrompts = useMemo(() => {
     const completedSearchCount = conversations.reduce(
@@ -123,8 +160,6 @@ const Landing = () => {
     [t],
   );
 
-  const collage = mockSongs.slice(0, 4);
-
   return (
     <AppLayout headerVariant="marketing">
       <div className="min-h-screen bg-background">
@@ -144,9 +179,9 @@ const Landing = () => {
 
           {/* Silhouette copertine — parallax leggero */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
-            {collage.map((s, idx) => (
+            {heroArtworkUrls.map((src, idx) => (
               <div
-                key={s.id}
+                key={`${src}-${idx}`}
                 className={cn(
                   "absolute rounded-3xl overflow-hidden shadow-2xl ring-1 ring-white/10 dark:ring-white/5 opacity-25 blur-[1px]",
                   idx === 0 && "w-28 h-28 -left-4 top-[18%] rotate-[-8deg] animate-artwork-float",
@@ -156,7 +191,7 @@ const Landing = () => {
                 )}
                 style={{ animationDuration: `${5 + idx}s` }}
               >
-                <img src={s.artwork} alt="" className="w-full h-full object-cover" width={128} height={128} />
+                <img src={src} alt="" className="w-full h-full object-cover" width={128} height={128} />
               </div>
             ))}
           </div>
@@ -253,7 +288,7 @@ const Landing = () => {
 
         <section
           className="py-24 md:py-28 px-6 relative overflow-hidden rounded-t-[2.5rem] md:rounded-t-[3rem]"
-          style={mockSongs[0] ? artworkTintFromId(mockSongs[0].id) : undefined}
+          style={previewSongs[0] ? artworkTintFromId(previewSongs[0].id) : undefined}
         >
           <div className="absolute inset-0 gradient-warm rounded-t-[2.5rem] md:rounded-t-[3rem]" aria-hidden />
           <div className="absolute inset-0 bg-artwork-radial opacity-50 pointer-events-none rounded-t-[2.5rem] md:rounded-t-[3rem]" aria-hidden />
@@ -264,10 +299,15 @@ const Landing = () => {
               {t("landing.resultsTitleEnd")}
             </h2>
             <p className="text-muted-foreground text-center font-body mb-12 max-w-lg mx-auto text-balance">{t("landing.resultsSubtitle")}</p>
+            {communityGalleryActive ? (
+              <p className="text-center text-xs text-muted-foreground/75 font-body mb-8 -mt-6 max-w-md mx-auto text-balance">
+                {t("landing.liveCommunityArtwork")}
+              </p>
+            ) : null}
 
             <div className="space-y-5">
-              {mockSongs.slice(0, 3).map((song, i) => (
-                <SongCard key={song.id} {...song} index={i} />
+              {previewSongs.map((song, i) => (
+                <SongCard key={`${song.id}-${i}`} {...song} index={i} />
               ))}
             </div>
 

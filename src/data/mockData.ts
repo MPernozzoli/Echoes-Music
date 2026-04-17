@@ -45,6 +45,7 @@ export interface SearchResult {
   /** Paragrafo discorsivo (senza elenco titoli); i brani sono mostrati sotto come chip con tooltip */
   narrativeReply?: string;
   tracking?: SearchResultTracking;
+  searchMode?: "search" | "lucky" | "creator_trends";
   /** pick = lista con azioni coda; inline = avviata subito in coda globale */
   playbackPresentation?: "pick" | "inline";
 }
@@ -71,14 +72,15 @@ export interface EmotionalProfile {
 
 export { examplePrompts } from "@/lib/discoverPromptSuggestions";
 
+/** Copertine album reali (CDN Deezer), coerenti con titolo/album di ogni voce mock. */
 const artworks = [
-  "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=300&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=300&h=300&fit=crop",
-  "https://images.unsplash.com/photo-1506157786151-b8491531f063?w=300&h=300&fit=crop",
-];
+  "https://cdn-images.dzcdn.net/images/cover/bb1f906b81ee6bd532762a6a64d8bdc8/1000x1000-000000-80-0-0.jpg", // Lord Huron — Strange Trails
+  "https://cdn-images.dzcdn.net/images/cover/2af56dee5db12e4af6323afa26257ccf/1000x1000-000000-80-0-0.jpg", // Bon Iver — For Emma, Forever Ago
+  "https://cdn-images.dzcdn.net/images/cover/c82449a6fb6a40d947b79a2328ae0eb6/1000x1000-000000-80-0-0.jpg", // M83 — Hurry Up, We're Dreaming
+  "https://cdn-images.dzcdn.net/images/cover/1457f0d27076538d484625fa706541b7/1000x1000-000000-80-0-0.jpg", // Bon Iver — Bon Iver
+  "https://cdn-images.dzcdn.net/images/cover/763cd442c23f5d9c64d8f9923a9e814c/1000x1000-000000-80-0-0.jpg", // James Blake — Overgrown
+  "https://cdn-images.dzcdn.net/images/cover/2af56dee5db12e4af6323afa26257ccf/1000x1000-000000-80-0-0.jpg", // stesso album For Emma (Re: Stacks)
+] as const;
 
 export const mockSongs: Song[] = [
   {

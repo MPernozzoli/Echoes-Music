@@ -314,13 +314,22 @@ interface TrackResult {
   releaseYear?: number;
 }
 
+interface TrendingTrackResult extends TrackResult {
+  trendScore: number;
+  trendRank: number;
+  trendSource: string;
+}
+
 type StreamingProviderPreference = 'auto' | 'spotify' | 'apple_music';
+type DiscoveryMode = 'search' | 'lucky' | 'creator_trends';
 
 const SEARCH_QUERY_LIMIT = 12;
 const EXACT_SUGGESTION_QUERY_LIMIT = 8;
 const SEARCH_RESULTS_PER_QUERY = 6;
 const MIN_RESULTS_TARGET = 4;
 const SOFT_RELEVANCE_FLOOR = 58;
+const TRENDING_TRACK_LIMIT = 40;
+const TRENDING_CACHE_TTL_MS = 15 * 60 * 1000;
 
 type SpotifySearchItem = {
   id: string;
@@ -344,6 +353,29 @@ type AppleMusicSearchItem = {
     releaseDate?: string;
     previews?: Array<{ url?: string }>;
     artwork?: { url?: string };
+  };
+};
+
+type AppleMusicChartSongItem = {
+  id: string;
+  attributes?: {
+    name?: string;
+    artistName?: string;
+    albumName?: string;
+    releaseDate?: string;
+    previews?: Array<{ url?: string }>;
+    artwork?: { url?: string };
+  };
+};
+
+type AppleMusicChart = {
+  name?: string;
+  data?: AppleMusicChartSongItem[];
+};
+
+type AppleMusicChartsResponse = {
+  results?: {
+    songs?: AppleMusicChart[];
   };
 };
 
@@ -451,6 +483,108 @@ async function searchAppleMusic(query: string, limit = 5): Promise<TrackResult[]
     appleMusicId: s.id,
     releaseYear: releaseYearFromDateString(s.attributes.releaseDate),
   }));
+}
+
+let trendingTracksCache:
+  | {
+      expiresAt: number;
+      tracks: TrendingTrackResult[];
+    }
+  | null = null;
+
+async function fetchAppleMusicTrendingSongs(storefront: string, limit = 25): Promise<TrendingTrackResult[]> {
+  const token = await getAppleMusicToken();
+  if (!token) return [];
+  const res = await fetch(
+    `https://api.music.apple.com/v1/catalog/${storefront}/charts?types=songs&limit=${limit}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) return [];
+
+  const data = await res.json() as AppleMusicChartsResponse;
+  const charts = data.results?.songs || [];
+  const ranked: TrendingTrackResult[] = [];
+
+  for (const chart of charts) {
+    const chartName = normalizeWhitespace(chart.name || `apple_music_${storefront}_songs`);
+    for (const [index, item] of (chart.data || []).entries()) {
+      const attrs = item.attributes;
+      if (!attrs?.name || !attrs.artistName) continue;
+      const rank = index + 1;
+      ranked.push({
+        trackId: item.id,
+        title: attrs.name,
+        artist: attrs.artistName,
+        album: attrs.albumName || '',
+        artworkUrl: (attrs.artwork?.url || '').replace('{w}', '300').replace('{h}', '300'),
+        provider: 'apple_music',
+        previewUrl: attrs.previews?.[0]?.url || undefined,
+        appleMusicId: item.id,
+        releaseYear: releaseYearFromDateString(attrs.releaseDate),
+        trendRank: rank,
+        trendScore: Math.max(55, 100 - (rank - 1) * 2),
+        trendSource: `${chartName} (${storefront.toUpperCase()})`,
+      });
+    }
+  }
+
+  return ranked;
+}
+
+async function getTrendingTracks(): Promise<TrendingTrackResult[]> {
+  const now = Date.now();
+  if (trendingTracksCache && trendingTracksCache.expiresAt > now) {
+    return trendingTracksCache.tracks;
+  }
+
+  const storefronts = ['us', 'it'];
+  const fetched = await Promise.all(storefronts.map((storefront) => fetchAppleMusicTrendingSongs(storefront, 25)));
+  const merged = new Map<string, TrendingTrackResult>();
+
+  for (const tracks of fetched) {
+    for (const track of tracks) {
+      const key = workKey(track.title, track.artist);
+      const existing = merged.get(key);
+      if (!existing) {
+        merged.set(key, track);
+        continue;
+      }
+      const existingWeight = existing.trendScore - existing.trendRank;
+      const incomingWeight = track.trendScore - track.trendRank;
+      if (incomingWeight > existingWeight) {
+        merged.set(key, {
+          ...track,
+          trendSource: `${existing.trendSource} · ${track.trendSource}`,
+          previewUrl: track.previewUrl || existing.previewUrl,
+          artworkUrl: track.artworkUrl || existing.artworkUrl,
+        });
+      } else {
+        merged.set(key, {
+          ...existing,
+          trendScore: Math.max(existing.trendScore, track.trendScore),
+          trendRank: Math.min(existing.trendRank, track.trendRank),
+          trendSource: `${existing.trendSource} · ${track.trendSource}`,
+          previewUrl: existing.previewUrl || track.previewUrl,
+          artworkUrl: existing.artworkUrl || track.artworkUrl,
+        });
+      }
+    }
+  }
+
+  const tracks = [...merged.values()]
+    .sort((a, b) => {
+      const byScore = b.trendScore - a.trendScore;
+      if (byScore !== 0) return byScore;
+      return a.trendRank - b.trendRank;
+    })
+    .slice(0, TRENDING_TRACK_LIMIT);
+
+  trendingTracksCache = {
+    expiresAt: now + TRENDING_CACHE_TTL_MS,
+    tracks,
+  };
+
+  return tracks;
 }
 
 // --- Canonical axes (must match client) ---
@@ -687,7 +821,7 @@ const standardAxesSchema = {
 async function interpretDiscovery(params: {
   userContent: string;
   descriptionLanguage?: string;
-  mode: 'search' | 'lucky';
+  mode: Extract<DiscoveryMode, 'search' | 'lucky'>;
   image?: { base64: string; mimeType: string };
   route: AiInferenceRoute;
 }): Promise<{
@@ -862,6 +996,163 @@ CRITICAL: Only suggest songs that actually exist. Use correct artist names and s
       },
     }],
     tool_choice: { type: 'function', function: { name: 'interpret_emotion' } },
+  };
+
+  const { data, usage, gatewayRequestId } = await runInferenceCompletion(params.route, chatBody);
+  const d = data as { choices?: Array<{ message?: { tool_calls?: Array<{ function?: { arguments?: string } }> } }> };
+  const toolCall = d.choices?.[0]?.message?.tool_calls?.[0];
+  if (!toolCall?.function?.arguments) throw new Error('AI did not return structured output');
+
+  return {
+    interpretation: JSON.parse(toolCall.function.arguments) as AIInterpretation,
+    usage,
+    gatewayRequestId,
+  };
+}
+
+async function interpretCreatorTrends(params: {
+  userContent: string;
+  descriptionLanguage?: string;
+  trendPool: TrendingTrackResult[];
+  route: AiInferenceRoute;
+}): Promise<{
+  interpretation: AIInterpretation;
+  usage: GatewayUsage;
+  gatewayRequestId: string | null;
+}> {
+  const languageInstruction = params.descriptionLanguage && params.descriptionLanguage !== 'auto'
+    ? `IMPORTANT: The user has set their preferred language to "${params.descriptionLanguage}". ALL explanations, emotional profile text, narrativeReply, and adjacentInterpretations MUST be written in ${params.descriptionLanguage}.`
+    : 'Write explanations and emotional profile text in the same language as the user prompt.';
+
+  const trendPoolJson = JSON.stringify(
+    params.trendPool.map((track) => ({
+      title: track.title,
+      artist: track.artist,
+      album: track.album,
+      trendScore: track.trendScore,
+      trendRank: track.trendRank,
+      trendSource: track.trendSource,
+      releaseYear: track.releaseYear ?? null,
+    })),
+  );
+
+  const systemPrompt = `You are Echoes in creator mode: a music strategist for short-form videos on TikTok and Instagram Reels.
+
+${languageInstruction}
+
+## Goal
+The user is looking for songs that are already trending or trend-adjacent for short-form content.
+You MUST choose songs ONLY from the provided trend pool. Do not invent tracks outside that list.
+
+## How to interpret the user
+The user may describe:
+- the kind of video they are editing
+- the type of videos where they expect the song to be used
+- pacing, rhythm, beat drop, cadence, payoff
+- lyrics, hook, emotional arc, aesthetic, fashion, travel, GRWM, cinematic reveal, transition, recap, etc.
+
+You should optimize for:
+1. semantic fit with the described video/use case
+2. short-form usability (hook, pacing, payoff, recognizability)
+3. actual trend momentum from the supplied pool
+
+## Trend pool
+Use ONLY these songs:
+${trendPoolJson}
+
+## Instructions
+1. Build an emotional profile for the user's video/music need.
+2. Generate 5-7 searchQueries. At least 4 should be exact "artist - title" strings drawn from the trend pool.
+3. Suggest 6-8 REAL songs, chosen ONLY from the trend pool above.
+4. Give each suggestion:
+   - emotionalTags (3 short tags)
+   - a distinct explanation connected to the described use case for short-form video
+   - relevanceScore (0-100), balancing fit and trend momentum honestly
+5. Write narrativeReply in 2-5 sentences explaining why this cluster works for this kind of content. No bullet list, no exhaustive listing of titles.
+6. Generate 2-3 adjacent interpretations as short next prompts the user could type.
+7. Fill conversationMemoryUpdate and optional userTasteProfileUpdate.
+
+CRITICAL:
+- Do not output songs outside the trend pool.
+- Prefer songs that are easier to imagine in a reel/tiktok edit.
+- If the user asks for lyrics or rhythm, use that as a strong ranking signal.
+- Weak or generic fits must stay below 65.`;
+
+  const chatBody = {
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: params.userContent },
+    ],
+    tools: [{
+      type: 'function',
+      function: {
+        name: 'rank_creator_trends',
+        description: 'Rank trending songs for a short-form creator use case',
+        parameters: {
+          type: 'object',
+          properties: {
+            emotionalProfile: {
+              type: 'object',
+              properties: {
+                themes: { type: 'array', items: { type: 'string' } },
+                mood: { type: 'string' },
+                energy: { type: 'string' },
+                intimacy: { type: 'string' },
+                catharsis: { type: 'string' },
+                emotionalTension: { type: 'string' },
+              },
+              required: ['themes', 'mood', 'energy', 'intimacy', 'catharsis', 'emotionalTension'],
+            },
+            searchQueries: { type: 'array', items: { type: 'string' } },
+            adjacentInterpretations: {
+              type: 'array',
+              items: { type: 'string' },
+            },
+            narrativeReply: { type: 'string' },
+            songSuggestions: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string' },
+                  artist: { type: 'string' },
+                  emotionalTags: { type: 'array', items: { type: 'string' } },
+                  explanation: { type: 'string' },
+                  relevanceScore: { type: 'number' },
+                },
+                required: ['title', 'artist', 'emotionalTags', 'explanation', 'relevanceScore'],
+              },
+            },
+            conversationMemoryUpdate: {
+              type: 'object',
+              properties: {
+                threadSummary: { type: 'string' },
+                standardAxes: standardAxesSchema,
+              },
+              required: ['threadSummary', 'standardAxes'],
+            },
+            userTasteProfileUpdate: {
+              type: 'object',
+              properties: {
+                globalSummary: { type: 'string' },
+                userStandardAxes: standardAxesSchema,
+                genreAffinityTags: { type: 'array', items: { type: 'string' }, maxItems: 12 },
+                preferredLanguages: { type: 'array', items: { type: 'string' }, maxItems: 6 },
+              },
+            },
+          },
+          required: [
+            'emotionalProfile',
+            'narrativeReply',
+            'searchQueries',
+            'adjacentInterpretations',
+            'songSuggestions',
+            'conversationMemoryUpdate',
+          ],
+        },
+      },
+    }],
+    tool_choice: { type: 'function', function: { name: 'rank_creator_trends' } },
   };
 
   const { data, usage, gatewayRequestId } = await runInferenceCompletion(params.route, chatBody);
@@ -1122,6 +1413,12 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (mode === 'creator_trends' && hasImage) {
+      return new Response(JSON.stringify({ error: 'image is not supported in creator_trends mode' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const userContent = buildUserContent(
       mode === 'lucky' ? '' : prompt,
       conversationMemory ?? null,
@@ -1142,17 +1439,37 @@ Deno.serve(async (req) => {
     }
 
     const routeDisc = await loadAiInferenceRoute(admin, userId, hasImage);
-    const discovery = await interpretDiscovery({
-      userContent,
-      descriptionLanguage,
-      mode: mode === 'lucky' ? 'lucky' : 'search',
-      ...(hasImage ? { image: { base64: imageB64, mimeType: imageMime } } : {}),
-      route: routeDisc,
-    });
+    let discovery:
+      | {
+          interpretation: AIInterpretation;
+          usage: GatewayUsage;
+          gatewayRequestId: string | null;
+        };
+    const effectiveMode: DiscoveryMode = mode === 'lucky' ? 'lucky' : mode === 'creator_trends' ? 'creator_trends' : 'search';
+    let trendPool: TrendingTrackResult[] = [];
+
+    if (effectiveMode === 'creator_trends') {
+      trendPool = await getTrendingTracks();
+      if (!trendPool.length) throw new Error('Trending catalog unavailable');
+      discovery = await interpretCreatorTrends({
+        userContent,
+        descriptionLanguage,
+        trendPool,
+        route: routeDisc,
+      });
+    } else {
+      discovery = await interpretDiscovery({
+        userContent,
+        descriptionLanguage,
+        mode: effectiveMode === 'lucky' ? 'lucky' : 'search',
+        ...(hasImage ? { image: { base64: imageB64, mimeType: imageMime } } : {}),
+        route: routeDisc,
+      });
+    }
     await insertAiUsage(admin, {
       user_id: userId,
-      operation: 'interpret_discovery',
-      search_mode: mode === 'lucky' ? 'lucky' : 'search',
+      operation: effectiveMode === 'creator_trends' ? 'interpret_creator_trends' : 'interpret_discovery',
+      search_mode: effectiveMode,
       usage: discovery.usage,
       gateway_request_id: discovery.gatewayRequestId,
       ...(routeDisc.kind === 'byo'
@@ -1175,6 +1492,12 @@ Deno.serve(async (req) => {
       ...interpretation.searchQueries,
     ];
 
+    const exactTrendMatches = effectiveMode === 'creator_trends'
+      ? trendPool.filter((track) =>
+        preparedSuggestions.some((suggestion) =>
+          workKey(track.title, track.artist) === `${suggestion.primaryArtist}||${suggestion.canonicalTitle}`))
+      : [];
+
     // Deduplicate queries while preserving priority.
     const uniqueQueries = [...new Set(allQueries.map((q) => normalizeWhitespace(q)).filter(Boolean))]
       .slice(0, SEARCH_QUERY_LIMIT);
@@ -1193,7 +1516,7 @@ Deno.serve(async (req) => {
       ];
     });
     const searchResults = await Promise.all(searchPromises);
-    const allTracks = searchResults.flat();
+    const allTracks = [...exactTrendMatches, ...searchResults.flat()];
 
     // Deduplicate by canonical work, while merging provider-specific ids and keeping the strongest hit.
     const mergedTracks = new Map<string, TrackAggregate>();

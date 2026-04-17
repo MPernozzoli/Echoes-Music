@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
-import PromptInput from "@/components/PromptInput";
+import PromptInput, { type PromptSubmitPayload } from "@/components/PromptInput";
 import PromptSuggestions from "@/components/PromptSuggestions";
 import FullPlayer from "@/components/FullPlayer";
 import {
@@ -52,6 +52,7 @@ import { dedupeSongVersions, filterSongsByMinRelevance } from "@/lib/dedupeSongs
 import SearchResultTrackList from "@/components/SearchResultTrackList";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { isLuckyPrompt } from "@/constants/luckyPrompt";
+import type { MusicSearchMode } from "@/services/musicSearchApi";
 
 function buildSearchResult(
   prompt: string,
@@ -60,6 +61,7 @@ function buildSearchResult(
     songs: SearchResult["songs"];
     adjacentInterpretations: string[];
   },
+  searchMode?: SearchResult["searchMode"],
   playbackPresentation?: SearchResult["playbackPresentation"]
 ): SearchResult {
   return {
@@ -69,6 +71,7 @@ function buildSearchResult(
     emotionalProfile: data.emotionalProfile,
     songs: data.songs,
     adjacentInterpretations: data.adjacentInterpretations || [],
+    ...(searchMode ? { searchMode } : {}),
     ...(playbackPresentation ? { playbackPresentation } : {}),
   };
 }
@@ -159,7 +162,11 @@ const Chat = () => {
   const showMobilePlayer = queue.length > 0 && isMobile;
 
   const runSearch = useCallback(
-    async (conversationId: string, prompt: string) => {
+    async (
+      conversationId: string,
+      prompt: string,
+      mode: Extract<MusicSearchMode, "search" | "creator_trends"> = "search"
+    ) => {
       const conv = getConversation(conversationId);
       if (!conv) return;
 
@@ -175,6 +182,7 @@ const Chat = () => {
       try {
         const data = await callMusicSearch({
           prompt,
+          ...(mode !== "search" ? { mode } : {}),
           descriptionLanguage,
           conversationMemory: memoryPayload,
           userTasteProfile,
@@ -234,6 +242,7 @@ const Chat = () => {
             songs,
             adjacentInterpretations: data.adjacentInterpretations || [],
           },
+          mode,
           presentation
         );
 
@@ -294,16 +303,24 @@ const Chat = () => {
   );
 
   const handleSearch = useCallback(
-    (prompt: string) => {
+    (payload: PromptSubmitPayload) => {
+      const prompt = payload.text.trim();
+      const mode = payload.mode === "creator_trends" ? "creator_trends" : "search";
+      if (!prompt) return;
       let id = activeConversationId;
       if (!id) {
         id = createConversation();
         navigate(`${CHAT_PATH}?conversation=${id}`, { replace: true });
       }
       appendUserMessage(id, prompt);
-      void runSearch(id, prompt);
+      void runSearch(id, prompt, mode);
     },
     [activeConversationId, createConversation, navigate, appendUserMessage, runSearch]
+  );
+
+  const handleSuggestionSelect = useCallback(
+    (prompt: string) => handleSearch({ text: prompt }),
+    [handleSearch]
   );
 
   const handleRefineSearch = (interp: string) => {
@@ -320,7 +337,7 @@ const Chat = () => {
       }
     }
     appendUserMessage(activeConversationId, interp);
-    void runSearch(activeConversationId, interp);
+    void runSearch(activeConversationId, interp, currentResult?.searchMode === "creator_trends" ? "creator_trends" : "search");
   };
 
   const handleNewChat = () => {
@@ -399,6 +416,7 @@ const Chat = () => {
         songs: luckySongs,
         adjacentInterpretations: data.adjacentInterpretations || [],
       },
+      "lucky",
       presentation
     );
     appendAssistantResult(id, result);
@@ -539,6 +557,7 @@ const Chat = () => {
   const memorySummary = activeConversation?.conversationMemory?.threadSummary;
   const standardAxes = activeConversation?.conversationMemory?.standardAxes;
   const isLuckyLatestTurn = Boolean(currentResult && isLuckyPrompt(currentResult.prompt));
+  const isCreatorLatestTurn = currentResult?.searchMode === "creator_trends";
 
   const tagSong = currentSong ?? currentResult?.songs[0];
 
@@ -613,13 +632,12 @@ const Chat = () => {
   );
 
   const composerProps = {
-    onSubmit: (p: { text: string }) => {
-      const t = p.text.trim();
-      if (t) handleSearch(t);
-    },
+    onSubmit: handleSearch,
     isLoading,
     size: "compact" as const,
     placeholder: "Sentimento, ricordo, momento…",
+    creatorPlaceholder: "Video, hook, montaggio, payoff o trend che vuoi accompagnare…",
+    allowModeSwitch: true as const,
   };
 
   return (
@@ -702,7 +720,7 @@ const Chat = () => {
                     <p className="text-xs text-muted-foreground font-body mb-3 uppercase tracking-wider text-center md:text-left">
                       Prova qualcosa come
                     </p>
-                    <PromptSuggestions suggestions={discoverSuggestions} onSelect={handleSearch} />
+                    <PromptSuggestions suggestions={discoverSuggestions} onSelect={handleSuggestionSelect} />
                   </div>
                   <div className="text-center py-10 max-w-md mx-auto rounded-3xl border border-border/50 bg-gradient-to-b from-card/40 to-card/20 px-6 py-10">
                     <div className="w-14 h-14 rounded-2xl bg-primary/12 flex items-center justify-center mx-auto mb-5 ring-1 ring-primary/15">
@@ -936,7 +954,7 @@ const Chat = () => {
             </div>
 
             {activeConversation &&
-              (isLuckyLatestTurn || memorySummary || standardAxes || activeConversation.conversationProfile) && (
+              (isLuckyLatestTurn || isCreatorLatestTurn || memorySummary || standardAxes || activeConversation.conversationProfile) && (
               <aside className="lg:w-72 shrink-0 space-y-3 lg:border-l lg:border-border/40 lg:pl-5 lg:py-4 lg:overflow-y-auto lg:max-h-[calc(100dvh-3.5rem-3.25rem)]">
                 {isLuckyLatestTurn ? (
                   <>
@@ -945,6 +963,15 @@ const Chat = () => {
                     </p>
                     <div className="glass-card rounded-2xl p-4 text-sm font-body text-secondary-foreground/90 leading-relaxed">
                       {t("chat.luckySidebarBody")}
+                    </div>
+                  </>
+                ) : isCreatorLatestTurn ? (
+                  <>
+                    <p className="text-xs text-muted-foreground font-body uppercase tracking-wider lg:pt-1">
+                      {t("chat.creatorSidebarTitle")}
+                    </p>
+                    <div className="glass-card rounded-2xl p-4 text-sm font-body text-secondary-foreground/90 leading-relaxed">
+                      {t("chat.creatorSidebarBody")}
                     </div>
                   </>
                 ) : (

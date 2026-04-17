@@ -47,6 +47,7 @@ import { AssistantSongNarrative } from "@/components/AssistantSongNarrative";
 import { fallbackNarrativeForResult } from "@/lib/assistantNarrative";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { isLuckyPrompt } from "@/constants/luckyPrompt";
+import type { MusicSearchMode } from "@/services/musicSearchApi";
 
 function buildSearchResult(
   prompt: string,
@@ -56,6 +57,7 @@ function buildSearchResult(
     adjacentInterpretations: string[];
     narrativeReply?: string;
   },
+  searchMode?: SearchResult["searchMode"],
   playbackPresentation?: SearchResult["playbackPresentation"]
 ): SearchResult {
   return {
@@ -66,6 +68,7 @@ function buildSearchResult(
     songs: data.songs,
     adjacentInterpretations: data.adjacentInterpretations || [],
     ...(data.narrativeReply?.trim() ? { narrativeReply: data.narrativeReply.trim() } : {}),
+    ...(searchMode ? { searchMode } : {}),
     ...(playbackPresentation ? { playbackPresentation } : {}),
   };
 }
@@ -217,7 +220,8 @@ const Chat = () => {
     async (
       conversationId: string,
       prompt: string,
-      media?: { imageBase64: string; imageMimeType: string }
+      media?: { imageBase64: string; imageMimeType: string },
+      mode: Extract<MusicSearchMode, "search" | "creator_trends"> = "search"
     ) => {
       const conv = getConversation(conversationId);
       if (!conv) return;
@@ -240,6 +244,7 @@ const Chat = () => {
           ...(media
             ? { imageBase64: media.imageBase64, imageMimeType: media.imageMimeType }
             : {}),
+          ...(mode !== "search" ? { mode } : {}),
           descriptionLanguage,
           streamingProviderPreference,
           conversationMemory: memoryPayload,
@@ -301,6 +306,7 @@ const Chat = () => {
             adjacentInterpretations: data.adjacentInterpretations || [],
             narrativeReply: data.narrativeReply,
           },
+          mode,
           presentation
         );
 
@@ -373,6 +379,7 @@ const Chat = () => {
     (payload: PromptSubmitPayload) => {
       const text = payload.text.trim();
       const hasImg = Boolean(payload.imageBase64 && payload.imageMimeType);
+      const mode = payload.mode === "creator_trends" ? "creator_trends" : "search";
       if (!text && !hasImg) return;
       let id = activeConversationId;
       const createdNewConversation = !id;
@@ -391,9 +398,9 @@ const Chat = () => {
           ? { imageBase64: payload.imageBase64, imageMimeType: payload.imageMimeType }
           : undefined;
       if (createdNewConversation) {
-        setTimeout(() => void runSearch(id, text, media), 0);
+        setTimeout(() => void runSearch(id, text, media, mode), 0);
       } else {
-        void runSearch(id, text, media);
+        void runSearch(id, text, media, mode);
       }
     },
     [t, activeConversationId, createConversation, navigate, appendUserMessage, runSearch]
@@ -418,7 +425,7 @@ const Chat = () => {
       }
     }
     appendUserMessage(activeConversationId, interp);
-    void runSearch(activeConversationId, interp);
+    void runSearch(activeConversationId, interp, undefined, currentResult?.searchMode === "creator_trends" ? "creator_trends" : "search");
   };
 
   const handleNewChat = () => {
@@ -558,6 +565,7 @@ const Chat = () => {
         adjacentInterpretations: data.adjacentInterpretations || [],
         narrativeReply: data.narrativeReply,
       },
+      "lucky",
       presentation
     );
     appendAssistantResult(id, result);
@@ -730,6 +738,7 @@ const Chat = () => {
   const memorySummary = activeConversation?.conversationMemory?.threadSummary;
   const standardAxes = activeConversation?.conversationMemory?.standardAxes;
   const isLuckyLatestTurn = Boolean(currentResult && isLuckyPrompt(currentResult.prompt));
+  const isCreatorLatestTurn = currentResult?.searchMode === "creator_trends";
 
   const tagSong = currentSong ?? currentResult?.songs[0];
 
@@ -739,7 +748,9 @@ const Chat = () => {
       isLoading,
       size: (!hasAnyMessage && !isLoading ? "hero" : "compact") as const,
       placeholder: t("chat.composerPlaceholder"),
+      creatorPlaceholder: t("chat.creatorComposerPlaceholder"),
       allowImageAttachment: true as const,
+      allowModeSwitch: true as const,
     }),
     [handleComposerSubmit, isLoading, hasAnyMessage, t]
   );
@@ -1061,7 +1072,7 @@ const Chat = () => {
             </div>
 
             {activeConversation &&
-              (isLuckyLatestTurn || memorySummary || standardAxes || activeConversation.conversationProfile) && (
+              (isLuckyLatestTurn || isCreatorLatestTurn || memorySummary || standardAxes || activeConversation.conversationProfile) && (
               <aside className="hidden lg:flex lg:w-[17rem] shrink-0 flex-col gap-4 lg:border-l lg:border-borderSubtle/60 lg:pl-6 lg:pr-2 lg:py-6 lg:overflow-y-auto lg:max-h-[calc(100dvh-3.5rem-3rem)] scrollbar-thin bg-gradient-to-b from-transparent via-card/[0.15] to-transparent">
                 {isLuckyLatestTurn ? (
                   <>
@@ -1070,6 +1081,15 @@ const Chat = () => {
                     </p>
                     <div className="rounded-2xl border border-borderSubtle/60 surface-card p-4 text-sm font-body text-secondary-foreground/90 leading-relaxed shadow-sm">
                       {t("chat.luckySidebarBody")}
+                    </div>
+                  </>
+                ) : isCreatorLatestTurn ? (
+                  <>
+                    <p className="text-[11px] text-muted-foreground/70 font-body uppercase tracking-[0.12em] font-semibold">
+                      {t("chat.creatorSidebarTitle")}
+                    </p>
+                    <div className="rounded-2xl border border-borderSubtle/60 surface-card p-4 text-sm font-body text-secondary-foreground/90 leading-relaxed shadow-sm">
+                      {t("chat.creatorSidebarBody")}
                     </div>
                   </>
                 ) : (

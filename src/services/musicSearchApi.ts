@@ -3,7 +3,7 @@ import type { ConversationMemory, UserTasteProfile } from "@/types/conversation"
 import { supabase } from "@/integrations/supabase/client";
 import { getSessionId } from "@/services/sessionId";
 
-export type MusicSearchMode = "search" | "lucky" | "memory_compact";
+export type MusicSearchMode = "search" | "lucky" | "memory_compact" | "creator_trends";
 export type StreamingProviderPreference = "auto" | "spotify" | "apple_music";
 
 export interface MusicSearchRequest {
