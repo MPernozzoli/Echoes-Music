@@ -4,7 +4,18 @@
     "freeTokens": "{{count}} ricerche incluse all’iscrizione",
     "loginError": "Accesso non riuscito. Riprova.",
     "subtitle": "Scopri musica che risuona con le tue emozioni",
-    "continueWithGoogle": "Continua con Google"
+    "continueWithGoogle": "Continua con Google",
+    "referralPending": "Invito rilevato: completa l’accesso con Google e il bonus referral verrà accreditato automaticamente."
+  },
+  "invite": {
+    "badge": "Sei stato invitato su Echoes",
+    "title": "Accedi con Google e sblocca il bonus invito",
+    "subtitle": "Il tuo codice invito è già associato. Completa l’iscrizione con Google e il bonus verrà accreditato automaticamente a entrambi.",
+    "signupBonus": "{{count}} ricerche bonus per te e per chi ti ha invitato dopo l’iscrizione.",
+    "googleOnly": "Il flusso di iscrizione continua sempre con Google.",
+    "cta": "Continua con Google",
+    "disclaimer": "Se hai già un account, aprire questo invito prova comunque a collegare il referral quando sei idoneo.",
+    "loginError": "Impossibile avviare l’accesso con Google. Riprova."
   },
   "anon": {
     "loginForNewChat": "Per aprire un’altra chat accedi al tuo account.",

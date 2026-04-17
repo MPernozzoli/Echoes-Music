@@ -12,7 +12,18 @@
     "freeTokens": "{{count}} searches included when you sign up",
     "loginError": "Login failed. Please try again.",
     "subtitle": "Discover music that resonates with your emotions",
-    "continueWithGoogle": "Continue with Google"
+    "continueWithGoogle": "Continue with Google",
+    "referralPending": "Referral detected: finish with Google and the invite bonus will be credited automatically."
+  },
+  "invite": {
+    "badge": "You were invited to Echoes",
+    "title": "Join with Google and unlock your invite bonus",
+    "subtitle": "Your invite code is already attached. Finish sign-up with Google and both accounts will receive the referral reward.",
+    "signupBonus": "{{count}} bonus searches for you and your friend after sign-up.",
+    "googleOnly": "The sign-up flow continues with Google.",
+    "cta": "Continue with Google",
+    "disclaimer": "If you already have an account, opening this invite still links the referral when eligible.",
+    "loginError": "Unable to start Google sign-in. Please try again."
   },
   "anon": {
     "loginForNewChat": "Sign in to start another chat.",
