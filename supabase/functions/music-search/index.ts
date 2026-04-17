@@ -314,9 +314,13 @@ interface TrackResult {
   releaseYear?: number;
 }
 
-const SEARCH_QUERY_LIMIT = 8;
-const EXACT_SUGGESTION_QUERY_LIMIT = 6;
-const SEARCH_RESULTS_PER_QUERY = 5;
+type StreamingProviderPreference = 'auto' | 'spotify' | 'apple_music';
+
+const SEARCH_QUERY_LIMIT = 12;
+const EXACT_SUGGESTION_QUERY_LIMIT = 8;
+const SEARCH_RESULTS_PER_QUERY = 6;
+const MIN_RESULTS_TARGET = 4;
+const SOFT_RELEVANCE_FLOOR = 58;
 
 type SpotifySearchItem = {
   id: string;
@@ -632,6 +636,7 @@ function scoreTrackAgainstSuggestion(track: TrackResult, suggestion: PreparedSug
   if (exactTitle && exactArtist) return suggestion.relevanceScore - versionPenalty;
   if (exactTitle) return suggestion.relevanceScore - 18 - versionPenalty;
   if (titleContains && exactArtist) return suggestion.relevanceScore - 10 - versionPenalty;
+  if (exactArtist) return Math.max(66, suggestion.relevanceScore - 16) - versionPenalty;
   if (titleContains) return suggestion.relevanceScore - 26 - versionPenalty;
   return 0;
 }
@@ -743,7 +748,7 @@ Given the user's message${params.image ? ' (and attached image)' : ''}:
 1. Detect the language of the active prompt (if any). If it's not English, respond with song suggestions primarily in that language unless the prompt explicitly asks for another language.
 2. Create an emotional profile analyzing themes, mood, energy, intimacy, catharsis, and emotional tension (rich text for UI).
 3. Generate 5-7 highly specific search queries optimized for Spotify/Apple Music search (use "artist name - song title" format when possible, or genre/mood keywords). At least 2 queries should intentionally go a bit deeper than the most obvious answer: hidden gems, deeper cuts, overlooked songs, niche adjacent scenes.
-4. Suggest 6-8 specific REAL songs with correct artists. Prioritize songs whose LYRICS match the user's intent. **Avoid suggesting multiple storefront variants of the same work** (e.g. same song as studio + remaster + remix + live) unless the user clearly wants versions; prefer one canonical cut per song. Diversify across artists whenever possible; avoid repeating the same primary artist unless the prompt strongly calls for it. Include at least 2 less-obvious, high-quality picks when the request allows it. For each suggestion: emotional tags (3 words), a **distinct** poetic explanation tied to that song's lyrics or identity (never copy the same sentence across songs), and **relevanceScore** (0-100). **Score honestly**: weak or tangential fits must be **below 65**. Only strong, clearly justified picks should be **65 or above**. Do not inflate scores to fill the list.
+4. Suggest 6-8 specific REAL songs with correct artists. Prioritize songs whose LYRICS match the user's intent. When the prompt is scenic, cinematic, geographic, or atmosphere-first, also consider strong instrumental / soundtrack / ambient / world / new-age fits even if lyrics are secondary. **Avoid suggesting multiple storefront variants of the same work** (e.g. same song as studio + remaster + remix + live) unless the user clearly wants versions; prefer one canonical cut per song. Diversify across artists whenever possible; avoid repeating the same primary artist unless the prompt strongly calls for it. Include at least 2 less-obvious, high-quality picks when the request allows it. For each suggestion: emotional tags (3 words), a **distinct** poetic explanation tied to that song's lyrics or identity (never copy the same sentence across songs), and **relevanceScore** (0-100). **Score honestly**: weak or tangential fits must be **below 65**. Only strong, clearly justified picks should be **65 or above**. Do not inflate scores to fill the list.
 5. Write **narrativeReply**: 2-5 sentences, same language as the user. One flowing paragraph: why this **cluster** fits the request emotionally (themes, arc, intent). Sound human and specific. **Do not** list every song, **do not** use «guillemets» or track-by-track blurbs — per-track reasoning lives only in each song's **explanation** field. You may name at most one anchor track if it feels natural; otherwise no titles. No bullet lists.
 6. Generate 2-3 adjacent interpretations — creative alternative readings of the prompt (or of the lucky pick).
    They must be SHORT USER INPUTS the person could actually type next.
@@ -1018,6 +1023,7 @@ Deno.serve(async (req) => {
       imageMimeType: rawImageMime,
       descriptionLanguage,
       mode = 'search',
+      streamingProviderPreference = 'auto',
       conversationMemory,
       userTasteProfile,
       lastUserPrompt,
@@ -1027,6 +1033,7 @@ Deno.serve(async (req) => {
       imageMimeType?: string;
       descriptionLanguage?: string;
       mode?: string;
+      streamingProviderPreference?: StreamingProviderPreference;
       conversationMemory?: Record<string, unknown> | null;
       userTasteProfile?: Record<string, unknown> | null;
       lastUserPrompt?: string;
@@ -1157,8 +1164,14 @@ Deno.serve(async (req) => {
     const preparedSuggestions = interpretation.songSuggestions.map(prepareSuggestion);
 
     // Step 2: search exact suggestions first, then the broader semantic queries.
+    const strongArtistSeedQueries = preparedSuggestions
+      .filter((s) => s.relevanceScore >= 72)
+      .slice(0, 4)
+      .map((s) => s.artist);
+
     const allQueries = [
       ...preparedSuggestions.slice(0, EXACT_SUGGESTION_QUERY_LIMIT).map((s) => `${s.artist} - ${s.title}`),
+      ...strongArtistSeedQueries,
       ...interpretation.searchQueries,
     ];
 
@@ -1167,10 +1180,18 @@ Deno.serve(async (req) => {
       .slice(0, SEARCH_QUERY_LIMIT);
 
     // Search in parallel
-    const searchPromises = uniqueQueries.flatMap(q => [
-      searchSpotify(q, SEARCH_RESULTS_PER_QUERY),
-      searchAppleMusic(q, SEARCH_RESULTS_PER_QUERY),
-    ]);
+    const searchPromises = uniqueQueries.flatMap(q => {
+      if (streamingProviderPreference === 'spotify') {
+        return [searchSpotify(q, SEARCH_RESULTS_PER_QUERY)];
+      }
+      if (streamingProviderPreference === 'apple_music') {
+        return [searchAppleMusic(q, SEARCH_RESULTS_PER_QUERY)];
+      }
+      return [
+        searchSpotify(q, SEARCH_RESULTS_PER_QUERY),
+        searchAppleMusic(q, SEARCH_RESULTS_PER_QUERY),
+      ];
+    });
     const searchResults = await Promise.all(searchPromises);
     const allTracks = searchResults.flat();
 
@@ -1288,7 +1309,14 @@ Deno.serve(async (req) => {
 
     const passed = enrichedSongs.filter((s) => s.relevanceScore >= MIN_RELEVANCE_SCORE);
     passed.sort((a, b) => b.relevanceScore - a.relevanceScore);
-    const diversified = diversifySongsByArtist(passed, 8);
+
+    let finalSongs = diversifySongsByArtist(passed, 8);
+    if (finalSongs.length < MIN_RESULTS_TARGET) {
+      const softCandidates = enrichedSongs
+        .filter((s) => s.relevanceScore >= SOFT_RELEVANCE_FLOOR)
+        .sort((a, b) => b.relevanceScore - a.relevanceScore);
+      finalSongs = diversifySongsByArtist(softCandidates, 8);
+    }
 
     const cm = interpretation.conversationMemoryUpdate;
     const ut = interpretation.userTasteProfileUpdate;
@@ -1296,7 +1324,7 @@ Deno.serve(async (req) => {
     const result = {
       emotionalProfile: interpretation.emotionalProfile,
       narrativeReply: interpretation.narrativeReply || '',
-      songs: diversified,
+      songs: finalSongs,
       adjacentInterpretations: interpretation.adjacentInterpretations,
       conversationMemoryUpdate: cm ? {
         threadSummary: cm.threadSummary,

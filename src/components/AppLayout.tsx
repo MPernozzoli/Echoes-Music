@@ -4,8 +4,10 @@ import { MessageSquare, Clock, Heart, User, LogIn } from "lucide-react";
 import { useAuth } from "@/context/useAuth";
 import TokenBadge from "@/components/TokenBadge";
 import { AppLogo } from "@/components/AppLogo";
+import { GlobalPlaybackDock } from "@/components/GlobalPlaybackDock";
 import TokenLowBanner from "@/components/TokenLowBanner";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -17,6 +19,7 @@ const AppLayout = ({ children, headerVariant = "app" }: AppLayoutProps) => {
   const location = useLocation();
   const { t } = useTranslation();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
   const navItems = [
     { labelKey: "nav.chat", path: "/chat", icon: MessageSquare },
@@ -99,7 +102,16 @@ const AppLayout = ({ children, headerVariant = "app" }: AppLayoutProps) => {
 
       <TokenLowBanner />
 
-      <main className="flex-1">{children}</main>
+      <main
+        className="flex-1"
+        style={
+          isMarketing
+            ? undefined
+            : { paddingBottom: `var(--global-player-offset, ${isMobile ? "56px" : "0px"})` }
+        }
+      >
+        {children}
+      </main>
 
       {!isMarketing && (
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-borderSubtle/80 bg-background/95 backdrop-blur-2xl pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_32px_-8px_rgba(0,0,0,0.12)]">
@@ -125,6 +137,8 @@ const AppLayout = ({ children, headerVariant = "app" }: AppLayoutProps) => {
         </div>
       </nav>
       )}
+
+      {!isMarketing && <GlobalPlaybackDock />}
     </div>
   );
 };

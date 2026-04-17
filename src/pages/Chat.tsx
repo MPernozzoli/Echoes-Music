@@ -4,17 +4,12 @@ import { useSearchParams, useNavigate, useLocation, Link } from "react-router-do
 import AppLayout from "@/components/AppLayout";
 import PromptInput, { type PromptSubmitPayload } from "@/components/PromptInput";
 import PromptSuggestions from "@/components/PromptSuggestions";
-import FullPlayer from "@/components/FullPlayer";
-import {
-  DiscoverDockPanelActions,
-  type DockPopoverId,
-} from "@/components/DiscoverDockPanelActions";
 import TrackQueue from "@/components/TrackQueue";
 import EmotionalProfileCard from "@/components/EmotionalProfile";
 import MusicSearchThinking from "@/components/MusicSearchThinking";
 import SearchFeedback from "@/components/SearchFeedback";
 import { pickDiscoverPromptSuggestions } from "@/lib/discoverPromptSuggestions";
-import type { ListenHistoryEntry, SearchResult } from "@/data/mockData";
+import type { SearchResult } from "@/data/mockData";
 import { useApp } from "@/context/useApp";
 import { useAuth } from "@/context/useAuth";
 import { useSpotify } from "@/context/useSpotify";
@@ -45,7 +40,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-import type { ChatMessage } from "@/types/conversation";
+import type { ChatMessage, Conversation } from "@/types/conversation";
 import { cn } from "@/lib/utils";
 import { dedupeSongVersions, filterSongsByMinRelevance } from "@/lib/dedupeSongs";
 import { AssistantSongNarrative } from "@/components/AssistantSongNarrative";
@@ -77,6 +72,17 @@ function buildSearchResult(
 
 const CHAT_PATH = "/chat";
 
+function conversationPreviewArtwork(c: Conversation): string | undefined {
+  for (let i = c.messages.length - 1; i >= 0; i--) {
+    const m = c.messages[i];
+    if (m.role === "assistant") {
+      const url = m.searchResult.songs[0]?.artwork;
+      if (url) return url;
+    }
+  }
+  return undefined;
+}
+
 const Chat = () => {
   const { t, i18n } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -87,7 +93,6 @@ const Chat = () => {
   const [resultIdMap, setResultIdMap] = useState<Record<string, string>>({});
   const [showQueue, setShowQueue] = useState(false);
   const [showEmotionalProfile, setShowEmotionalProfile] = useState(false);
-  const [dockPopover, setDockPopover] = useState<DockPopoverId | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [conversationsPanelOpen, setConversationsPanelOpen] = useState(true);
   const chatDockRef = useRef<HTMLDivElement>(null);
@@ -103,13 +108,9 @@ const Chat = () => {
   } = useAppleMusic();
   const {
     queue,
-    queueSources,
     currentIndex,
     setCurrentIndex,
     isGloballyPlaying,
-    pendingAutoplay,
-    setPendingAutoplay,
-    setGlobalPlaying,
     playNowReplace,
     playTrackFromResult,
     appendToQueue,
@@ -118,7 +119,7 @@ const Chat = () => {
     removeFromQueue,
   } = usePlaybackQueue();
 
-  const { toggleFavorite, isFavorite, descriptionLanguage, recordListen, listenHistory } = useApp();
+  const { toggleFavorite, isFavorite, descriptionLanguage } = useApp();
   const {
     conversations,
     activeConversationId,
@@ -184,6 +185,12 @@ const Chat = () => {
   const hasAnyMessage = (activeConversation?.messages.length ?? 0) > 0;
   const streamingLinked =
     spotifyConnected || (appleMusicAvailable && appleMusicAuthorized);
+  const streamingProviderPreference =
+    appleMusicAvailable && appleMusicAuthorized && !spotifyConnected
+      ? "apple_music"
+      : spotifyConnected && !(appleMusicAvailable && appleMusicAuthorized)
+        ? "spotify"
+        : "auto";
   const showStreamingConnectBanner =
     Boolean(user) &&
     hasAnyMessage &&
@@ -222,7 +229,6 @@ const Chat = () => {
       setIsLoading(true);
       setShowQueue(false);
       setShowEmotionalProfile(false);
-      setDockPopover(null);
       setDbSearchId(null);
       setResultIdMap({});
 
@@ -235,6 +241,7 @@ const Chat = () => {
             ? { imageBase64: media.imageBase64, imageMimeType: media.imageMimeType }
             : {}),
           descriptionLanguage,
+          streamingProviderPreference,
           conversationMemory: memoryPayload,
           userTasteProfile,
           conversationId,
@@ -350,6 +357,7 @@ const Chat = () => {
       refreshTokenBalance,
       getConversation,
       descriptionLanguage,
+      streamingProviderPreference,
       userTasteProfile,
       appendAssistantResult,
       patchSearchResultTracking,
@@ -629,47 +637,73 @@ const Chat = () => {
   const sidebar = (
     <div className="flex flex-col h-full min-h-0">
       <Button
-        variant="outline"
-        className="mb-4 w-full justify-start gap-2 rounded-xl h-10 font-body text-sm border-border/60 hover:border-primary/30 hover:bg-primary/[0.05] transition-all"
+        variant="soft"
+        className="mb-5 w-full justify-start gap-2 rounded-2xl h-11 font-body text-sm shadow-sm hover:shadow-md transition-shadow"
         onClick={handleNewChat}
       >
-        <MessageSquarePlus className="w-4 h-4 text-primary/70" />
+        <MessageSquarePlus className="w-4 h-4 text-primary" />
         {t("chat.newChat")}
       </Button>
-      <p className="text-xs text-muted-foreground/70 font-body uppercase tracking-wider font-medium mb-3 px-1">
-        {t("chat.conversations")}
-      </p>
-      <div className="flex-1 overflow-y-auto space-y-0.5 -mx-1 px-1">
+      <div className="flex items-center gap-2 mb-3 px-0.5">
+        <span className="h-px flex-1 bg-gradient-to-r from-transparent via-borderSubtle to-borderSubtle/40" aria-hidden />
+        <p className="text-[11px] text-muted-foreground/80 font-body uppercase tracking-[0.14em] font-semibold shrink-0">
+          {t("chat.conversations")}
+        </p>
+        <span className="h-px flex-1 bg-gradient-to-l from-transparent via-borderSubtle to-borderSubtle/40" aria-hidden />
+      </div>
+      <div className="flex-1 overflow-y-auto space-y-1 -mx-1 px-1 scrollbar-thin">
         {conversations.map((c) => {
           const isActive = c.id === activeConversationId;
+          const previewArt = conversationPreviewArtwork(c);
           return (
             <div
               key={c.id}
               className={cn(
-                "group flex items-start gap-0.5 rounded-xl transition-all duration-200 border border-transparent",
+                "group flex items-stretch gap-1 rounded-2xl transition-all duration-200 border",
                 isActive
-                  ? "bg-primary/10 ring-1 ring-primary/20 shadow-sm border-primary/10"
-                  : "hover:bg-muted/70 hover:border-border/40"
+                  ? "bg-gradient-to-br from-primary/[0.12] to-primary/[0.04] ring-1 ring-primary/25 shadow-md border-primary/15"
+                  : "border-transparent hover:bg-muted/60 hover:border-borderSubtle/50"
               )}
             >
               <button
                 type="button"
                 onClick={() => handleSelectChat(c.id)}
-                className="flex-1 text-left px-3 py-2.5 rounded-xl min-w-0"
+                className="flex flex-1 text-left gap-3 min-w-0 items-center px-2.5 py-2 rounded-2xl"
               >
-                <span className={cn(
-                  "line-clamp-2 text-[13px] font-body leading-snug",
-                  isActive ? "font-semibold text-foreground" : "font-medium text-foreground/80"
-                )}>
-                  {c.title}
-                </span>
-                <span className="text-xs text-muted-foreground/60 block mt-1 font-body">
-                  {new Date(c.updatedAt).toLocaleDateString(i18n.language)}
-                </span>
+                <div
+                  className={cn(
+                    "relative h-11 w-11 shrink-0 rounded-xl overflow-hidden ring-1 ring-inset ring-black/5 dark:ring-white/10",
+                    previewArt ? "bg-muted" : "bg-gradient-to-br from-muted to-muted/50"
+                  )}
+                >
+                  {previewArt ? (
+                    <img src={previewArt} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center">
+                      <MessageSquarePlus className="w-4 h-4 text-muted-foreground/45" />
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 py-0.5">
+                  <span
+                    className={cn(
+                      "line-clamp-2 text-[13px] font-body leading-snug block",
+                      isActive ? "font-semibold text-foreground" : "font-medium text-foreground/85"
+                    )}
+                  >
+                    {c.title}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground/65 block mt-0.5 font-body tabular-nums">
+                    {new Date(c.updatedAt).toLocaleDateString(i18n.language, {
+                      day: "numeric",
+                      month: "short",
+                    })}
+                  </span>
+                </div>
               </button>
               <button
                 type="button"
-                className="p-2 mt-1 opacity-0 group-hover:opacity-60 hover:!opacity-100 text-muted-foreground hover:text-destructive shrink-0 transition-opacity"
+                className="p-2 self-center opacity-0 group-hover:opacity-60 hover:!opacity-100 text-muted-foreground hover:text-destructive shrink-0 transition-opacity rounded-xl hover:bg-destructive/10"
                 aria-label={t("chat.deleteChatAria")}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -699,113 +733,45 @@ const Chat = () => {
 
   const tagSong = currentSong ?? currentResult?.songs[0];
 
-  const handlePlayerPlaybackChange = useCallback(
-    (playing: boolean) => {
-      setGlobalPlaying(playing);
-      if (!playing || !queue.length) return;
-      const song = queue[currentIndex];
-      if (!song) return;
-      const tagged = queueSources[currentIndex];
-      const fallback =
-        activeConversationId && currentResult?.songs.some((s) => s.id === song.id)
-          ? {
-              conversationId: activeConversationId,
-              searchResultId: currentResult.id,
-              prompt: currentResult.prompt,
-            }
-          : null;
-      const src = tagged ?? fallback;
-      if (!src) return;
-      const conv = getConversation(src.conversationId);
-      recordListen({
-        conversationId: src.conversationId,
-        searchResultId: src.searchResultId,
-        prompt: src.prompt,
-        chatTitle: conv?.title,
-        song,
-      });
-    },
-    [
-      setGlobalPlaying,
-      queue,
-      queueSources,
-      currentIndex,
-      activeConversationId,
-      currentResult,
-      getConversation,
-      recordListen,
-    ]
-  );
-
-  const historyChatExists = useCallback(
-    (id: string) => conversations.some((c) => c.id === id),
-    [conversations]
-  );
-
-  const handleReplayHistoryEntry = useCallback(
-    (entry: ListenHistoryEntry) => {
-      playNowReplace(
-        [entry.song],
-        0,
-        true,
-        {
-          conversationId: entry.conversationId,
-          searchResultId: entry.searchResultId,
-          prompt: entry.prompt,
-        }
-      );
-      setDockPopover(null);
-    },
-    [playNowReplace]
-  );
-
-  const handleOpenHistoryChat = useCallback(
-    (entry: ListenHistoryEntry) => {
-      if (!conversations.some((c) => c.id === entry.conversationId)) return;
-      selectConversation(entry.conversationId);
-      navigate(`${CHAT_PATH}?conversation=${encodeURIComponent(entry.conversationId)}`);
-      setDockPopover(null);
-    },
-    [conversations, selectConversation, navigate]
-  );
-
   const composerProps = useMemo(
     () => ({
       onSubmit: handleComposerSubmit,
       isLoading,
-      size: "compact" as const,
+      size: (!hasAnyMessage && !isLoading ? "hero" : "compact") as const,
       placeholder: t("chat.composerPlaceholder"),
       allowImageAttachment: true as const,
     }),
-    [handleComposerSubmit, isLoading, t]
+    [handleComposerSubmit, isLoading, hasAnyMessage, t]
   );
 
   return (
     <>
     <AppLayout>
-      <div
-        className="relative flex flex-col md:flex-row w-full max-w-[1600px] mx-auto min-h-[calc(100vh-3.5rem)]"
-      >
+      <div className="relative flex flex-col md:flex-row w-full max-w-[1600px] mx-auto min-h-[calc(100vh-3.5rem)] isolate">
         <aside
           className={cn(
-            "hidden md:flex shrink-0 flex-col border-r border-border/30 bg-gradient-to-b from-card/50 to-card/20 transition-[width] duration-300 ease-out overflow-hidden",
-            conversationsPanelOpen ? "w-[250px]" : "w-0 border-transparent"
+            "hidden md:flex shrink-0 flex-col border-r border-borderSubtle/60 bg-gradient-to-b from-card/95 via-card/40 to-background transition-[width] duration-300 ease-out overflow-hidden shadow-[inset_-1px_0_0_0_hsl(var(--border-subtle)/0.35)]",
+            conversationsPanelOpen ? "w-[272px]" : "w-0 border-transparent shadow-none"
           )}
           aria-hidden={!conversationsPanelOpen}
         >
-          <div className="w-[250px] h-full min-h-[calc(100vh-3.5rem)] max-h-[calc(100vh-3.5rem)] flex flex-col p-4 box-border">
+          <div className="w-[272px] h-full min-h-[calc(100vh-3.5rem)] max-h-[calc(100vh-3.5rem)] flex flex-col p-4 pt-5 box-border">
             {sidebar}
           </div>
         </aside>
 
-        <div className="flex-1 flex flex-col min-w-0 min-h-0">
-          <header className="shrink-0 flex items-center justify-between gap-3 px-4 md:px-6 py-3 border-b border-borderSubtle/60 bg-background/85 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/70">
-            <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
+          <div
+            className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_100%_55%_at_50%_-8%,hsl(var(--primary)/0.14),transparent_52%),radial-gradient(ellipse_70%_45%_at_100%_35%,hsl(var(--primary)/0.06),transparent_45%),radial-gradient(ellipse_55%_40%_at_0%_60%,hsl(var(--muted)/0.35),transparent_50%)] dark:bg-[radial-gradient(ellipse_100%_50%_at_50%_-5%,hsl(var(--primary)/0.18),transparent_50%),radial-gradient(ellipse_60%_50%_at_100%_40%,hsl(var(--primary)/0.08),transparent_48%)]"
+            aria-hidden
+          />
+          <header className="shrink-0 flex items-center justify-between gap-3 px-4 md:px-7 py-3.5 md:py-4 border-b border-borderSubtle/70 bg-background/80 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/65">
+            <div className="flex items-center gap-2.5 md:gap-3 min-w-0">
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="hidden md:inline-flex shrink-0 h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
+                className="hidden md:inline-flex shrink-0 h-9 w-9 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/70"
                 onClick={() => setConversationsPanelOpen((o) => !o)}
                 aria-expanded={conversationsPanelOpen}
                 aria-label={conversationsPanelOpen ? t("chat.panelClose") : t("chat.panelOpen")}
@@ -818,63 +784,86 @@ const Chat = () => {
               </Button>
               <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="sm" className="md:hidden gap-1.5 rounded-lg h-8 shrink-0 text-muted-foreground">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="md:hidden gap-2 rounded-xl h-9 px-3 shrink-0 text-muted-foreground border border-borderSubtle/50 bg-card/40"
+                  >
                     <PanelLeft className="w-4 h-4" />
                     {t("nav.chat")}
                   </Button>
                 </SheetTrigger>
-                <SheetContent side="left" className="w-[min(100%,300px)] pt-12 border-border/40">
+                <SheetContent
+                  side="left"
+                  className="w-[min(100%,320px)] pt-14 border-borderSubtle/60 bg-gradient-to-b from-background via-card/30 to-background"
+                >
                   {sidebar}
                 </SheetContent>
               </Sheet>
-              <div className="min-w-0">
-                <h1 className="font-display text-base md:text-lg font-semibold text-foreground tracking-tight truncate">
+              <div className="min-w-0 flex flex-col gap-0.5">
+                <h1 className="font-display text-lg md:text-xl font-semibold text-foreground tracking-tight truncate leading-tight">
                   {t("chat.musicChat")}
                 </h1>
+                <p className="font-body text-xs md:text-[13px] text-muted-foreground/85 leading-snug truncate max-w-[min(100%,28rem)]">
+                  {t("chat.musicChatSubtitle")}
+                </p>
               </div>
             </div>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={handleNewChat}
-              className="gap-1.5 shrink-0 rounded-lg h-8 text-muted-foreground hover:text-foreground"
+              className="gap-2 shrink-0 rounded-full h-9 px-3.5 border-borderSubtle/80 bg-card/50 hover:bg-primary/[0.08] hover:border-primary/25 text-foreground/90 font-body text-xs shadow-sm"
             >
-              <MessageSquarePlus className="w-4 h-4" />
-              <span className="hidden sm:inline text-xs font-body">{t("chat.newShort")}</span>
+              <MessageSquarePlus className="w-4 h-4 text-primary" />
+              <span className="hidden sm:inline">{t("chat.newShort")}</span>
             </Button>
           </header>
 
           <div className="flex-1 flex flex-col lg:flex-row min-h-0 gap-0">
             <div className="flex-1 flex flex-col min-h-0 min-w-0">
               <div
-                className="flex-1 overflow-y-auto overscroll-contain px-4 md:px-6 py-5 space-y-5"
+                className="flex-1 overflow-y-auto overscroll-contain px-4 md:px-8 py-6 md:py-8 space-y-6 scrollbar-thin"
                 style={{ paddingBottom: scrollPadBottom }}
               >
               {!hasAnyMessage && !isLoading && (
-                <div className="flex flex-col items-center justify-center min-h-[58vh] gap-10 animate-fade-in px-2">
-                  <div className="text-center max-w-md mx-auto px-4 relative">
-                    <div className="pointer-events-none absolute -inset-8 rounded-[2rem] bg-artwork-radial opacity-30 blur-2xl" aria-hidden />
-                    <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-primary/25 via-emotional-tag/15 to-primary/5 flex items-center justify-center mx-auto mb-7 ring-1 ring-primary/20 shadow-glow">
-                      <Lightbulb className="w-9 h-9 text-primary" />
+                <div className="flex flex-col items-center justify-center min-h-[min(68vh,560px)] gap-12 md:gap-14 animate-fade-in px-3 md:px-6">
+                  <div className="text-center max-w-lg mx-auto relative w-full">
+                    <div
+                      className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(100%,28rem)] aspect-square rounded-full bg-gradient-to-br from-primary/20 via-primary/5 to-transparent opacity-70 blur-3xl motion-reduce:opacity-40"
+                      aria-hidden
+                    />
+                    <div
+                      className="pointer-events-none absolute inset-0 opacity-[0.04] dark:opacity-[0.07] [background-image:linear-gradient(hsl(var(--foreground)/0.35)_1px,transparent_1px),linear-gradient(90deg,hsl(var(--foreground)/0.35)_1px,transparent_1px)] [background-size:24px_24px] rounded-[2rem]"
+                      aria-hidden
+                    />
+                    <div className="relative w-24 h-24 md:w-28 md:h-28 rounded-[1.35rem] bg-gradient-to-br from-primary/30 via-primary/12 to-emotional-tag/10 flex items-center justify-center mx-auto mb-8 md:mb-10 ring-1 ring-primary/25 shadow-glow motion-safe:animate-glow-pulse">
+                      <Lightbulb className="w-11 h-11 md:w-12 md:h-12 text-primary drop-shadow-sm" />
                     </div>
-                    <h2 className="font-display text-2xl md:text-3xl font-semibold mb-4 text-foreground text-balance">{t("chat.emptyTitle")}</h2>
-                    <p className="text-muted-foreground font-body text-sm md:text-base leading-relaxed max-w-sm mx-auto text-balance">
+                    <h2 className="font-display text-3xl md:text-4xl font-semibold mb-4 md:mb-5 text-foreground text-balance tracking-tight">
+                      {t("chat.emptyTitle")}
+                    </h2>
+                    <p className="text-muted-foreground font-body text-sm md:text-base leading-relaxed max-w-md mx-auto text-balance">
                       {t("chat.emptyBody")}
                     </p>
                   </div>
-                  <div className="max-w-xl mx-auto w-full">
-                    <p className="text-xs text-muted-foreground/70 font-body uppercase tracking-wider font-medium mb-4 text-center">
-                      {t("chat.tryLike")}
-                    </p>
+                  <div className="max-w-2xl mx-auto w-full space-y-5">
+                    <div className="flex items-center gap-3 justify-center">
+                      <span className="h-px w-10 md:w-16 bg-gradient-to-r from-transparent to-borderSubtle" aria-hidden />
+                      <p className="text-[11px] md:text-xs text-muted-foreground/75 font-body uppercase tracking-[0.12em] font-semibold">
+                        {t("chat.tryLike")}
+                      </p>
+                      <span className="h-px w-10 md:w-16 bg-gradient-to-l from-transparent to-borderSubtle" aria-hidden />
+                    </div>
                     <PromptSuggestions suggestions={discoverSuggestions} onSelect={handleSuggestionSelect} />
                   </div>
                 </div>
               )}
 
               {hasAnyMessage && (
-                <div className="max-w-3xl mx-auto w-full space-y-4">
+                <div className="max-w-3xl mx-auto w-full space-y-5 md:space-y-6">
                   {showStreamingConnectBanner && (
-                    <Alert className="border-primary/25 bg-primary/[0.06] text-foreground shadow-sm rounded-2xl pr-3">
+                    <Alert className="border-primary/20 bg-gradient-to-br from-primary/[0.08] to-primary/[0.02] text-foreground shadow-md rounded-2xl pr-3 ring-1 ring-primary/10">
                       <Headphones className="h-4 w-4 text-primary/80" />
                       <AlertTitle className="font-body text-sm font-semibold text-foreground/90">
                         {t("chat.streamingConnectTitle")}
@@ -899,7 +888,7 @@ const Chat = () => {
                           style={{ animationDelay: `${mi * 30}ms` }}
                         >
                           <div className="max-w-[min(85%,480px)]">
-                            <div className="rounded-2xl rounded-br-sm bg-gradient-to-br from-primary/18 to-primary/8 border border-primary/20 px-5 py-3.5 text-sm font-body text-foreground leading-relaxed shadow-md space-y-2">
+                            <div className="rounded-2xl rounded-br-md bg-gradient-to-br from-primary/22 to-primary/8 border border-primary/25 px-5 py-4 text-sm md:text-[15px] font-body text-foreground leading-relaxed shadow-md ring-1 ring-primary/10 space-y-2">
                               {m.imagePreviewUrl ? (
                                 <img
                                   src={m.imagePreviewUrl}
@@ -920,18 +909,20 @@ const Chat = () => {
                       <div
                         key={m.id}
                         className={cn(
-                          "mr-auto max-w-[min(100%,42rem)] rounded-2xl border p-5 md:p-6 backdrop-blur-xl transition-shadow duration-300 animate-fade-slide-up",
+                          "mr-auto max-w-[min(100%,42rem)] rounded-[1.35rem] border p-5 md:p-7 backdrop-blur-xl transition-shadow duration-300 animate-fade-slide-up",
                           isLatest
-                            ? "border-primary/25 bg-gradient-to-br from-card/90 via-card/70 to-primary/[0.04] shadow-elevated ring-1 ring-primary/12"
-                            : "border-border/40 bg-card/55 shadow-soft"
+                            ? "border-primary/20 bg-gradient-to-br from-card/95 via-card/75 to-primary/[0.06] shadow-elevated ring-1 ring-primary/15"
+                            : "border-borderSubtle/60 bg-card/70 shadow-soft"
                         )}
                         style={{ animationDelay: `${mi * 30}ms` }}
                       >
-                        <div className="flex items-center gap-2.5 mb-3.5">
-                          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary/15 to-primary/8 ring-1 ring-primary/10">
-                            <Bot className="h-3.5 w-3.5 text-primary" />
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/8 ring-1 ring-primary/15 shadow-sm">
+                            <Bot className="h-4 w-4 text-primary" />
                           </div>
-                          <span className="text-xs font-body font-semibold text-foreground/80 tracking-wide">{t("chat.echoes")}</span>
+                          <span className="text-xs md:text-[13px] font-body font-semibold text-foreground/85 tracking-wide">
+                            {t("chat.echoes")}
+                          </span>
                         </div>
                         {r.songs.length > 0 && activeConversationId ? (
                           <AssistantSongNarrative
@@ -962,7 +953,7 @@ const Chat = () => {
                         {isInlineLatest &&
                           r.playbackPresentation === "inline" &&
                           totalInlineAssistantTurns === 1 && (
-                          <p className="text-xs sm:text-sm text-muted-foreground/75 font-body mt-4 leading-relaxed">
+                          <p className="text-xs sm:text-[13px] text-muted-foreground/80 font-body mt-5 leading-relaxed border-t border-borderSubtle/50 pt-4">
                             {isMobile ? t("chat.playbackHintMobile") : t("chat.playbackHintDesktop")}
                           </p>
                         )}
@@ -1071,29 +1062,29 @@ const Chat = () => {
 
             {activeConversation &&
               (isLuckyLatestTurn || memorySummary || standardAxes || activeConversation.conversationProfile) && (
-              <aside className="hidden lg:flex lg:w-64 shrink-0 flex-col gap-3 lg:border-l lg:border-borderSubtle/50 lg:pl-5 lg:py-5 lg:overflow-y-auto lg:max-h-[calc(100dvh-3.5rem-3rem)] scrollbar-thin">
+              <aside className="hidden lg:flex lg:w-[17rem] shrink-0 flex-col gap-4 lg:border-l lg:border-borderSubtle/60 lg:pl-6 lg:pr-2 lg:py-6 lg:overflow-y-auto lg:max-h-[calc(100dvh-3.5rem-3rem)] scrollbar-thin bg-gradient-to-b from-transparent via-card/[0.15] to-transparent">
                 {isLuckyLatestTurn ? (
                   <>
-                    <p className="text-xs text-muted-foreground/65 font-body uppercase tracking-wider font-medium">
+                    <p className="text-[11px] text-muted-foreground/70 font-body uppercase tracking-[0.12em] font-semibold">
                       {t("chat.luckySidebarTitle")}
                     </p>
-                    <div className="rounded-xl border border-border/30 surface-card p-4 text-sm font-body text-secondary-foreground/85 leading-relaxed">
+                    <div className="rounded-2xl border border-borderSubtle/60 surface-card p-4 text-sm font-body text-secondary-foreground/90 leading-relaxed shadow-sm">
                       {t("chat.luckySidebarBody")}
                     </div>
                   </>
                 ) : (
                   <>
-                    <p className="text-xs text-muted-foreground/65 font-body uppercase tracking-wider font-medium">
+                    <p className="text-[11px] text-muted-foreground/70 font-body uppercase tracking-[0.12em] font-semibold">
                       {t("chat.threadProfile")}
                     </p>
                     {memorySummary && (
-                      <div className="rounded-xl border border-border/30 surface-card p-4 text-sm font-body text-secondary-foreground/85 leading-relaxed">
+                      <div className="rounded-2xl border border-borderSubtle/60 surface-card p-4 text-sm font-body text-secondary-foreground/90 leading-relaxed shadow-sm">
                         {memorySummary}
                       </div>
                     )}
                     {standardAxes && (
-                      <div className="rounded-xl border border-border/30 surface-card p-4 text-xs font-body space-y-2 text-muted-foreground/80">
-                        <span className="uppercase tracking-wider text-[10px] font-semibold text-muted-foreground/55">
+                      <div className="rounded-2xl border border-borderSubtle/60 surface-card p-4 text-xs font-body space-y-2 text-muted-foreground/85 shadow-sm">
+                        <span className="uppercase tracking-[0.1em] text-[11px] font-semibold text-muted-foreground/60">
                           {t("chat.axes")}
                         </span>
                         <p className="text-foreground/75 leading-relaxed text-sm">
@@ -1134,60 +1125,17 @@ const Chat = () => {
 
     <div
       ref={chatDockRef}
-      className={cn(
-        "fixed inset-x-0 z-[42] flex flex-col bg-background/95 backdrop-blur-2xl border-t border-border/20 shadow-[0_-4px_24px_-4px_rgba(0,0,0,0.15)]",
-        isMobile ? "bottom-14" : "bottom-0"
-      )}
+      className="fixed inset-x-0 z-[42] flex flex-col surface-player backdrop-blur-2xl border-t border-borderSubtle/70 shadow-player rounded-t-3xl md:rounded-t-[1.75rem] ring-1 ring-black/[0.04] dark:ring-white/[0.06]"
+      style={{ bottom: `var(--global-player-offset, ${isMobile ? "56px" : "0px"})` }}
     >
-      <div className="px-4 md:px-6 py-2.5">
+      <div className="px-4 md:px-8 pt-3 pb-2.5 md:pb-3">
         <div className="max-w-[1600px] w-full mx-auto">
-          <div className="max-w-3xl w-full mx-auto space-y-1.5">
+          <div className="max-w-3xl w-full mx-auto space-y-2">
             {dbSearchId && <SearchFeedback searchId={dbSearchId} />}
             <PromptInput {...composerProps} />
           </div>
         </div>
       </div>
-      {queue.length > 0 ? (
-        <div className="border-t border-borderSubtle/50 bg-gradient-to-t from-background via-background/95 to-transparent backdrop-blur-xl">
-          <div className="max-w-[1600px] w-full mx-auto px-2 md:px-6 pt-1.5 pb-1.5">
-            <FullPlayer
-              variant={isMobile ? "default" : "dock"}
-              songs={queue}
-              currentIndex={currentIndex}
-              onChangeIndex={setCurrentIndex}
-              isFavorite={isFavorite}
-              onToggleFavorite={handleToggleFavorite}
-              onShowDetails={
-                isMobile ? () => setShowEmotionalProfile(!showEmotionalProfile) : undefined
-              }
-              autoplay={pendingAutoplay}
-              onAutoplayConsumed={() => setPendingAutoplay(false)}
-              onPlaybackStateChange={handlePlayerPlaybackChange}
-              dockPanelActions={
-                !isMobile ? (
-                  <DiscoverDockPanelActions
-                    dockPopover={dockPopover}
-                    setDockPopover={setDockPopover}
-                    currentResult={currentResult}
-                    tagSong={tagSong}
-                    queue={queue}
-                    currentIndex={currentIndex}
-                    setCurrentIndex={setCurrentIndex}
-                    reorderQueue={reorderQueue}
-                    removeFromQueue={removeFromQueue}
-                    isFavorite={isFavorite}
-                    onToggleFavorite={handleToggleFavorite}
-                    listenHistory={listenHistory}
-                    historyChatExists={historyChatExists}
-                    onReplayHistoryEntry={handleReplayHistoryEntry}
-                    onOpenHistoryChat={handleOpenHistoryChat}
-                  />
-                ) : undefined
-              }
-            />
-          </div>
-        </div>
-      ) : null}
     </div>
     </>
   );

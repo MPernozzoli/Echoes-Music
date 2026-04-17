@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getSessionId } from "@/services/sessionId";
 
 export type MusicSearchMode = "search" | "lucky" | "memory_compact";
+export type StreamingProviderPreference = "auto" | "spotify" | "apple_music";
 
 export interface MusicSearchRequest {
   /** Obbligatorio per utenti anonimi (quota IP + una chat) */
@@ -14,6 +15,7 @@ export interface MusicSearchRequest {
   imageMimeType?: string;
   descriptionLanguage?: string;
   mode?: MusicSearchMode;
+  streamingProviderPreference?: StreamingProviderPreference;
   conversationMemory?: ConversationMemory | null;
   userTasteProfile?: UserTasteProfile | null;
   lastUserPrompt?: string;
