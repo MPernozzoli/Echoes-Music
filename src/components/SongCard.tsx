@@ -66,7 +66,9 @@ const SongCard = ({
       delay: index * 90,
       ease: "outExpo",
     });
-    return () => anim.pause?.();
+    return () => {
+      anim.pause?.();
+    };
   }, [index]);
 
   useEffect(() => {

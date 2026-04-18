@@ -28,7 +28,9 @@ const PromptSuggestions = ({ suggestions, onSelect }: PromptSuggestionsProps) =>
       delay: stagger(45, { start: 80 }),
       ease: "outQuart",
     });
-    return () => anim.pause?.();
+    return () => {
+      anim.pause?.();
+    };
   }, [suggestions]);
 
   return (
