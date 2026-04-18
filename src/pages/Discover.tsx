@@ -49,6 +49,7 @@ import { toast } from "sonner";
 import type { ChatMessage } from "@/types/conversation";
 import { cn } from "@/lib/utils";
 import { dedupeSongVersions, filterSongsByMinRelevance } from "@/lib/dedupeSongs";
+import { buildEmptySearchResult } from "@/lib/emptySearchResult";
 import SearchResultTrackList from "@/components/SearchResultTrackList";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
@@ -248,18 +249,42 @@ const Chat = () => {
           return;
         }
 
-        if (!data.emotionalProfile || !data.songs?.length) {
-          toast.error("Nessun risultato");
-          setIsLoading(false);
-          void refreshTokenBalance();
-          return;
-        }
+        const rawSongs = Array.isArray(data.songs) ? data.songs : [];
+        const songs = filterSongsByMinRelevance(dedupeSongVersions(rawSongs));
 
-        const songs = filterSongsByMinRelevance(dedupeSongVersions(data.songs));
         if (!songs.length) {
-          toast.error("Nessun risultato");
+          const narrative = data.narrativeReply?.trim() || t("chat.noResultsNarrative");
+          const emptyResult = buildEmptySearchResult({
+            prompt,
+            narrative,
+            emotionalProfile: data.emotionalProfile,
+            adjacentInterpretations: data.adjacentInterpretations,
+            searchMode: mode,
+          });
+          appendAssistantResult(conversationId, emptyResult);
+          if (data.conversationMemoryUpdate?.standardAxes) {
+            mergeConversationMemoryFromUpdate(conversationId, {
+              threadSummary: data.conversationMemoryUpdate.threadSummary ?? "",
+              standardAxes: normalizeStandardAxes(
+                data.conversationMemoryUpdate.standardAxes as Record<string, unknown>
+              ),
+            });
+          } else if (data.emotionalProfile) {
+            mergeConversationMemoryFromUpdate(conversationId, {
+              threadSummary: data.emotionalProfile.mood.slice(0, 400),
+              standardAxes: emotionalProfileToAxes(data.emotionalProfile),
+            });
+          }
+          if (data.userTasteProfileUpdate) {
+            mergeUserTasteFromUpdate(data.userTasteProfileUpdate);
+          }
           setIsLoading(false);
           void refreshTokenBalance();
+          const searchId = await trackSearch({
+            rawPrompt: prompt,
+            profile: emptyResult.emotionalProfile,
+          });
+          setDbSearchId(searchId);
           return;
         }
 
@@ -318,6 +343,7 @@ const Chat = () => {
       }
     },
     [
+      t,
       refreshTokenBalance,
       getConversation,
       descriptionLanguage,
@@ -791,6 +817,11 @@ const Chat = () => {
                       >
                         <p className="text-xs text-muted-foreground font-body uppercase tracking-wider mb-1">Risultati per</p>
                         <p className="font-display text-sm font-semibold mb-3">&quot;{r.prompt}&quot;</p>
+                        {r.songs.length === 0 ? (
+                          <p className="text-sm font-body text-foreground/90 leading-relaxed whitespace-pre-wrap mt-1">
+                            {r.narrativeReply?.trim() || t("chat.noResultsNarrative")}
+                          </p>
+                        ) : null}
                         {isPick && r.songs.length > 0 && activeConversationId && (
                           <SearchResultTrackList
                             className="mt-2"
@@ -840,7 +871,9 @@ const Chat = () => {
                         )}
                         {!isLatest && (
                           <p className="text-xs text-muted-foreground font-body mb-2">
-                            {r.songs.length} brani
+                            {r.songs.length === 0
+                              ? t("chat.noResultsPastTurnHint")
+                              : t("chat.pastTurnTrackCount", { count: r.songs.length })}
                           </p>
                         )}
                       </div>

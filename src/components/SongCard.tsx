@@ -64,7 +64,7 @@ const SongCard = ({
       filter: ["blur(8px)", "blur(0px)"],
       duration: 900,
       delay: index * 90,
-      ease: "out(expo)",
+      ease: "outExpo",
     });
     return () => anim.pause?.();
   }, [index]);

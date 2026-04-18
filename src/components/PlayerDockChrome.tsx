@@ -139,7 +139,7 @@ export function PlayerDockChrome({
     const anim = animate(el, {
       scale: [1, 1.035, 1],
       duration: 2600,
-      ease: "inOut(sine)",
+      ease: "inOutSine",
       loop: true,
     });
     return () => {

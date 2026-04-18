@@ -55,7 +55,7 @@ const Landing = () => {
           filter: ["blur(6px)", "blur(0px)"],
           duration: 900,
           delay: stagger(55, { start: 120 }),
-          ease: "out(quart)",
+          ease: "outQuart",
         });
       }
       cleanups.push(() => splitter.revert());
@@ -77,7 +77,7 @@ const Landing = () => {
           translateY: [14, 0],
           duration: 700,
           delay: 350 + i * 90,
-          ease: "out(quart)",
+          ease: "outQuart",
         });
       });
 
@@ -91,7 +91,7 @@ const Landing = () => {
           scale: [0.96, 1],
           duration: 600,
           delay: stagger(50, { start: 700 }),
-          ease: "out(cubic)",
+          ease: "outCubic",
         });
       }
     }
@@ -109,7 +109,7 @@ const Landing = () => {
           translateY: [20, 0],
           duration: 1200,
           delay: stagger(140, { start: 200 }),
-          ease: "out(expo)",
+          ease: "outExpo",
         });
       }
     }

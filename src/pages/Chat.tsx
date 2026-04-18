@@ -43,6 +43,7 @@ import { toast } from "sonner";
 import type { ChatMessage, Conversation } from "@/types/conversation";
 import { cn } from "@/lib/utils";
 import { dedupeSongVersions, filterSongsByMinRelevance } from "@/lib/dedupeSongs";
+import { buildEmptySearchResult } from "@/lib/emptySearchResult";
 import { AssistantSongNarrative } from "@/components/AssistantSongNarrative";
 import { fallbackNarrativeForResult } from "@/lib/assistantNarrative";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -239,12 +240,12 @@ const Chat = () => {
         scale: [0.6, 1],
         rotate: [-6, 0],
         duration: 900,
-        ease: "out(expo)",
+        ease: "outExpo",
       });
       const breathe = animate(icon, {
         scale: [1, 1.04, 1],
         duration: 3400,
-        ease: "inOut(sine)",
+        ease: "inOutSine",
         loop: true,
         delay: 1100,
       });
@@ -260,7 +261,7 @@ const Chat = () => {
         filter: ["blur(5px)", "blur(0px)"],
         duration: 750,
         delay: 280 + i * 120,
-        ease: "out(quart)",
+        ease: "outQuart",
       });
     });
 
@@ -366,18 +367,42 @@ const Chat = () => {
           return;
         }
 
-        if (!data.emotionalProfile || !data.songs?.length) {
-          toast.error(t("chat.toastNoResults"));
-          setIsLoading(false);
-          void refreshTokenBalance();
-          return;
-        }
+        const rawSongs = Array.isArray(data.songs) ? data.songs : [];
+        const songs = filterSongsByMinRelevance(dedupeSongVersions(rawSongs));
 
-        const songs = filterSongsByMinRelevance(dedupeSongVersions(data.songs));
         if (!songs.length) {
-          toast.error(t("chat.toastNoResults"));
+          const narrative = data.narrativeReply?.trim() || t("chat.noResultsNarrative");
+          const emptyResult = buildEmptySearchResult({
+            prompt: displayPrompt,
+            narrative,
+            emotionalProfile: data.emotionalProfile,
+            adjacentInterpretations: data.adjacentInterpretations,
+            searchMode: mode,
+          });
+          appendAssistantResult(conversationId, emptyResult);
+          if (data.conversationMemoryUpdate?.standardAxes) {
+            mergeConversationMemoryFromUpdate(conversationId, {
+              threadSummary: data.conversationMemoryUpdate.threadSummary ?? "",
+              standardAxes: normalizeStandardAxes(
+                data.conversationMemoryUpdate.standardAxes as Record<string, unknown>
+              ),
+            });
+          } else if (data.emotionalProfile) {
+            mergeConversationMemoryFromUpdate(conversationId, {
+              threadSummary: data.emotionalProfile.mood.slice(0, 400),
+              standardAxes: emotionalProfileToAxes(data.emotionalProfile),
+            });
+          }
+          if (data.userTasteProfileUpdate) {
+            mergeUserTasteFromUpdate(data.userTasteProfileUpdate);
+          }
           setIsLoading(false);
           void refreshTokenBalance();
+          const searchId = await trackSearch({
+            rawPrompt: displayPrompt,
+            profile: emptyResult.emotionalProfile,
+          });
+          setDbSearchId(searchId);
           return;
         }
 
@@ -829,7 +854,10 @@ const Chat = () => {
   const isLuckyLatestTurn = Boolean(currentResult && isLuckyPrompt(currentResult.prompt));
   const isCreatorLatestTurn = currentResult?.searchMode === "creator_trends";
 
-  const tagSong = currentSong ?? currentResult?.songs[0];
+  const tagSong =
+    currentResult?.songs.length && currentSong
+      ? currentResult.songs.find((s) => s.id === currentSong.id) ?? currentResult.songs[0]
+      : currentResult?.songs[0] ?? null;
 
   const composerProps = useMemo(
     () => ({
@@ -1058,6 +1086,10 @@ const Chat = () => {
                             toggleFavorite={toggleFavorite}
                             tracking={r.tracking}
                           />
+                        ) : r.songs.length === 0 ? (
+                          <p className="text-sm md:text-[15px] font-body text-foreground/90 leading-relaxed whitespace-pre-wrap">
+                            {r.narrativeReply?.trim() || t("chat.noResultsNarrative")}
+                          </p>
                         ) : null}
                         {isInlineLatest &&
                           r.playbackPresentation === "inline" &&

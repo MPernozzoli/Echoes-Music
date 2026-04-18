@@ -33,7 +33,7 @@ const AppLayout = ({ children, headerVariant = "app" }: AppLayoutProps) => {
       opacity: [0.001, 1],
       translateY: [10, 0],
       duration: 460,
-      ease: "out(quart)",
+      ease: "outQuart",
     });
     return () => anim.pause?.();
   }, [location.pathname]);
