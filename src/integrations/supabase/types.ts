@@ -761,6 +761,12 @@ export type Database = {
           spotify_track_id: string | null
           title_normalized: string
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "track_streaming_id_cache"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       grant_tokens: {
         Args: {
@@ -773,12 +779,12 @@ export type Database = {
       }
       merge_track_streaming_id_cache: {
         Args: {
-          p_apple_music_catalog_id?: string | null
-          p_apple_music_storefront?: string | null
+          p_apple_music_catalog_id?: string
+          p_apple_music_storefront?: string
           p_artist_normalized: string
-          p_artwork_url_template?: string | null
-          p_preview_url?: string | null
-          p_spotify_track_id?: string | null
+          p_artwork_url_template?: string
+          p_preview_url?: string
+          p_spotify_track_id?: string
           p_title_normalized: string
         }
         Returns: undefined
