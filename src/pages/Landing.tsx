@@ -1,4 +1,6 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { animate, stagger } from "animejs";
+import { splitText } from "animejs";
 import { Trans, useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Sparkles, Search, Music, Wand2 } from "lucide-react";
@@ -29,6 +31,93 @@ const Landing = () => {
   const [heroArtworkUrls, setHeroArtworkUrls] = useState<string[]>(() => mockSongs.slice(0, 4).map((s) => s.artwork));
   const [previewSongs, setPreviewSongs] = useState<Song[]>(() => mockSongs.slice(0, 3));
   const [communityGalleryActive, setCommunityGalleryActive] = useState(false);
+
+  const heroRef = useRef<HTMLDivElement | null>(null);
+  const heroTitleRef = useRef<HTMLHeadingElement | null>(null);
+  const heroCollageRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+
+    const cleanups: Array<() => void> = [];
+
+    if (heroTitleRef.current) {
+      const splitter = splitText(heroTitleRef.current, { words: true, chars: false });
+      if (splitter.words.length > 0) {
+        splitter.words.forEach((w) => {
+          (w as HTMLElement).style.willChange = "transform, opacity, filter";
+          (w as HTMLElement).style.display = "inline-block";
+        });
+        animate(splitter.words, {
+          opacity: [0, 1],
+          translateY: [16, 0],
+          filter: ["blur(6px)", "blur(0px)"],
+          duration: 900,
+          delay: stagger(55, { start: 120 }),
+          ease: "out(quart)",
+        });
+      }
+      cleanups.push(() => splitter.revert());
+    }
+
+    const heroRoot = heroRef.current;
+    if (heroRoot) {
+      const badge = heroRoot.querySelector<HTMLElement>("[data-anime='hero-badge']");
+      const subtitle = heroRoot.querySelector<HTMLElement>("[data-anime='hero-subtitle']");
+      const composer = heroRoot.querySelector<HTMLElement>("[data-anime='hero-composer']");
+      const lucky = heroRoot.querySelector<HTMLElement>("[data-anime='hero-lucky']");
+      const chips = heroRoot.querySelectorAll<HTMLElement>("[data-anime='hero-chip']");
+
+      [badge, subtitle, composer, lucky].forEach((el, i) => {
+        if (!el) return;
+        el.style.opacity = "0";
+        animate(el, {
+          opacity: [0, 1],
+          translateY: [14, 0],
+          duration: 700,
+          delay: 350 + i * 90,
+          ease: "out(quart)",
+        });
+      });
+
+      if (chips.length > 0) {
+        chips.forEach((c) => {
+          c.style.opacity = "0";
+        });
+        animate(chips, {
+          opacity: [0, 1],
+          translateY: [10, 0],
+          scale: [0.96, 1],
+          duration: 600,
+          delay: stagger(50, { start: 700 }),
+          ease: "out(cubic)",
+        });
+      }
+    }
+
+    const collageRoot = heroCollageRef.current;
+    if (collageRoot) {
+      const tiles = collageRoot.querySelectorAll<HTMLElement>("[data-anime='hero-tile']");
+      if (tiles.length > 0) {
+        tiles.forEach((tile) => {
+          tile.style.opacity = "0";
+        });
+        animate(tiles, {
+          opacity: [0, 0.25],
+          scale: [0.7, 1],
+          translateY: [20, 0],
+          duration: 1200,
+          delay: stagger(140, { start: 200 }),
+          ease: "out(expo)",
+        });
+      }
+    }
+
+    return () => {
+      cleanups.forEach((fn) => fn());
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -163,7 +252,7 @@ const Landing = () => {
   return (
     <AppLayout headerVariant="marketing">
       <div className="min-h-screen bg-background">
-        <section className="relative min-h-[92vh] flex items-center justify-center overflow-hidden">
+        <section ref={heroRef} className="relative min-h-[92vh] flex items-center justify-center overflow-hidden">
           <img
             src={heroBg}
             alt=""
@@ -178,10 +267,11 @@ const Landing = () => {
           />
 
           {/* Silhouette copertine — parallax leggero */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
+          <div ref={heroCollageRef} className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
             {heroArtworkUrls.map((src, idx) => (
               <div
                 key={`${src}-${idx}`}
+                data-anime="hero-tile"
                 className={cn(
                   "absolute rounded-3xl overflow-hidden shadow-2xl ring-1 ring-white/10 dark:ring-white/5 opacity-25 blur-[1px]",
                   idx === 0 && "w-28 h-28 -left-4 top-[18%] rotate-[-8deg] animate-artwork-float",
@@ -197,24 +287,30 @@ const Landing = () => {
           </div>
 
           <div className="relative z-10 max-w-3xl mx-auto px-6 text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/20 bg-card/60 backdrop-blur-md text-muted-foreground text-sm font-body mb-8 animate-fade-in shadow-soft">
+            <div
+              data-anime="hero-badge"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/20 bg-card/60 backdrop-blur-md text-muted-foreground text-sm font-body mb-8 shadow-soft"
+            >
               <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
               {t("landing.badge")}
             </div>
 
-            <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-foreground leading-[1.08] mb-6 animate-fade-up text-balance">
+            <h1
+              ref={heroTitleRef}
+              className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-foreground leading-[1.08] mb-6 text-balance"
+            >
               {t("landing.title")}{" "}
               <span className="gradient-warm-text italic">{t("landing.titleItalic")}</span>
             </h1>
 
             <p
-              className="text-lg md:text-xl text-muted-foreground font-body max-w-xl mx-auto mb-10 animate-fade-up text-balance"
-              style={{ animationDelay: "100ms" }}
+              data-anime="hero-subtitle"
+              className="text-lg md:text-xl text-muted-foreground font-body max-w-xl mx-auto mb-10 text-balance"
             >
               {t("landing.subtitle")}
             </p>
 
-            <div className="max-w-2xl mx-auto mb-4 animate-fade-up" style={{ animationDelay: "200ms" }}>
+            <div data-anime="hero-composer" className="max-w-2xl mx-auto mb-4">
               <PromptInput
                 onSubmit={handlePromptSubmit}
                 allowImageAttachment
@@ -223,7 +319,7 @@ const Landing = () => {
               />
             </div>
 
-            <div className="flex justify-center mb-8 animate-fade-up" style={{ animationDelay: "250ms" }}>
+            <div data-anime="hero-lucky" className="flex justify-center mb-8">
               <Button
                 type="button"
                 variant="soft"
@@ -243,14 +339,14 @@ const Landing = () => {
               </Button>
             </div>
 
-            <div className="flex flex-wrap justify-center gap-2 animate-fade-up" style={{ animationDelay: "300ms" }}>
-              {landingPrompts.map((prompt, i) => (
+            <div className="flex flex-wrap justify-center gap-2">
+              {landingPrompts.map((prompt) => (
                 <button
                   key={prompt}
                   type="button"
+                  data-anime="hero-chip"
                   onClick={() => handlePromptSubmit({ text: prompt })}
-                  className="group text-xs px-4 py-2 rounded-full border border-border/70 bg-card/40 backdrop-blur-sm text-muted-foreground hover:text-foreground hover:border-primary/35 hover:bg-primary/[0.06] hover:shadow-md transition-all font-body hover:-rotate-1 hover:scale-[1.02] motion-reduce:hover:rotate-0 motion-reduce:hover:scale-100 animate-fade-slide-up"
-                  style={{ animationDelay: `${320 + i * 50}ms` }}
+                  className="group text-xs px-4 py-2 rounded-full border border-border/70 bg-card/40 backdrop-blur-sm text-muted-foreground hover:text-foreground hover:border-primary/35 hover:bg-primary/[0.06] hover:shadow-md transition-all font-body hover:-rotate-1 hover:scale-[1.02] motion-reduce:hover:rotate-0 motion-reduce:hover:scale-100"
                 >
                   <span className="inline-flex items-center gap-1.5">
                     <Sparkles className="w-3 h-3 text-primary/60 group-hover:text-primary transition-colors shrink-0" />

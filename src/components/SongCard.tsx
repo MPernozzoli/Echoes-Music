@@ -1,5 +1,6 @@
 import { Heart, Play } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { animate } from "animejs";
 import ResultFeedback from "./ResultFeedback";
 import MusicPlayer from "./MusicPlayer";
 import { trackInteraction } from "@/services/tracking";
@@ -51,6 +52,24 @@ const SongCard = ({
   const tintStyle = artworkTintFromId(id);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const el = cardRef.current;
+    if (!el) return;
+    el.style.opacity = "0";
+    const anim = animate(el, {
+      opacity: [0, 1],
+      translateY: [24, 0],
+      scale: [0.96, 1],
+      filter: ["blur(8px)", "blur(0px)"],
+      duration: 900,
+      delay: index * 90,
+      ease: "out(expo)",
+    });
+    return () => anim.pause?.();
+  }, [index]);
+
+  useEffect(() => {
     if (!searchResultId || !searchId || impressionTracked.current) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -93,9 +112,9 @@ const SongCard = ({
     <div
       ref={cardRef}
       onClick={handleClick}
-      style={{ ...tintStyle, animationDelay: `${index * 100}ms`, animationFillMode: "backwards" }}
+      style={tintStyle}
       className={cn(
-        "group relative overflow-hidden rounded-2xl border border-border/50 transition-all duration-500 animate-fade-up",
+        "group relative overflow-hidden rounded-2xl border border-border/50 transition-all duration-500",
         "bg-gradient-to-br from-card/95 via-card/90 to-background/80 backdrop-blur-xl shadow-elevated",
         "hover:border-primary/35 hover:shadow-glow"
       )}

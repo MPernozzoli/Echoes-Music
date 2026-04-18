@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { animate } from "animejs";
 import {
   Shuffle,
   SkipBack,
@@ -124,6 +125,27 @@ export function PlayerDockChrome({
   const { t } = useTranslation();
   const [volOpen, setVolOpen] = useState(false);
   const maxT = duration > 0 ? duration : 1;
+  const artworkRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const el = artworkRef.current;
+    if (!el) return;
+    if (!isPlaying) {
+      el.style.transform = "";
+      return undefined;
+    }
+    const anim = animate(el, {
+      scale: [1, 1.035, 1],
+      duration: 2600,
+      ease: "inOut(sine)",
+      loop: true,
+    });
+    return () => {
+      anim.pause?.();
+    };
+  }, [isPlaying]);
 
   return (
     <div className="relative w-full rounded-[1.7rem] surface-player text-foreground">
@@ -136,12 +158,12 @@ export function PlayerDockChrome({
           {/* Sinistra: copertina + testo */}
           <div className="relative flex flex-col justify-end min-w-0 min-h-[3.5rem] pl-[4.25rem] sm:pl-[5rem] md:pl-[7rem] overflow-visible">
             <div
+              ref={artworkRef}
               className={cn(
                 "peer absolute left-0 bottom-0 z-10 rounded-xl overflow-hidden shadow-elevated ring-1 ring-border/50 bg-muted",
                 "origin-bottom-left cursor-default",
-                "transition-[transform,box-shadow] duration-300 ease-out",
-                "hover:z-30 hover:scale-[1.08] hover:shadow-glow hover:ring-primary/20",
-                "motion-reduce:transition-none motion-reduce:hover:scale-100",
+                "transition-[box-shadow] duration-300 ease-out",
+                "hover:z-30 hover:shadow-glow hover:ring-primary/20",
                 artworkOverlapClassName,
               )}
               title={title}

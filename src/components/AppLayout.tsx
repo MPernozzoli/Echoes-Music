@@ -1,6 +1,8 @@
+import { useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { MessageSquare, Clock, Heart, User, LogIn } from "lucide-react";
+import { animate } from "animejs";
 import { useAuth } from "@/context/useAuth";
 import TokenBadge from "@/components/TokenBadge";
 import { AppLogo } from "@/components/AppLogo";
@@ -20,6 +22,21 @@ const AppLayout = ({ children, headerVariant = "app" }: AppLayoutProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
   const isMobile = useIsMobile();
+  const mainRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const el = mainRef.current;
+    if (!el) return;
+    const anim = animate(el, {
+      opacity: [0.001, 1],
+      translateY: [10, 0],
+      duration: 460,
+      ease: "out(quart)",
+    });
+    return () => anim.pause?.();
+  }, [location.pathname]);
 
   const navItems = [
     { labelKey: "nav.chat", path: "/chat", icon: MessageSquare },
@@ -103,6 +120,7 @@ const AppLayout = ({ children, headerVariant = "app" }: AppLayoutProps) => {
       <TokenLowBanner />
 
       <main
+        ref={mainRef}
         className="flex-1"
         style={
           isMarketing

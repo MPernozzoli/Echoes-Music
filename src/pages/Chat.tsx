@@ -48,6 +48,7 @@ import { fallbackNarrativeForResult } from "@/lib/assistantNarrative";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
 import { usePrefetchAppleMusicCatalogIds } from "@/hooks/usePrefetchAppleMusicCatalogIds";
+import { animate, stagger } from "animejs";
 import { isLuckyPrompt } from "@/constants/luckyPrompt";
 import type { MusicSearchMode } from "@/services/musicSearchApi";
 
@@ -101,6 +102,7 @@ const Chat = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [conversationsPanelOpen, setConversationsPanelOpen] = useState(true);
   const chatDockRef = useRef<HTMLDivElement>(null);
+  const chatEmptyRef = useRef<HTMLDivElement | null>(null);
   const [chatDockInset, setChatDockInset] = useState(0);
 
   const isMobile = useIsMobile();
@@ -216,6 +218,57 @@ const Chat = () => {
   );
   const currentSong = queue[currentIndex] ?? currentResult?.songs[0] ?? null;
   const hasAnyMessage = (activeConversation?.messages.length ?? 0) > 0;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    if (hasAnyMessage || isLoading) return;
+    const root = chatEmptyRef.current;
+    if (!root) return;
+
+    const icon = root.querySelector<HTMLElement>("[data-anime='empty-icon']");
+    const title = root.querySelector<HTMLElement>("[data-anime='empty-title']");
+    const body = root.querySelector<HTMLElement>("[data-anime='empty-body']");
+
+    const cleanups: Array<() => void> = [];
+
+    if (icon) {
+      icon.style.opacity = "0";
+      animate(icon, {
+        opacity: [0, 1],
+        scale: [0.6, 1],
+        rotate: [-6, 0],
+        duration: 900,
+        ease: "out(expo)",
+      });
+      const breathe = animate(icon, {
+        scale: [1, 1.04, 1],
+        duration: 3400,
+        ease: "inOut(sine)",
+        loop: true,
+        delay: 1100,
+      });
+      cleanups.push(() => breathe.pause?.());
+    }
+
+    [title, body].forEach((el, i) => {
+      if (!el) return;
+      el.style.opacity = "0";
+      animate(el, {
+        opacity: [0, 1],
+        translateY: [14, 0],
+        filter: ["blur(5px)", "blur(0px)"],
+        duration: 750,
+        delay: 280 + i * 120,
+        ease: "out(quart)",
+      });
+    });
+
+    return () => {
+      cleanups.forEach((fn) => fn());
+    };
+  }, [hasAnyMessage, isLoading, activeConversationId]);
+
   const appleMusicLinked =
     appleMusicAuthorized || appleMusicLinkedAccount || (appleMusicAvailable && appleMusicAuthorized);
   const streamingLinked = spotifyConnected || appleMusicLinked;
@@ -874,7 +927,7 @@ const Chat = () => {
                 style={{ paddingBottom: scrollPadBottom }}
               >
               {!hasAnyMessage && !isLoading && (
-                <div className="flex flex-col items-center justify-center min-h-[min(68vh,560px)] gap-12 md:gap-14 animate-fade-in px-3 md:px-6">
+                <div ref={chatEmptyRef} className="flex flex-col items-center justify-center min-h-[min(68vh,560px)] gap-12 md:gap-14 px-3 md:px-6">
                   <div className="text-center max-w-lg mx-auto relative w-full">
                     <div
                       className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(100%,28rem)] aspect-square rounded-full bg-gradient-to-br from-primary/20 via-primary/5 to-transparent opacity-70 blur-3xl motion-reduce:opacity-40"
@@ -884,13 +937,22 @@ const Chat = () => {
                       className="pointer-events-none absolute inset-0 opacity-[0.04] dark:opacity-[0.07] [background-image:linear-gradient(hsl(var(--foreground)/0.35)_1px,transparent_1px),linear-gradient(90deg,hsl(var(--foreground)/0.35)_1px,transparent_1px)] [background-size:24px_24px] rounded-[2rem]"
                       aria-hidden
                     />
-                    <div className="relative w-24 h-24 md:w-28 md:h-28 rounded-[1.35rem] bg-gradient-to-br from-primary/30 via-primary/12 to-emotional-tag/10 flex items-center justify-center mx-auto mb-8 md:mb-10 ring-1 ring-primary/25 shadow-glow motion-safe:animate-glow-pulse">
+                    <div
+                      data-anime="empty-icon"
+                      className="relative w-24 h-24 md:w-28 md:h-28 rounded-[1.35rem] bg-gradient-to-br from-primary/30 via-primary/12 to-emotional-tag/10 flex items-center justify-center mx-auto mb-8 md:mb-10 ring-1 ring-primary/25 shadow-glow"
+                    >
                       <Lightbulb className="w-11 h-11 md:w-12 md:h-12 text-primary drop-shadow-sm" />
                     </div>
-                    <h2 className="font-display text-3xl md:text-4xl font-semibold mb-4 md:mb-5 text-foreground text-balance tracking-tight">
+                    <h2
+                      data-anime="empty-title"
+                      className="font-display text-3xl md:text-4xl font-semibold mb-4 md:mb-5 text-foreground text-balance tracking-tight"
+                    >
                       {t("chat.emptyTitle")}
                     </h2>
-                    <p className="text-muted-foreground font-body text-sm md:text-base leading-relaxed max-w-md mx-auto text-balance">
+                    <p
+                      data-anime="empty-body"
+                      className="text-muted-foreground font-body text-sm md:text-base leading-relaxed max-w-md mx-auto text-balance"
+                    >
                       {t("chat.emptyBody")}
                     </p>
                   </div>
@@ -1201,14 +1263,15 @@ const Chat = () => {
     </AppLayout>
 
     <div
+      aria-hidden
+      className="fixed inset-x-0 bottom-0 z-[41] pointer-events-none bg-gradient-to-t from-background via-background/90 to-transparent"
+      style={{ height: `calc(var(--global-player-offset, ${isMobile ? "56px" : "0px"}) + 7.5rem)` }}
+    />
+    <div
       ref={chatDockRef}
       className="fixed inset-x-0 z-[42] pointer-events-none"
       style={{ bottom: `var(--global-player-offset, ${isMobile ? "56px" : "0px"})` }}
     >
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-background via-background/85 to-transparent"
-        aria-hidden
-      />
       <div className="relative px-3 md:px-8 pt-3 pb-3 md:pb-5">
         <div className="max-w-3xl w-full mx-auto space-y-2 pointer-events-auto">
           {dbSearchId && (
