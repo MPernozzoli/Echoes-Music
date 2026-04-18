@@ -863,7 +863,7 @@ const Chat = () => {
     () => ({
       onSubmit: handleComposerSubmit,
       isLoading,
-      size: (!hasAnyMessage && !isLoading ? "hero" : "compact") as const,
+      size: (!hasAnyMessage && !isLoading ? "hero" : "compact") as "hero" | "compact",
       placeholder: t("chat.composerPlaceholder"),
       creatorPlaceholder: t("chat.creatorComposerPlaceholder"),
       allowImageAttachment: true as const,

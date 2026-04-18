@@ -35,7 +35,9 @@ const AppLayout = ({ children, headerVariant = "app" }: AppLayoutProps) => {
       duration: 460,
       ease: "outQuart",
     });
-    return () => anim.pause?.();
+    return () => {
+      anim.pause?.();
+    };
   }, [location.pathname]);
 
   const navItems = [
