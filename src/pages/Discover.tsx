@@ -22,6 +22,7 @@ import { useConversations } from "@/context/useConversations";
 import { memoryOrFromProfile } from "@/lib/conversationMemory";
 import { callMusicSearch } from "@/services/musicSearchApi";
 import {
+  getRecentFeedbackLearningSummary,
   trackSearch,
   trackResults,
   trackInteraction,
@@ -210,12 +211,14 @@ const Chat = () => {
       const memoryPayload = memoryOrFromProfile(conv.conversationMemory, conv.conversationProfile);
 
       try {
+        const feedbackLearningSummary = await getRecentFeedbackLearningSummary();
         const data = await callMusicSearch({
           prompt,
           ...(mode !== "search" ? { mode } : {}),
           descriptionLanguage,
           conversationMemory: memoryPayload,
           userTasteProfile,
+          feedbackLearningSummary,
           conversationId,
         });
 

@@ -4,6 +4,28 @@ import type { Song, EmotionalProfile } from "@/data/mockData";
 
 const sessionId = getSessionId();
 
+export interface FeedbackLearningSummary {
+  searchFeedback: Array<{
+    label: string;
+    text?: string;
+    prompt?: string;
+  }>;
+  positiveTracks: Array<{
+    title: string;
+    artist: string;
+    prompt?: string;
+    label: string;
+  }>;
+  negativeTracks: Array<{
+    title: string;
+    artist: string;
+    prompt?: string;
+    label: string;
+    text?: string;
+  }>;
+  negativePatterns: string[];
+}
+
 async function authUserId(): Promise<string | null> {
   const { data: { session } } = await supabase.auth.getSession();
   return session?.user?.id ?? null;
@@ -111,8 +133,10 @@ export async function trackSearchFeedback(params: {
   label: string;
   text?: string;
 }) {
+  const uid = await authUserId();
   const { error } = await supabase.from("search_feedback").insert({
     search_id: params.searchId,
+    user_id: uid,
     anonymous_session_id: sessionId,
     feedback_label: params.label,
     optional_text_feedback: params.text ?? null,
@@ -127,14 +151,111 @@ export async function trackResultFeedback(params: {
   label: string;
   text?: string;
 }) {
+  const uid = await authUserId();
   const { error } = await supabase.from("result_feedback").insert({
     search_result_id: params.searchResultId,
     search_id: params.searchId,
+    user_id: uid,
     anonymous_session_id: sessionId,
     feedback_label: params.label,
     optional_text_feedback: params.text ?? null,
   });
   if (error) console.error("trackResultFeedback error:", error);
+}
+
+export async function getRecentFeedbackLearningSummary(limit = 24): Promise<FeedbackLearningSummary | null> {
+  const uid = await authUserId();
+
+  const searchFeedbackQuery = supabase
+    .from("search_feedback")
+    .select("search_id, feedback_label, optional_text_feedback, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  const resultFeedbackQuery = supabase
+    .from("result_feedback")
+    .select("search_id, search_result_id, feedback_label, optional_text_feedback, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  const [searchFeedbackRes, resultFeedbackRes] = await Promise.all([
+    uid ? searchFeedbackQuery.eq("user_id", uid) : searchFeedbackQuery.eq("anonymous_session_id", sessionId),
+    uid ? resultFeedbackQuery.eq("user_id", uid) : resultFeedbackQuery.eq("anonymous_session_id", sessionId),
+  ]);
+
+  if (searchFeedbackRes.error) console.error("getRecentFeedbackLearningSummary search error:", searchFeedbackRes.error);
+  if (resultFeedbackRes.error) console.error("getRecentFeedbackLearningSummary result error:", resultFeedbackRes.error);
+
+  const searchFeedback = searchFeedbackRes.data ?? [];
+  const resultFeedback = resultFeedbackRes.data ?? [];
+  if (!searchFeedback.length && !resultFeedback.length) return null;
+
+  const searchIds = Array.from(new Set([
+    ...searchFeedback.map((f) => f.search_id),
+    ...resultFeedback.map((f) => f.search_id),
+  ].filter(Boolean)));
+  const resultIds = Array.from(new Set(resultFeedback.map((f) => f.search_result_id).filter(Boolean)));
+
+  const [searchRowsRes, resultRowsRes] = await Promise.all([
+    searchIds.length
+      ? supabase.from("searches").select("id, raw_prompt").in("id", searchIds)
+      : Promise.resolve({ data: [], error: null }),
+    resultIds.length
+      ? supabase.from("search_results").select("id, track_title, artist_name").in("id", resultIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  if (searchRowsRes.error) console.error("getRecentFeedbackLearningSummary searches error:", searchRowsRes.error);
+  if (resultRowsRes.error) console.error("getRecentFeedbackLearningSummary results error:", resultRowsRes.error);
+
+  const promptBySearchId = new Map((searchRowsRes.data ?? []).map((row) => [row.id, row.raw_prompt]));
+  const trackByResultId = new Map((resultRowsRes.data ?? []).map((row) => [
+    row.id,
+    { title: row.track_title, artist: row.artist_name },
+  ]));
+
+  const normalizedSearchFeedback = searchFeedback
+    .filter((f) => f.feedback_label !== "good")
+    .slice(0, 8)
+    .map((f) => ({
+      label: f.feedback_label,
+      ...(f.optional_text_feedback ? { text: f.optional_text_feedback } : {}),
+      ...(promptBySearchId.get(f.search_id) ? { prompt: promptBySearchId.get(f.search_id) } : {}),
+    }));
+
+  const positiveTracks: FeedbackLearningSummary["positiveTracks"] = [];
+  const negativeTracks: FeedbackLearningSummary["negativeTracks"] = [];
+  const negativePatterns = new Set<string>();
+
+  for (const f of resultFeedback) {
+    const track = trackByResultId.get(f.search_result_id);
+    if (!track) continue;
+    const label = f.feedback_label;
+    const prompt = promptBySearchId.get(f.search_id);
+    if (label === "good match") {
+      positiveTracks.push({
+        ...track,
+        ...(prompt ? { prompt } : {}),
+        label,
+      });
+      continue;
+    }
+    negativeTracks.push({
+      ...track,
+      ...(prompt ? { prompt } : {}),
+      label,
+      ...(f.optional_text_feedback ? { text: f.optional_text_feedback } : {}),
+    });
+    if (label && label !== "custom") negativePatterns.add(label);
+    if (f.optional_text_feedback) negativePatterns.add(f.optional_text_feedback.slice(0, 120));
+  }
+
+  return {
+    searchFeedback: normalizedSearchFeedback,
+    positiveTracks: positiveTracks.slice(0, 8),
+    negativeTracks: negativeTracks.slice(0, 10),
+    negativePatterns: Array.from(negativePatterns).slice(0, 10),
+  };
 }
 
 // --- USER SETTINGS ---

@@ -18,7 +18,13 @@ import { usePlaybackQueue } from "@/context/usePlaybackQueue";
 import { useConversations } from "@/context/useConversations";
 import { memoryOrFromProfile } from "@/lib/conversationMemory";
 import { callMusicSearch } from "@/services/musicSearchApi";
-import { trackSearch, trackResults, trackInteraction, maybeCreateTrainingEvent } from "@/services/tracking";
+import {
+  getRecentFeedbackLearningSummary,
+  trackSearch,
+  trackResults,
+  trackInteraction,
+  maybeCreateTrainingEvent,
+} from "@/services/tracking";
 import { emotionalProfileToAxes } from "@/types/conversation";
 import { normalizeStandardAxes } from "@/lib/memoryMerge";
 import { Button } from "@/components/ui/button";
@@ -324,6 +330,7 @@ const Chat = () => {
       const memoryPayload = memoryOrFromProfile(conv.conversationMemory, conv.conversationProfile);
 
       try {
+        const feedbackLearningSummary = await getRecentFeedbackLearningSummary();
         const data = await callMusicSearch({
           ...(prompt.trim() ? { prompt: prompt.trim() } : {}),
           ...(media
@@ -334,6 +341,7 @@ const Chat = () => {
           streamingProviderPreference,
           conversationMemory: memoryPayload,
           userTasteProfile,
+          feedbackLearningSummary,
           conversationId,
         });
 

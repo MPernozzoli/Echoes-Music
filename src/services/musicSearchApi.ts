@@ -2,6 +2,7 @@ import type { EmotionalProfile, Song } from "@/data/mockData";
 import type { ConversationMemory, UserTasteProfile } from "@/types/conversation";
 import { supabase } from "@/integrations/supabase/client";
 import { getSessionId } from "@/services/sessionId";
+import type { FeedbackLearningSummary } from "@/services/tracking";
 
 export type MusicSearchMode = "search" | "lucky" | "memory_compact" | "creator_trends";
 export type StreamingProviderPreference = "auto" | "spotify" | "apple_music";
@@ -18,6 +19,7 @@ export interface MusicSearchRequest {
   streamingProviderPreference?: StreamingProviderPreference;
   conversationMemory?: ConversationMemory | null;
   userTasteProfile?: UserTasteProfile | null;
+  feedbackLearningSummary?: FeedbackLearningSummary | null;
   lastUserPrompt?: string;
 }
 

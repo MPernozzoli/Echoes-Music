@@ -740,6 +740,28 @@ interface AIInterpretation {
   };
 }
 
+type FeedbackLearningSummary = {
+  searchFeedback?: Array<{
+    label?: string;
+    text?: string;
+    prompt?: string;
+  }>;
+  positiveTracks?: Array<{
+    title?: string;
+    artist?: string;
+    prompt?: string;
+    label?: string;
+  }>;
+  negativeTracks?: Array<{
+    title?: string;
+    artist?: string;
+    prompt?: string;
+    label?: string;
+    text?: string;
+  }>;
+  negativePatterns?: string[];
+};
+
 type PreparedSuggestion = {
   title: string;
   artist: string;
@@ -784,6 +806,62 @@ function scoreTrackAgainstSuggestion(track: TrackResult, suggestion: PreparedSug
   if (exactArtist) return Math.max(66, suggestion.relevanceScore - 16) - versionPenalty;
   if (titleContains) return suggestion.relevanceScore - 26 - versionPenalty;
   return 0;
+}
+
+function sanitizeFeedbackLearningSummary(raw: unknown): FeedbackLearningSummary | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const input = raw as FeedbackLearningSummary;
+  const cleanText = (value: unknown, max = 160): string | undefined => {
+    if (typeof value !== 'string') return undefined;
+    const t = normalizeWhitespace(value).slice(0, max);
+    return t || undefined;
+  };
+  const searchFeedback = Array.isArray(input.searchFeedback)
+    ? input.searchFeedback.slice(0, 8).map((f) => ({
+      ...(cleanText(f.label, 64) ? { label: cleanText(f.label, 64) } : {}),
+      ...(cleanText(f.text) ? { text: cleanText(f.text) } : {}),
+      ...(cleanText(f.prompt) ? { prompt: cleanText(f.prompt) } : {}),
+    })).filter((f) => f.label || f.text)
+    : [];
+  const positiveTracks = Array.isArray(input.positiveTracks)
+    ? input.positiveTracks.slice(0, 8).map((t) => ({
+      ...(cleanText(t.title, 120) ? { title: cleanText(t.title, 120) } : {}),
+      ...(cleanText(t.artist, 120) ? { artist: cleanText(t.artist, 120) } : {}),
+      ...(cleanText(t.prompt) ? { prompt: cleanText(t.prompt) } : {}),
+      ...(cleanText(t.label, 64) ? { label: cleanText(t.label, 64) } : {}),
+    })).filter((t) => t.title || t.artist)
+    : [];
+  const negativeTracks = Array.isArray(input.negativeTracks)
+    ? input.negativeTracks.slice(0, 10).map((t) => ({
+      ...(cleanText(t.title, 120) ? { title: cleanText(t.title, 120) } : {}),
+      ...(cleanText(t.artist, 120) ? { artist: cleanText(t.artist, 120) } : {}),
+      ...(cleanText(t.prompt) ? { prompt: cleanText(t.prompt) } : {}),
+      ...(cleanText(t.label, 64) ? { label: cleanText(t.label, 64) } : {}),
+      ...(cleanText(t.text) ? { text: cleanText(t.text) } : {}),
+    })).filter((t) => t.title || t.artist || t.label || t.text)
+    : [];
+  const negativePatterns = Array.isArray(input.negativePatterns)
+    ? input.negativePatterns.map((p) => cleanText(p, 120)).filter((p): p is string => Boolean(p)).slice(0, 10)
+    : [];
+  if (!searchFeedback.length && !positiveTracks.length && !negativeTracks.length && !negativePatterns.length) return null;
+  return { searchFeedback, positiveTracks, negativeTracks, negativePatterns };
+}
+
+function feedbackAdjustment(track: TrackResult, feedback: FeedbackLearningSummary | null | undefined): number {
+  if (!feedback) return 0;
+  const trackWorkKey = workKey(track.title, track.artist);
+  let adjustment = 0;
+
+  for (const liked of feedback.positiveTracks ?? []) {
+    if (!liked.title || !liked.artist) continue;
+    if (workKey(liked.title, liked.artist) === trackWorkKey) adjustment += 6;
+  }
+  for (const disliked of feedback.negativeTracks ?? []) {
+    if (!disliked.title || !disliked.artist) continue;
+    if (workKey(disliked.title, disliked.artist) === trackWorkKey) adjustment -= 14;
+  }
+
+  return Math.max(-18, Math.min(8, adjustment));
 }
 
 function diversifySongsByArtist<T extends { artist: string }>(songs: T[], limit: number): T[] {
@@ -856,8 +934,9 @@ Still output full searchQueries and songSuggestions (6-8 real songs).
 
   const memoryBlock = `
 ## Memory (structured, not full chat):
-The user message may include JSON blocks "conversationMemory" and "userTasteProfile". Use them ONLY for continuity and taste defaults.
+The user message may include JSON blocks "conversationMemory", "userTasteProfile", and "feedbackLearningSummary". Use them ONLY for continuity, taste defaults, and recent preference calibration.
 The **current user message** always wins if it conflicts with memory.
+Treat feedbackLearningSummary as explicit user feedback from prior results: avoid repeating tracks or patterns marked negative unless the current prompt clearly asks for them; softly favor tracks/artists similar to positive feedback when they fit the current prompt. Do not mention feedback in the reply.
 After interpreting, you MUST output:
 - **conversationMemoryUpdate**: a 2-4 sentence threadSummary merging prior summary with this turn; **standardAxes** using ONLY enums: energy/catharsis/emotionalTension in low|medium|high, intimacy integer 1-5, dominantThemes array (max 8 short tags), moodLabel short.
 - **userTasteProfileUpdate**: optional incremental globalSummary (brief), userStandardAxes (same schema), genreAffinityTags (max 12), preferredLanguages (max 6). Only include fields that should change.`;
@@ -1258,6 +1337,7 @@ function buildUserContent(
   prompt: string,
   conversationMemory: Record<string, unknown> | null | undefined,
   userTasteProfile: Record<string, unknown> | null | undefined,
+  feedbackLearningSummary: FeedbackLearningSummary | null | undefined,
 ): string {
   const parts: string[] = [];
   if (conversationMemory && Object.keys(conversationMemory).length > 0) {
@@ -1265,6 +1345,9 @@ function buildUserContent(
   }
   if (userTasteProfile && Object.keys(userTasteProfile).length > 0) {
     parts.push(`userTasteProfile (JSON): ${JSON.stringify(userTasteProfile)}`);
+  }
+  if (feedbackLearningSummary && Object.keys(feedbackLearningSummary).length > 0) {
+    parts.push(`feedbackLearningSummary (JSON): ${JSON.stringify(feedbackLearningSummary)}`);
   }
   parts.push(
     `Current user prompt: ${prompt || '(none — user attached an image only, or lucky mode; infer from image and/or memory as instructed)'}`,
@@ -1328,6 +1411,7 @@ Deno.serve(async (req) => {
       streamingProviderPreference = 'auto',
       conversationMemory,
       userTasteProfile,
+      feedbackLearningSummary: rawFeedbackLearningSummary,
       lastUserPrompt,
     } = body as {
       prompt?: string;
@@ -1338,8 +1422,10 @@ Deno.serve(async (req) => {
       streamingProviderPreference?: StreamingProviderPreference;
       conversationMemory?: Record<string, unknown> | null;
       userTasteProfile?: Record<string, unknown> | null;
+      feedbackLearningSummary?: FeedbackLearningSummary | null;
       lastUserPrompt?: string;
     };
+    const feedbackLearningSummary = sanitizeFeedbackLearningSummary(rawFeedbackLearningSummary);
 
     const imageB64 = typeof rawImageB64 === 'string' ? rawImageB64.replace(/\s/g, '') : '';
     const mimeIn = typeof rawImageMime === 'string' ? rawImageMime.trim().toLowerCase() : '';
@@ -1434,6 +1520,7 @@ Deno.serve(async (req) => {
       mode === 'lucky' ? '' : prompt,
       conversationMemory ?? null,
       userTasteProfile ?? null,
+      feedbackLearningSummary,
     );
 
     if (userId && admin) {
