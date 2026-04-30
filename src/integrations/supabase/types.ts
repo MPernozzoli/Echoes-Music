@@ -737,6 +737,7 @@ export type Database = {
           id: string
           sync_favorites_echoes_playlist: boolean
           theme: string | null
+          tutorial_completed_at: string | null
           ui_language: string | null
           updated_at: string
           user_id: string | null
@@ -755,6 +756,7 @@ export type Database = {
           id?: string
           sync_favorites_echoes_playlist?: boolean
           theme?: string | null
+          tutorial_completed_at?: string | null
           ui_language?: string | null
           updated_at?: string
           user_id?: string | null
@@ -773,6 +775,7 @@ export type Database = {
           id?: string
           sync_favorites_echoes_playlist?: boolean
           theme?: string | null
+          tutorial_completed_at?: string | null
           ui_language?: string | null
           updated_at?: string
           user_id?: string | null
