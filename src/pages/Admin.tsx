@@ -3,11 +3,13 @@ import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/useAuth";
 import AppLayout from "@/components/AppLayout";
+import AdminDiscounts from "@/components/AdminDiscounts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2, ShieldCheck, Crown, X, Search, ShieldPlus, ShieldMinus, Ban, Unlock } from "lucide-react";
+import { Loader2, ShieldCheck, Crown, X, Search, ShieldPlus, ShieldMinus, Ban, Unlock, Tag } from "lucide-react";
 
 interface AdminUserRow {
   user_id: string;
@@ -128,178 +130,137 @@ const Admin = () => {
   return (
     <AppLayout>
       <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 space-y-6">
-        <header className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h1 className="font-display text-3xl font-semibold flex items-center gap-2">
-              <ShieldCheck className="w-7 h-7 text-primary" /> Admin
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {users.length} utenti · {proCount} PRO attivi · {blockedCount} bloccati
-            </p>
-          </div>
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cerca per email o nome…"
-              className="pl-9"
-            />
-          </div>
+        <header>
+          <h1 className="font-display text-3xl font-semibold flex items-center gap-2">
+            <ShieldCheck className="w-7 h-7 text-primary" /> Admin
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {users.length} utenti · {proCount} PRO attivi · {blockedCount} bloccati
+          </p>
         </header>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-24">
-            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <div className="rounded-xl border border-borderSubtle overflow-hidden bg-card/40">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="text-left px-4 py-3">Utente</th>
-                    <th className="text-left px-4 py-3">Stato</th>
-                    <th className="text-left px-4 py-3 hidden md:table-cell">Scadenza</th>
-                    <th className="text-right px-4 py-3">Azioni</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((u) => {
-                    const isPro = u.plan === "premium" && u.status === "active";
-                    const isSelf = u.user_id === user.id;
-                    const proBusy = busyId === `pro:${u.user_id}`;
-                    const adminBusy = busyId === `admin:${u.user_id}`;
-                    const blockBusy = busyId === `block:${u.user_id}`;
-                    return (
-                      <tr key={u.user_id} className="border-t border-borderSubtle/60 hover:bg-muted/20">
-                        <td className="px-4 py-3">
-                          <div className="font-medium flex items-center gap-2">
-                            {u.email ?? "—"}
-                            {u.is_admin && (
-                              <Badge variant="secondary" className="text-[10px]">ADMIN</Badge>
-                            )}
-                            {u.is_blocked && (
-                              <Badge variant="destructive" className="text-[10px]">BLOCCATO</Badge>
-                            )}
-                          </div>
-                          {u.display_name && (
-                            <div className="text-xs text-muted-foreground">{u.display_name}</div>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          {isPro ? (
-                            <Badge className="bg-amber-500/15 text-amber-600 hover:bg-amber-500/20 border-amber-500/30">
-                              <Crown className="w-3 h-3 mr-1" /> PRO
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline">Free</Badge>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 hidden md:table-cell text-muted-foreground text-xs">
-                          {u.current_period_end
-                            ? new Date(u.current_period_end).toLocaleDateString()
-                            : "—"}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex justify-end gap-2 flex-wrap">
-                            {isPro ? (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                disabled={proBusy}
-                                onClick={() => revokePro(u.user_id)}
-                              >
-                                {proBusy ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <><X className="w-4 h-4 mr-1" /> PRO</>
-                                )}
-                              </Button>
-                            ) : (
-                              <Button
-                                size="sm"
-                                disabled={proBusy}
-                                onClick={() => grantPro(u.user_id)}
-                              >
-                                {proBusy ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <><Crown className="w-4 h-4 mr-1" /> PRO</>
-                                )}
-                              </Button>
-                            )}
+        <Tabs defaultValue="utenti">
+          <TabsList>
+            <TabsTrigger value="utenti" className="gap-1.5">
+              <ShieldCheck className="w-4 h-4" /> Utenti
+            </TabsTrigger>
+            <TabsTrigger value="sconti" className="gap-1.5">
+              <Tag className="w-4 h-4" /> Sconti
+            </TabsTrigger>
+          </TabsList>
 
-                            {u.is_admin ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={adminBusy || isSelf}
-                                onClick={() => revokeAdmin(u.user_id)}
-                                title={isSelf ? "Non puoi rimuovere il tuo ruolo admin" : undefined}
-                              >
-                                {adminBusy ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <><ShieldMinus className="w-4 h-4 mr-1" /> Admin</>
-                                )}
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={adminBusy}
-                                onClick={() => grantAdmin(u.user_id)}
-                              >
-                                {adminBusy ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <><ShieldPlus className="w-4 h-4 mr-1" /> Admin</>
-                                )}
-                              </Button>
-                            )}
-
-                            {u.is_blocked ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={blockBusy}
-                                onClick={() => unblockUser(u.user_id)}
-                              >
-                                {blockBusy ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <><Unlock className="w-4 h-4 mr-1" /> Sblocca</>
-                                )}
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                disabled={blockBusy || isSelf}
-                                onClick={() => blockUser(u.user_id)}
-                                title={isSelf ? "Non puoi bloccare il tuo account" : undefined}
-                              >
-                                {blockBusy ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <><Ban className="w-4 h-4 mr-1" /> Blocca</>
-                                )}
-                              </Button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {filtered.length === 0 && (
-                    <tr><td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">Nessun utente trovato.</td></tr>
-                  )}
-                </tbody>
-              </table>
+          <TabsContent value="utenti" className="mt-4 space-y-4">
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Cerca per email o nome…"
+                className="pl-9"
+              />
             </div>
-          </div>
-        )}
+
+            {loading ? (
+              <div className="flex items-center justify-center py-24">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="rounded-xl border border-borderSubtle overflow-hidden bg-card/40">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
+                      <tr>
+                        <th className="text-left px-4 py-3">Utente</th>
+                        <th className="text-left px-4 py-3">Stato</th>
+                        <th className="text-left px-4 py-3 hidden md:table-cell">Scadenza</th>
+                        <th className="text-right px-4 py-3">Azioni</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map((u) => {
+                        const isPro = u.plan === "premium" && u.status === "active";
+                        const isSelf = u.user_id === user.id;
+                        const proBusy = busyId === `pro:${u.user_id}`;
+                        const adminBusy = busyId === `admin:${u.user_id}`;
+                        const blockBusy = busyId === `block:${u.user_id}`;
+                        return (
+                          <tr key={u.user_id} className="border-t border-borderSubtle/60 hover:bg-muted/20">
+                            <td className="px-4 py-3">
+                              <div className="font-medium flex items-center gap-2">
+                                {u.email ?? "—"}
+                                {u.is_admin && (
+                                  <Badge variant="secondary" className="text-[10px]">ADMIN</Badge>
+                                )}
+                                {u.is_blocked && (
+                                  <Badge variant="destructive" className="text-[10px]">BLOCCATO</Badge>
+                                )}
+                              </div>
+                              {u.display_name && (
+                                <div className="text-xs text-muted-foreground">{u.display_name}</div>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {isPro ? (
+                                <Badge className="bg-amber-500/15 text-amber-600 hover:bg-amber-500/20 border-amber-500/30">
+                                  <Crown className="w-3 h-3 mr-1" /> PRO
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline">Free</Badge>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 hidden md:table-cell text-muted-foreground text-xs">
+                              {u.current_period_end
+                                ? new Date(u.current_period_end).toLocaleDateString()
+                                : "—"}
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <div className="flex justify-end gap-2 flex-wrap">
+                                {isPro ? (
+                                  <Button variant="ghost" size="sm" disabled={proBusy} onClick={() => revokePro(u.user_id)}>
+                                    {proBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><X className="w-4 h-4 mr-1" /> PRO</>}
+                                  </Button>
+                                ) : (
+                                  <Button size="sm" disabled={proBusy} onClick={() => grantPro(u.user_id)}>
+                                    {proBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Crown className="w-4 h-4 mr-1" /> PRO</>}
+                                  </Button>
+                                )}
+                                {u.is_admin ? (
+                                  <Button variant="outline" size="sm" disabled={adminBusy || isSelf} onClick={() => revokeAdmin(u.user_id)} title={isSelf ? "Non puoi rimuovere il tuo ruolo admin" : undefined}>
+                                    {adminBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><ShieldMinus className="w-4 h-4 mr-1" /> Admin</>}
+                                  </Button>
+                                ) : (
+                                  <Button variant="outline" size="sm" disabled={adminBusy} onClick={() => grantAdmin(u.user_id)}>
+                                    {adminBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><ShieldPlus className="w-4 h-4 mr-1" /> Admin</>}
+                                  </Button>
+                                )}
+                                {u.is_blocked ? (
+                                  <Button variant="outline" size="sm" disabled={blockBusy} onClick={() => unblockUser(u.user_id)}>
+                                    {blockBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Unlock className="w-4 h-4 mr-1" /> Sblocca</>}
+                                  </Button>
+                                ) : (
+                                  <Button variant="destructive" size="sm" disabled={blockBusy || isSelf} onClick={() => blockUser(u.user_id)} title={isSelf ? "Non puoi bloccare il tuo account" : undefined}>
+                                    {blockBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Ban className="w-4 h-4 mr-1" /> Blocca</>}
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {filtered.length === 0 && (
+                        <tr><td colSpan={4} className="px-4 py-12 text-center text-muted-foreground">Nessun utente trovato.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="sconti" className="mt-4">
+            <AdminDiscounts />
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );
