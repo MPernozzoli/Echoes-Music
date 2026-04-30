@@ -881,15 +881,15 @@ const Chat = () => {
   return (
     <>
     <AppLayout>
-      <div className="relative flex flex-col md:flex-row w-full max-w-[1600px] mx-auto min-h-[calc(100vh-3.5rem)] isolate">
+      <div className="relative flex h-[calc(100dvh-3.5rem-var(--global-player-offset,0px))] w-full max-w-[1600px] mx-auto flex-col overflow-hidden md:flex-row isolate">
         <aside
           className={cn(
-            "hidden md:flex shrink-0 flex-col border-r border-borderSubtle/50 bg-background/40 transition-[width] duration-300 ease-out overflow-hidden",
+            "hidden md:flex h-full shrink-0 flex-col border-r border-borderSubtle/50 bg-background/40 transition-[width] duration-300 ease-out overflow-hidden",
             conversationsPanelOpen ? "w-[260px]" : "w-0 border-transparent"
           )}
           aria-hidden={!conversationsPanelOpen}
         >
-          <div className="w-[260px] h-full min-h-[calc(100vh-3.5rem)] max-h-[calc(100vh-3.5rem)] flex flex-col px-3 pt-5 pb-4 box-border">
+          <div className="w-[260px] h-full min-h-0 flex flex-col px-3 pt-5 pb-4 box-border">
             {sidebar}
           </div>
         </aside>
