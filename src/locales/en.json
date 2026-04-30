@@ -13,6 +13,8 @@
     "loginError": "Login failed. Please try again.",
     "subtitle": "Discover music that resonates with your emotions",
     "continueWithGoogle": "Continue with Google",
+    "termsPrefix": "By continuing, you agree to our",
+    "termsAnd": "and",
     "referralPending": "Referral detected: finish with Google and the invite bonus will be credited automatically."
   },
   "invite": {
@@ -53,6 +55,7 @@
     "liveCommunityArtwork": "Powered by recent tracked searches from the Echoes community (signed-in and anonymous), when available.",
     "enterEchoes": "Enter Echoes",
     "footerTagline": "Music discovery, reimagined.",
+    "footerTerms": "Terms of Service",
     "footerPrivacy": "Privacy Policy",
     "footerCookies": "Cookie Policy",
     "toastRateLimit": "Too many requests. Try again shortly.",
@@ -122,20 +125,29 @@
     "goToStep": "Go to tutorial step {{step}}",
     "steps": {
       "describe": {
+        "cta": "Open chat",
         "title": "Start from a feeling",
         "body": "Open the chat and describe a mood, memory, scene, or image. Echoes turns that emotional context into song recommendations."
       },
       "results": {
+        "cta": "Try a search",
         "title": "Echoes explains the match",
         "body": "Results include a match score, emotional tags, and a short reason why the track fits. Use that context to refine the next message."
       },
       "playback": {
+        "cta": "Connect streaming",
         "title": "Connect your streaming service",
         "body": "Echoes works without it, but it is better with Spotify or Apple Music connected: full playback, playlist actions, and synced favorites become available."
       },
+      "save": {
+        "cta": "View favorites",
+        "title": "Take songs outside Echoes",
+        "body": "With streaming connected, you can save songs to your own library and playlists so they are ready to find and play outside the app too."
+      },
       "memory": {
+        "cta": "Open history",
         "title": "Build your music memory",
-        "body": "Save favorites, revisit history, and keep related searches in the same chat. The more context you keep, the easier it is to find songs that feel right."
+        "body": "Revisit past chats and listening history, then continue related searches in the same thread. The more context you keep, the easier it is to find songs that feel right."
       }
     }
   },
@@ -480,9 +492,10 @@
     "copyFailed": "Could not copy"
   },
   "legal": {
+    "termsTitle": "Terms of Service",
     "privacyTitle": "Privacy Policy",
     "cookiesTitle": "Cookie Policy",
     "backHome": "Back to home",
-    "lastUpdated": "Last updated: 9 April 2026"
+    "lastUpdated": "Last updated: 30 April 2026"
   }
 }

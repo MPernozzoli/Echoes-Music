@@ -4,7 +4,9 @@
     "freeTokens": "{{count}} recherches incluses à l’inscription",
     "loginError": "Connexion impossible. Réessayez.",
     "subtitle": "Découvrez une musique qui résonne avec vos émotions",
-    "continueWithGoogle": "Continuer avec Google"
+    "continueWithGoogle": "Continuer avec Google",
+    "termsPrefix": "En continuant, vous acceptez",
+    "termsAnd": "et"
   },
   "landing": {
     "badge": "Découverte musicale par IA",
@@ -30,6 +32,7 @@
     "liveCommunityArtwork": "Alimenté par des recherches récentes tracées sur la communauté Echoes (anonymes et inscrits), lorsque disponibles.",
     "enterEchoes": "Entrer dans Echoes",
     "footerTagline": "La découverte musicale, réinventée.",
+    "footerTerms": "Conditions d’utilisation",
     "footerPrivacy": "Politique de confidentialité",
     "footerCookies": "Politique relative aux cookies",
     "toastRateLimit": "Trop de requêtes. Réessayez bientôt.",
@@ -333,9 +336,10 @@
     "copyFailed": "Copie impossible"
   },
   "legal": {
+    "termsTitle": "Conditions d’utilisation",
     "privacyTitle": "Politique de confidentialité",
     "cookiesTitle": "Politique relative aux cookies",
     "backHome": "Retour à l’accueil",
-    "lastUpdated": "Dernière mise à jour : 9 avril 2026"
+    "lastUpdated": "Dernière mise à jour : 30 avril 2026"
   }
 }

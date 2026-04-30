@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Loader2, ShieldCheck, Crown, X, Search } from "lucide-react";
+import { Loader2, ShieldCheck, Crown, X, Search, ShieldPlus, ShieldMinus, Ban, Unlock } from "lucide-react";
 
 interface AdminUserRow {
   user_id: string;
@@ -18,6 +18,8 @@ interface AdminUserRow {
   status: string;
   current_period_end: string | null;
   is_admin: boolean;
+  banned_until: string | null;
+  is_blocked: boolean;
 }
 
 const Admin = () => {
@@ -54,7 +56,7 @@ const Admin = () => {
   }, [isAdmin, loadUsers]);
 
   const grantPro = async (userId: string) => {
-    setBusyId(userId);
+    setBusyId(`pro:${userId}`);
     const { error } = await supabase.rpc("admin_grant_pro", { p_user_id: userId, p_years: 100 });
     if (error) toast.error("Errore", { description: error.message });
     else { toast.success("PRO attivato"); await loadUsers(); }
@@ -62,10 +64,42 @@ const Admin = () => {
   };
 
   const revokePro = async (userId: string) => {
-    setBusyId(userId);
+    setBusyId(`pro:${userId}`);
     const { error } = await supabase.rpc("admin_revoke_pro", { p_user_id: userId });
     if (error) toast.error("Errore", { description: error.message });
     else { toast.success("PRO revocato"); await loadUsers(); }
+    setBusyId(null);
+  };
+
+  const grantAdmin = async (userId: string) => {
+    setBusyId(`admin:${userId}`);
+    const { error } = await supabase.rpc("admin_grant_admin", { p_user_id: userId });
+    if (error) toast.error("Errore", { description: error.message });
+    else { toast.success("Admin assegnato"); await loadUsers(); }
+    setBusyId(null);
+  };
+
+  const revokeAdmin = async (userId: string) => {
+    setBusyId(`admin:${userId}`);
+    const { error } = await supabase.rpc("admin_revoke_admin", { p_user_id: userId });
+    if (error) toast.error("Errore", { description: error.message });
+    else { toast.success("Admin rimosso"); await loadUsers(); }
+    setBusyId(null);
+  };
+
+  const blockUser = async (userId: string) => {
+    setBusyId(`block:${userId}`);
+    const { error } = await supabase.rpc("admin_block_user", { p_user_id: userId });
+    if (error) toast.error("Errore", { description: error.message });
+    else { toast.success("Account bloccato"); await loadUsers(); }
+    setBusyId(null);
+  };
+
+  const unblockUser = async (userId: string) => {
+    setBusyId(`block:${userId}`);
+    const { error } = await supabase.rpc("admin_unblock_user", { p_user_id: userId });
+    if (error) toast.error("Errore", { description: error.message });
+    else { toast.success("Account sbloccato"); await loadUsers(); }
     setBusyId(null);
   };
 
@@ -89,6 +123,7 @@ const Admin = () => {
   });
 
   const proCount = users.filter((u) => u.plan === "premium" && u.status === "active").length;
+  const blockedCount = users.filter((u) => u.is_blocked).length;
 
   return (
     <AppLayout>
@@ -99,7 +134,7 @@ const Admin = () => {
               <ShieldCheck className="w-7 h-7 text-primary" /> Admin
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {users.length} utenti · {proCount} PRO attivi
+              {users.length} utenti · {proCount} PRO attivi · {blockedCount} bloccati
             </p>
           </div>
           <div className="relative w-full sm:w-72">
@@ -132,6 +167,10 @@ const Admin = () => {
                 <tbody>
                   {filtered.map((u) => {
                     const isPro = u.plan === "premium" && u.status === "active";
+                    const isSelf = u.user_id === user.id;
+                    const proBusy = busyId === `pro:${u.user_id}`;
+                    const adminBusy = busyId === `admin:${u.user_id}`;
+                    const blockBusy = busyId === `block:${u.user_id}`;
                     return (
                       <tr key={u.user_id} className="border-t border-borderSubtle/60 hover:bg-muted/20">
                         <td className="px-4 py-3">
@@ -139,6 +178,9 @@ const Admin = () => {
                             {u.email ?? "—"}
                             {u.is_admin && (
                               <Badge variant="secondary" className="text-[10px]">ADMIN</Badge>
+                            )}
+                            {u.is_blocked && (
+                              <Badge variant="destructive" className="text-[10px]">BLOCCATO</Badge>
                             )}
                           </div>
                           {u.display_name && (
@@ -160,32 +202,92 @@ const Admin = () => {
                             : "—"}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          {isPro ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled={busyId === u.user_id}
-                              onClick={() => revokePro(u.user_id)}
-                            >
-                              {busyId === u.user_id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <><X className="w-4 h-4 mr-1" /> Revoca</>
-                              )}
-                            </Button>
-                          ) : (
-                            <Button
-                              size="sm"
-                              disabled={busyId === u.user_id}
-                              onClick={() => grantPro(u.user_id)}
-                            >
-                              {busyId === u.user_id ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <><Crown className="w-4 h-4 mr-1" /> Attiva PRO</>
-                              )}
-                            </Button>
-                          )}
+                          <div className="flex justify-end gap-2 flex-wrap">
+                            {isPro ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                disabled={proBusy}
+                                onClick={() => revokePro(u.user_id)}
+                              >
+                                {proBusy ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <><X className="w-4 h-4 mr-1" /> PRO</>
+                                )}
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                disabled={proBusy}
+                                onClick={() => grantPro(u.user_id)}
+                              >
+                                {proBusy ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <><Crown className="w-4 h-4 mr-1" /> PRO</>
+                                )}
+                              </Button>
+                            )}
+
+                            {u.is_admin ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={adminBusy || isSelf}
+                                onClick={() => revokeAdmin(u.user_id)}
+                                title={isSelf ? "Non puoi rimuovere il tuo ruolo admin" : undefined}
+                              >
+                                {adminBusy ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <><ShieldMinus className="w-4 h-4 mr-1" /> Admin</>
+                                )}
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={adminBusy}
+                                onClick={() => grantAdmin(u.user_id)}
+                              >
+                                {adminBusy ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <><ShieldPlus className="w-4 h-4 mr-1" /> Admin</>
+                                )}
+                              </Button>
+                            )}
+
+                            {u.is_blocked ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={blockBusy}
+                                onClick={() => unblockUser(u.user_id)}
+                              >
+                                {blockBusy ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <><Unlock className="w-4 h-4 mr-1" /> Sblocca</>
+                                )}
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                disabled={blockBusy || isSelf}
+                                onClick={() => blockUser(u.user_id)}
+                                title={isSelf ? "Non puoi bloccare il tuo account" : undefined}
+                              >
+                                {blockBusy ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <><Ban className="w-4 h-4 mr-1" /> Blocca</>
+                                )}
+                              </Button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );

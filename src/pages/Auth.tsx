@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Gift, Music, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -132,7 +132,22 @@ const Auth = () => {
             {t("auth.continueWithGoogle", "Continue with Google")}
           </Button>
 
-          <p className="text-xs text-muted-foreground font-body">{t("auth.terms", "By continuing, you agree to our Terms of Service and Privacy Policy")}</p>
+          <p className="text-xs text-muted-foreground font-body leading-relaxed">
+            {t("auth.termsPrefix", "By continuing, you agree to our")}{" "}
+            <Link to="/terms" className="text-primary hover:underline">
+              {t("legal.termsTitle", "Terms of Service")}
+            </Link>
+            {", "}
+            <Link to="/privacy" className="text-primary hover:underline">
+              {t("legal.privacyTitle", "Privacy Policy")}
+            </Link>
+            {" "}
+            {t("auth.termsAnd", "and")}{" "}
+            <Link to="/cookies" className="text-primary hover:underline">
+              {t("legal.cookiesTitle", "Cookie Policy")}
+            </Link>
+            .
+          </p>
         </div>
       </div>
     </div>

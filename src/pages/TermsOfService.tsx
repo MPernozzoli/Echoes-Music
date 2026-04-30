@@ -3,11 +3,11 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
 import LegalDocumentView from "@/components/LegalDocumentView";
-import { privacySectionsFor } from "@/legal/privacyContent";
+import { termsSectionsFor } from "@/legal/termsContent";
 
-const PrivacyPolicy = () => {
+const TermsOfService = () => {
   const { t, i18n } = useTranslation();
-  const sections = privacySectionsFor(i18n.language);
+  const sections = termsSectionsFor(i18n.language);
 
   return (
     <AppLayout headerVariant="marketing">
@@ -19,12 +19,12 @@ const PrivacyPolicy = () => {
           <ArrowLeft className="w-4 h-4" />
           {t("legal.backHome")}
         </Link>
-        <h1 className="font-display text-3xl md:text-4xl font-bold mb-2">{t("legal.privacyTitle")}</h1>
+        <h1 className="font-display text-3xl md:text-4xl font-bold mb-2">{t("legal.termsTitle")}</h1>
         <p className="text-sm text-muted-foreground font-body mb-8">{t("legal.lastUpdated")}</p>
         <LegalDocumentView sections={sections} />
         <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm text-muted-foreground font-body pb-12">
-          <Link to="/terms" className="text-primary hover:underline">
-            {t("legal.termsTitle")}
+          <Link to="/privacy" className="text-primary hover:underline">
+            {t("legal.privacyTitle")}
           </Link>
           <span aria-hidden>·</span>
           <Link to="/cookies" className="text-primary hover:underline">
@@ -36,4 +36,4 @@ const PrivacyPolicy = () => {
   );
 };
 
-export default PrivacyPolicy;
+export default TermsOfService;

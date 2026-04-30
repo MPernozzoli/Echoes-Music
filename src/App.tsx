@@ -38,6 +38,7 @@ import NotFound from "./pages/NotFound";
 import Admin from "./pages/Admin";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import CookiePolicy from "./pages/CookiePolicy";
+import TermsOfService from "./pages/TermsOfService";
 
 const queryClient = new QueryClient();
 
@@ -76,6 +77,8 @@ const App = () => (
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/insights" element={<Insights />} />
                 <Route path="/spotify-callback" element={<SpotifyCallback />} />
+                <Route path="/terms" element={<TermsOfService />} />
+                <Route path="/user-agreement" element={<TermsOfService />} />
                 <Route path="/privacy" element={<PrivacyPolicy />} />
                 <Route path="/cookies" element={<CookiePolicy />} />
                 <Route path="/admin" element={<Admin />} />

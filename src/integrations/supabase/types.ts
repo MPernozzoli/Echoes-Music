@@ -877,24 +877,30 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_block_user: { Args: { p_user_id: string }; Returns: undefined }
       admin_grant_pro: {
         Args: { p_user_id: string; p_years?: number }
         Returns: undefined
       }
+      admin_grant_admin: { Args: { p_user_id: string }; Returns: undefined }
       admin_list_users: {
         Args: never
         Returns: {
+          banned_until: string | null
           created_at: string
-          current_period_end: string
-          display_name: string
-          email: string
+          current_period_end: string | null
+          display_name: string | null
+          email: string | null
           is_admin: boolean
+          is_blocked: boolean
           plan: string
           status: string
           user_id: string
         }[]
       }
+      admin_revoke_admin: { Args: { p_user_id: string }; Returns: undefined }
       admin_revoke_pro: { Args: { p_user_id: string }; Returns: undefined }
+      admin_unblock_user: { Args: { p_user_id: string }; Returns: undefined }
       claim_anonymous_search: {
         Args: { p_conversation: string; p_ip: string; p_session: string }
         Returns: Json

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Heart, ListMusic, MessageSquare, Music, Sparkles, X } from "lucide-react";
+import { Clock, Heart, ListMusic, MessageSquare, Music, Sparkles, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/useAuth";
@@ -19,11 +19,14 @@ export function UserTutorial() {
   const { user, loading } = useAuth();
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
+  const [followPages, setFollowPages] = useState(false);
 
   const steps = useMemo(
     () => [
       {
         icon: MessageSquare,
+        path: "/chat",
+        cta: t("tutorial.steps.describe.cta", "Open chat"),
         title: t("tutorial.steps.describe.title", "Start from a feeling"),
         body: t(
           "tutorial.steps.describe.body",
@@ -32,6 +35,8 @@ export function UserTutorial() {
       },
       {
         icon: Sparkles,
+        path: "/chat",
+        cta: t("tutorial.steps.results.cta", "Try a search"),
         title: t("tutorial.steps.results.title", "Echoes explains the match"),
         body: t(
           "tutorial.steps.results.body",
@@ -40,6 +45,8 @@ export function UserTutorial() {
       },
       {
         icon: Music,
+        path: "/profile#streaming-services",
+        cta: t("tutorial.steps.playback.cta", "Connect streaming"),
         title: t("tutorial.steps.playback.title", "Connect your streaming service"),
         body: t(
           "tutorial.steps.playback.body",
@@ -48,10 +55,22 @@ export function UserTutorial() {
       },
       {
         icon: Heart,
+        path: "/favorites",
+        cta: t("tutorial.steps.save.cta", "View favorites"),
+        title: t("tutorial.steps.save.title", "Save songs beyond Echoes"),
+        body: t(
+          "tutorial.steps.save.body",
+          "When streaming is connected, you can save songs to your own library and playlists so they are ready to listen to outside the app too."
+        ),
+      },
+      {
+        icon: Clock,
+        path: "/history",
+        cta: t("tutorial.steps.memory.cta", "Open history"),
         title: t("tutorial.steps.memory.title", "Build your music memory"),
         body: t(
           "tutorial.steps.memory.body",
-          "Save favorites, revisit history, and keep related searches in the same chat. The more context you keep, the easier it is to find songs that feel right."
+          "Revisit past chats and listening history, then continue related searches in the same thread. The more context you keep, the easier it is to find songs that feel right."
         ),
       },
     ],
@@ -71,19 +90,32 @@ export function UserTutorial() {
     (complete: boolean) => {
       setOpen(false);
       setStep(0);
+      setFollowPages(false);
       if (complete) void markCompleted();
     },
     [markCompleted]
   );
 
+  const goToStep = useCallback(
+    (nextStep: number) => {
+      const boundedStep = Math.max(0, Math.min(steps.length - 1, nextStep));
+      setStep(boundedStep);
+      if (followPages) navigate(steps[boundedStep].path);
+    },
+    [followPages, navigate, steps]
+  );
+
   useEffect(() => {
-    const onOpenTutorial = () => {
+    const onOpenTutorial = (event: Event) => {
+      const shouldFollowPages = event instanceof CustomEvent && Boolean(event.detail?.followPages);
+      setFollowPages(shouldFollowPages);
       setStep(0);
       setOpen(true);
+      if (shouldFollowPages) navigate(steps[0].path);
     };
     window.addEventListener(OPEN_TUTORIAL_EVENT, onOpenTutorial);
     return () => window.removeEventListener(OPEN_TUTORIAL_EVENT, onOpenTutorial);
-  }, []);
+  }, [navigate, steps]);
 
   useEffect(() => {
     if (loading || !user?.id) return;
@@ -106,6 +138,7 @@ export function UserTutorial() {
       }
 
       sessionStorage.setItem(promptedStorageKey(user.id), "true");
+      setFollowPages(false);
       setStep(0);
       setOpen(true);
     })();
@@ -176,7 +209,7 @@ export function UserTutorial() {
                     "h-1.5 flex-1 rounded-full transition-colors",
                     index <= step ? "bg-primary" : "bg-muted"
                   )}
-                  onClick={() => setStep(index)}
+                  onClick={() => goToStep(index)}
                   aria-label={t("tutorial.goToStep", "Go to tutorial step {{step}}", { step: index + 1 })}
                 />
               ))}
@@ -193,6 +226,14 @@ export function UserTutorial() {
                 <p className="mt-2 font-body text-sm leading-relaxed text-muted-foreground">
                   {currentStep.body}
                 </p>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="mt-3 h-auto p-0 font-body text-sm text-primary"
+                  onClick={() => navigate(currentStep.path)}
+                >
+                  {currentStep.cta}
+                </Button>
               </div>
             </div>
 
@@ -211,7 +252,7 @@ export function UserTutorial() {
                     type="button"
                     variant="outline"
                     className="rounded-full"
-                    onClick={() => setStep((value) => Math.max(0, value - 1))}
+                    onClick={() => goToStep(step - 1)}
                   >
                     {t("tutorial.back", "Back")}
                   </Button>
@@ -233,7 +274,7 @@ export function UserTutorial() {
                     type="button"
                     variant="hero"
                     className="rounded-full"
-                    onClick={() => setStep((value) => Math.min(steps.length - 1, value + 1))}
+                    onClick={() => goToStep(step + 1)}
                   >
                     {t("tutorial.next", "Next")}
                   </Button>

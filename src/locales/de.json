@@ -4,7 +4,9 @@
     "freeTokens": "{{count}} Suchen inklusive bei der Registrierung",
     "loginError": "Anmeldung fehlgeschlagen. Bitte erneut versuchen.",
     "subtitle": "Entdecke Musik, die mit deinen Emotionen mitschwingt",
-    "continueWithGoogle": "Mit Google fortfahren"
+    "continueWithGoogle": "Mit Google fortfahren",
+    "termsPrefix": "Mit der Fortsetzung akzeptierst du",
+    "termsAnd": "und"
   },
   "landing": {
     "badge": "KI-gestützte Musikkentdeckung",
@@ -30,6 +32,7 @@
     "liveCommunityArtwork": "Basierend auf kürzlich getrackten Suchen der Echoes-Community (anonym und angemeldet), sofern vorhanden.",
     "enterEchoes": "Echoes öffnen",
     "footerTagline": "Musikentdeckung, neu gedacht.",
+    "footerTerms": "Nutzungsbedingungen",
     "footerPrivacy": "Datenschutzerklärung",
     "footerCookies": "Cookie-Richtlinie",
     "toastRateLimit": "Zu viele Anfragen. Bitte kurz warten.",
@@ -331,9 +334,10 @@
     "copyFailed": "Kopieren fehlgeschlagen"
   },
   "legal": {
+    "termsTitle": "Nutzungsbedingungen",
     "privacyTitle": "Datenschutzerklärung",
     "cookiesTitle": "Cookie-Richtlinie",
     "backHome": "Zur Startseite",
-    "lastUpdated": "Letzte Aktualisierung: 9. April 2026"
+    "lastUpdated": "Letzte Aktualisierung: 30. April 2026"
   }
 }

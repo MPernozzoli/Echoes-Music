@@ -22,11 +22,15 @@ const CookiePolicy = () => {
         <h1 className="font-display text-3xl md:text-4xl font-bold mb-2">{t("legal.cookiesTitle")}</h1>
         <p className="text-sm text-muted-foreground font-body mb-8">{t("legal.lastUpdated")}</p>
         <LegalDocumentView sections={sections} />
-        <p className="text-center text-sm text-muted-foreground font-body pb-12">
+        <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm text-muted-foreground font-body pb-12">
+          <Link to="/terms" className="text-primary hover:underline">
+            {t("legal.termsTitle")}
+          </Link>
+          <span aria-hidden>·</span>
           <Link to="/privacy" className="text-primary hover:underline">
             {t("legal.privacyTitle")}
           </Link>
-        </p>
+        </nav>
       </div>
     </AppLayout>
   );

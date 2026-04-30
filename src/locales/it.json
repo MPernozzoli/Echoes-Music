@@ -5,6 +5,8 @@
     "loginError": "Accesso non riuscito. Riprova.",
     "subtitle": "Scopri musica che risuona con le tue emozioni",
     "continueWithGoogle": "Continua con Google",
+    "termsPrefix": "Continuando accetti",
+    "termsAnd": "e",
     "referralPending": "Invito rilevato: completa l’accesso con Google e il bonus referral verrà accreditato automaticamente."
   },
   "invite": {
@@ -45,6 +47,7 @@
     "liveCommunityArtwork": "Alimentato da ricerche recenti tracciate sulla community Echoes (anonimi e registrati), quando disponibili.",
     "enterEchoes": "Entra in Echoes",
     "footerTagline": "Scoperta musicale, reinventata.",
+    "footerTerms": "Termini di utilizzo",
     "footerPrivacy": "Privacy Policy",
     "footerCookies": "Informativa sui cookie",
     "toastRateLimit": "Troppi richieste. Riprova tra poco.",
@@ -114,20 +117,29 @@
     "goToStep": "Vai al passaggio {{step}} del tutorial",
     "steps": {
       "describe": {
+        "cta": "Apri la chat",
         "title": "Parti da una sensazione",
         "body": "Apri la chat e descrivi un umore, un ricordo, una scena o un’immagine. Echoes trasforma quel contesto emotivo in consigli musicali."
       },
       "results": {
+        "cta": "Prova una ricerca",
         "title": "Echoes spiega l’abbinamento",
         "body": "I risultati includono punteggio di affinità, tag emotivi e una breve ragione per cui il brano funziona. Usa quel contesto per affinare il messaggio successivo."
       },
       "playback": {
+        "cta": "Collega lo streaming",
         "title": "Collega il tuo streaming",
         "body": "Echoes funziona anche senza, ma rende meglio con Spotify o Apple Music collegato: abiliti ascolto completo, azioni sulle playlist e sincronizzazione dei preferiti."
       },
+      "save": {
+        "cta": "Vedi i preferiti",
+        "title": "Porta i brani fuori da Echoes",
+        "body": "Con lo streaming collegato puoi salvare i brani nella tua libreria e nelle tue playlist, così li ritrovi e li ascolti anche fuori dall’app."
+      },
       "memory": {
+        "cta": "Apri lo storico",
         "title": "Costruisci la tua memoria musicale",
-        "body": "Salva i preferiti, rivedi lo storico e tieni le ricerche correlate nella stessa chat. Più contesto conservi, più è facile trovare brani che calzano."
+        "body": "Riapri chat e ascolti passati, poi continua le ricerche correlate nello stesso filo. Più contesto conservi, più è facile trovare brani che calzano."
       }
     }
   },
@@ -472,9 +484,10 @@
     "copyFailed": "Impossibile copiare"
   },
   "legal": {
+    "termsTitle": "Termini di utilizzo",
     "privacyTitle": "Informativa sulla privacy",
     "cookiesTitle": "Informativa sui cookie",
     "backHome": "Torna alla home",
-    "lastUpdated": "Ultimo aggiornamento: 9 aprile 2026"
+    "lastUpdated": "Ultimo aggiornamento: 30 aprile 2026"
   }
 }
