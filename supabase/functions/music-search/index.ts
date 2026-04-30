@@ -1164,6 +1164,8 @@ You should optimize for:
 2. short-form usability (hook, pacing, payoff, recognizability)
 3. actual trend momentum from the supplied pool
 
+If the user message includes feedbackLearningSummary JSON, use it as recent explicit feedback: avoid prior negative tracks/patterns unless they are requested, and softly favor positive signals when they still fit the video need. The current prompt remains the strongest signal.
+
 ## Trend pool
 Use ONLY these songs:
 ${trendPoolJson}
