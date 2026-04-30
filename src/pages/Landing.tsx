@@ -424,6 +424,20 @@ const Landing = () => {
             <p className="font-display text-xl gradient-warm-text">Echoes</p>
           </div>
           <p className="text-xs text-muted-foreground font-body">{t("landing.footerTagline")}</p>
+          <p className="mt-2 text-xs text-muted-foreground font-body">
+            <Trans
+              i18nKey="landing.footerMadeBy"
+              components={[
+                <a
+                  key="pynkstudio"
+                  href="https://pynkstudio.it"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-foreground/80 hover:text-foreground underline underline-offset-4"
+                />,
+              ]}
+            />
+          </p>
           <nav className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs font-body">
             <Link to="/terms" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
               {t("landing.footerTerms")}
