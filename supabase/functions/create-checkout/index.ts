@@ -107,7 +107,18 @@ serve(async (req: Request) => {
     });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
-    return new Response(JSON.stringify({ error: msg }), {
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
+    const keyMode = stripeKey.startsWith("sk_live_")
+      ? "live"
+      : stripeKey.startsWith("sk_test_")
+        ? "test"
+        : "unknown";
+    console.error("[create-checkout] error", {
+      message: msg,
+      key_mode: keyMode,
+      key_prefix: stripeKey.substring(0, 8),
+    });
+    return new Response(JSON.stringify({ error: msg, key_mode: keyMode }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });
