@@ -7,8 +7,9 @@ import { ArrowRight, Sparkles, Search, Music, Wand2 } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
 import PromptInput, { type PromptSubmitPayload } from "@/components/PromptInput";
 import SongCard from "@/components/SongCard";
-import { mockSongs, type Song } from "@/data/mockData";
-import { fetchRecentSearchArtworks, fetchRecentSearchPreviewSongs } from "@/services/recentSearchGallery";
+import MicroConversationCard from "@/components/MicroConversationCard";
+import { mockSongs } from "@/data/mockData";
+import { fetchRecentSearchArtworks, fetchRecentMicroConversations, type MicroConversation } from "@/services/recentSearchGallery";
 import { pickDiscoverPromptSuggestions } from "@/lib/discoverPromptSuggestions";
 import { useApp } from "@/context/useApp";
 import { useAuth } from "@/context/useAuth";
@@ -29,7 +30,7 @@ const Landing = () => {
   const { userTasteProfile, conversations, activeConversationId } = useConversations();
   const [luckyLoading, setLuckyLoading] = useState(false);
   const [heroArtworkUrls, setHeroArtworkUrls] = useState<string[]>(() => mockSongs.slice(0, 4).map((s) => s.artwork));
-  const [previewSongs, setPreviewSongs] = useState<Song[]>(() => mockSongs.slice(0, 3));
+  const [microConversations, setMicroConversations] = useState<MicroConversation[]>([]);
   const [communityGalleryActive, setCommunityGalleryActive] = useState(false);
 
   const heroRef = useRef<HTMLDivElement | null>(null);
@@ -123,12 +124,12 @@ const Landing = () => {
     let cancelled = false;
     void (async () => {
       try {
-        const [urls, songs] = await Promise.all([
+        const [urls, convos] = await Promise.all([
           fetchRecentSearchArtworks(4),
-          fetchRecentSearchPreviewSongs(3),
+          fetchRecentMicroConversations(3),
         ]);
         if (cancelled) return;
-        const fromDb = urls.length > 0 || songs.length > 0;
+        const fromDb = urls.length > 0 || convos.length > 0;
         setCommunityGalleryActive(fromDb);
 
         if (urls.length >= 4) setHeroArtworkUrls(urls.slice(0, 4));
@@ -137,12 +138,7 @@ const Landing = () => {
           setHeroArtworkUrls([...urls, ...pad].slice(0, 4));
         }
 
-        if (songs.length >= 3) setPreviewSongs(songs.slice(0, 3));
-        else if (songs.length > 0) {
-          const ids = new Set(songs.map((s) => s.id));
-          const pad = mockSongs.filter((s) => !ids.has(s.id));
-          setPreviewSongs([...songs, ...pad].slice(0, 3));
-        }
+        if (convos.length > 0) setMicroConversations(convos.slice(0, 3));
       } catch {
         if (!cancelled) setCommunityGalleryActive(false);
       }
@@ -384,27 +380,30 @@ const Landing = () => {
 
         <section
           className="py-24 md:py-28 px-6 relative overflow-hidden rounded-t-[2.5rem] md:rounded-t-[3rem]"
-          style={previewSongs[0] ? artworkTintFromId(previewSongs[0].id) : undefined}
+          style={microConversations[0]?.songs[0] ? artworkTintFromId(microConversations[0].songs[0].id) : undefined}
         >
           <div className="absolute inset-0 gradient-warm rounded-t-[2.5rem] md:rounded-t-[3rem]" aria-hidden />
           <div className="absolute inset-0 bg-artwork-radial opacity-50 pointer-events-none rounded-t-[2.5rem] md:rounded-t-[3rem]" aria-hidden />
           <div className="relative max-w-2xl mx-auto">
-            <p className="text-xs uppercase tracking-widest text-primary font-body mb-3 text-center">{t("landing.preview")}</p>
+            <p className="text-xs uppercase tracking-widest text-primary font-body mb-3 text-center">
+              {communityGalleryActive ? t("landing.communityLabel") : t("landing.preview")}
+            </p>
             <h2 className="font-display text-3xl md:text-4xl font-semibold text-center mb-4 text-balance">
               {t("landing.resultsTitle")} <span className="italic">{t("landing.resultsTitleItalic")}</span>
               {t("landing.resultsTitleEnd")}
             </h2>
-            <p className="text-muted-foreground text-center font-body mb-12 max-w-lg mx-auto text-balance">{t("landing.resultsSubtitle")}</p>
-            {communityGalleryActive ? (
-              <p className="text-center text-xs text-muted-foreground/75 font-body mb-8 -mt-6 max-w-md mx-auto text-balance">
-                {t("landing.liveCommunityArtwork")}
-              </p>
-            ) : null}
+            <p className="text-muted-foreground text-center font-body mb-12 max-w-lg mx-auto text-balance">
+              {t("landing.resultsSubtitle")}
+            </p>
 
             <div className="space-y-5">
-              {previewSongs.map((song, i) => (
-                <SongCard key={`${song.id}-${i}`} {...song} index={i} />
-              ))}
+              {microConversations.length > 0
+                ? microConversations.map((convo) => (
+                    <MicroConversationCard key={convo.searchId} {...convo} />
+                  ))
+                : mockSongs.slice(0, 3).map((song, i) => (
+                    <SongCard key={`${song.id}-${i}`} {...song} index={i} showPlayer={false} />
+                  ))}
             </div>
 
             <div className="text-center mt-14">

@@ -1,5 +1,13 @@
 {
-  "nav": { "chat": "Chat", "history": "Historial", "favorites": "Favoritos", "profile": "Perfil", "home": "Inicio", "login": "Iniciar sesión", "signUp": "Registrarse" },
+  "nav": {
+    "chat": "Chat",
+    "history": "Historial",
+    "favorites": "Favoritos",
+    "profile": "Perfil",
+    "home": "Inicio",
+    "login": "Iniciar sesión",
+    "signUp": "Registrarse"
+  },
   "auth": {
     "freeTokens": "{{count}} búsquedas incluidas al registrarte",
     "loginError": "No se pudo iniciar sesión. Inténtalo de nuevo.",
@@ -28,8 +36,7 @@
     "resultsTitle": "Resultados que",
     "resultsTitleItalic": "significan",
     "resultsTitleEnd": " algo",
-    "resultsSubtitle": "Cada recomendación tiene contexto: no solo metadatos, sino por qué la canción resuena.",
-    "liveCommunityArtwork": "Con datos de búsquedas recientes registradas en la comunidad Echoes (anónimos y registrados), cuando hay suficientes.",
+    "resultsSubtitle": "Cada recomendación tiene contexto — no solo metadatos, sino por qué la canción resuena.",
     "enterEchoes": "Entrar en Echoes",
     "footerTagline": "Descubrimiento musical, reinventado.",
     "footerMadeBy": "Un producto realizado por <0>PynkStudio</0>.",
@@ -39,7 +46,8 @@
     "toastRateLimit": "Demasiadas solicitudes. Prueba de nuevo en breve.",
     "toastNoCredits": "Créditos de IA agotados.",
     "toastNoSongs": "No se encontraron canciones. Haz algunas búsquedas para afinar tu perfil.",
-    "toastGenericError": "Algo salió mal"
+    "toastGenericError": "Algo salió mal",
+    "communityLabel": "Desde la comunidad"
   },
   "profile": {
     "title": "Ajustes",
@@ -108,7 +116,10 @@
     "chatWithTitle": "Chat: {{title}}",
     "fromQuote": "De: «{{prompt}}»"
   },
-  "notFound": { "title": "Página no encontrada", "home": "Volver al inicio" },
+  "notFound": {
+    "title": "Página no encontrada",
+    "home": "Volver al inicio"
+  },
   "insights": {
     "internal": "Interno",
     "title": "Insights de producto",

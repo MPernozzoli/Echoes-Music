@@ -1,5 +1,13 @@
 {
-  "nav": { "chat": "Chat", "history": "Historique", "favorites": "Favoris", "profile": "Profil", "home": "Accueil", "login": "Connexion", "signUp": "S’inscrire" },
+  "nav": {
+    "chat": "Chat",
+    "history": "Historique",
+    "favorites": "Favoris",
+    "profile": "Profil",
+    "home": "Accueil",
+    "login": "Connexion",
+    "signUp": "S’inscrire"
+  },
   "auth": {
     "freeTokens": "{{count}} recherches incluses à l’inscription",
     "loginError": "Connexion impossible. Réessayez.",
@@ -29,7 +37,6 @@
     "resultsTitleItalic": "ont du sens",
     "resultsTitleEnd": "",
     "resultsSubtitle": "Chaque recommandation a du contexte — pas seulement des métadonnées, mais pourquoi le morceau résonne.",
-    "liveCommunityArtwork": "Alimenté par des recherches récentes tracées sur la communauté Echoes (anonymes et inscrits), lorsque disponibles.",
     "enterEchoes": "Entrer dans Echoes",
     "footerTagline": "La découverte musicale, réinventée.",
     "footerMadeBy": "Un produit réalisé par <0>PynkStudio</0>.",
@@ -39,7 +46,8 @@
     "toastRateLimit": "Trop de requêtes. Réessayez bientôt.",
     "toastNoCredits": "Crédits IA épuisés.",
     "toastNoSongs": "Aucun morceau trouvé. Faites quelques recherches pour affiner votre profil.",
-    "toastGenericError": "Une erreur s’est produite"
+    "toastGenericError": "Une erreur s’est produite",
+    "communityLabel": "De la communauté"
   },
   "profile": {
     "title": "Réglages",
@@ -108,7 +116,10 @@
     "chatWithTitle": "Chat : {{title}}",
     "fromQuote": "De : « {{prompt}} »"
   },
-  "notFound": { "title": "Page introuvable", "home": "Retour à l’accueil" },
+  "notFound": {
+    "title": "Page introuvable",
+    "home": "Retour à l’accueil"
+  },
   "insights": {
     "internal": "Interne",
     "title": "Insights produit",

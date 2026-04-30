@@ -10,6 +10,7 @@ function shuffleInPlace<T>(arr: T[]): void {
 
 type ResultRow = {
   id: string;
+  search_id: string;
   track_id: string;
   track_title: string;
   artist_name: string;
@@ -70,6 +71,62 @@ function rowToSong(row: ResultRow): Song {
     explanation: row.match_explanation,
     relevanceScore,
   };
+}
+
+export type MicroConversation = {
+  searchId: string;
+  displayPrompt: string;
+  songs: Song[];
+};
+
+/**
+ * Ricerche approvate per la home: prompt pubblico + top 3 risultati.
+ * Solo ricerche con display_approved = true.
+ */
+export async function fetchRecentMicroConversations(count: number): Promise<MicroConversation[]> {
+  const { data: searches, error: searchErr } = await supabase
+    .from("searches")
+    .select("id, display_prompt, created_at")
+    .eq("display_approved", true)
+    .order("created_at", { ascending: false })
+    .limit(count * 12);
+
+  if (searchErr || !searches?.length) return [];
+
+  const searchIds = searches.map((s) => s.id);
+
+  const { data: results, error: resultsErr } = await supabase
+    .from("search_results")
+    .select(
+      "id, search_id, track_id, track_title, artist_name, album_name, artwork_url, emotional_tags, match_explanation, relevance_score, position, created_at",
+    )
+    .in("search_id", searchIds)
+    .not("artwork_url", "is", null)
+    .lte("position", 3)
+    .order("position", { ascending: true });
+
+  if (resultsErr || !results?.length) return [];
+
+  const bySearch = new Map<string, ResultRow[]>();
+  for (const row of results as ResultRow[]) {
+    if (!row.artwork_url?.trim()) continue;
+    const list = bySearch.get(row.search_id) ?? [];
+    list.push(row);
+    bySearch.set(row.search_id, list);
+  }
+
+  const convos: MicroConversation[] = [];
+  for (const search of searches) {
+    if (!search.display_prompt) continue;
+    const rows = bySearch.get(search.id);
+    if (!rows?.length) continue;
+    const songs = rows.slice(0, 3).map(rowToSong);
+    if (!songs.length) continue;
+    convos.push({ searchId: search.id, displayPrompt: search.display_prompt, songs });
+  }
+
+  shuffleInPlace(convos);
+  return convos.slice(0, count);
 }
 
 /**
