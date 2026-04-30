@@ -25,6 +25,8 @@ interface SongCardProps {
   showPlayer?: boolean;
   spotifyUri?: string;
   appleMusicId?: string;
+  youtubeMusicVideoId?: string;
+  youtubeMusicUrl?: string;
 }
 
 const SongCard = ({
@@ -44,6 +46,8 @@ const SongCard = ({
   showPlayer = true,
   spotifyUri,
   appleMusicId,
+  youtubeMusicVideoId,
+  youtubeMusicUrl,
 }: SongCardProps) => {
   const [imgLoaded, setImgLoaded] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -215,6 +219,8 @@ const SongCard = ({
                 artistName={artist}
                 spotifyTrackId={spotifyUri?.replace("spotify:track:", "")}
                 appleMusicTrackId={appleMusicId}
+                youtubeMusicVideoId={youtubeMusicVideoId}
+                youtubeMusicUrl={youtubeMusicUrl}
               />
             )}
 

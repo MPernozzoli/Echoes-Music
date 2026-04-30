@@ -64,6 +64,7 @@ Punti di ingresso principali:
 - account Stripe per checkout e webhook
 - credenziali Spotify API
 - credenziali Apple Music / MusicKit
+- credenziali YouTube Data API per risultati YouTube Music opzionali
 
 ## Avvio locale
 
@@ -119,6 +120,8 @@ APPLE_MUSIC_PRIVATE_KEY=
 APPLE_MUSIC_KEY_ID=
 APPLE_MUSIC_TEAM_ID=
 
+YOUTUBE_DATA_API_KEY=
+
 LOVABLE_API_KEY=
 
 BYO_AI_ENCRYPTION_KEY=
@@ -131,6 +134,7 @@ Nota:
 - `LOVABLE_API_KEY` viene usata per la modalita AI gestita.
 - `BYO_*` serve per la modalita "bring your own OpenAI key".
 - Le credenziali Apple Music sono richieste sia per token generation sia per operazioni libreria.
+- `YOUTUBE_DATA_API_KEY` abilita YouTube Music come provider di ricerca best-effort tramite YouTube Data API; in alternativa e supportata anche `YOUTUBE_MUSIC_API_KEY`.
 - `SPOTIFY_REDIRECT_URI` e `VITE_SPOTIFY_REDIRECT_URI` devono coincidere con uno degli URI registrati nella Spotify Developer Dashboard: `https://echoesmusic.it/spotify-callback`.
 - Per test locali Spotify richiede un loopback esplicito: usa `http://127.0.0.1:8080/spotify-callback`, non `http://localhost:8080/spotify-callback`.
 

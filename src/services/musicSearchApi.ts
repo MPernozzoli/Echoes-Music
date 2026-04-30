@@ -5,7 +5,7 @@ import { getSessionId } from "@/services/sessionId";
 import type { FeedbackLearningSummary } from "@/services/tracking";
 
 export type MusicSearchMode = "search" | "lucky" | "memory_compact" | "creator_trends";
-export type StreamingProviderPreference = "auto" | "spotify" | "apple_music";
+export type StreamingProviderPreference = "auto" | "spotify" | "apple_music" | "youtube_music";
 
 export interface MusicSearchRequest {
   /** Obbligatorio per utenti anonimi (quota IP + una chat) */

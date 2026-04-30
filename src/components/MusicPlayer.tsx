@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef } from "react";
-import { Volume2 } from "lucide-react";
+import { ExternalLink, Volume2, Youtube } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSpotify } from "@/context/useSpotify";
 import { useAppleMusic } from "@/context/useAppleMusic";
@@ -21,6 +21,8 @@ interface MusicPlayerProps {
   artistName: string;
   spotifyTrackId?: string;
   appleMusicTrackId?: string;
+  youtubeMusicVideoId?: string;
+  youtubeMusicUrl?: string;
   /** Usato come chiave per cachare la risoluzione Apple Music (se assente ripiega su title|artist) */
   songId?: string;
 }
@@ -30,6 +32,8 @@ const MusicPlayer = ({
   artistName,
   spotifyTrackId,
   appleMusicTrackId,
+  youtubeMusicVideoId,
+  youtubeMusicUrl,
   songId,
 }: MusicPlayerProps) => {
   const { t } = useTranslation();
@@ -69,6 +73,8 @@ const MusicPlayer = ({
     !!spotifyTrackId && !applePreferred && (playbackMode === "spotify" || playbackMode === "guest");
   const appleOnlyFallback = !spotifyTrackId && !!resolvedAppleId;
   const lastResortSpotify = !preferApple && !preferSpotifyEmbed && !appleOnlyFallback && !!spotifyTrackId;
+  const resolvedYouTubeMusicUrl =
+    youtubeMusicUrl || (youtubeMusicVideoId ? `https://music.youtube.com/watch?v=${encodeURIComponent(youtubeMusicVideoId)}` : undefined);
 
   const chrome = "surface-player rounded-2xl border border-borderSubtle/50 p-2 md:p-3 shadow-soft mt-3";
 
@@ -175,6 +181,28 @@ const MusicPlayer = ({
           className="rounded-xl opacity-95 hover:opacity-100 transition-opacity"
           title={`${trackTitle} by ${artistName}`}
         />
+        <StreamingLibraryActions
+          spotifyTrackId={spotifyTrackId}
+          appleMusicTrackId={resolvedAppleId}
+          className="mt-2"
+        />
+      </div>
+    );
+  }
+
+  if (resolvedYouTubeMusicUrl) {
+    return (
+      <div className={cn(chrome, "overflow-hidden")} onClick={(e) => e.stopPropagation()}>
+        <a
+          href={resolvedYouTubeMusicUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 rounded-xl border border-borderSubtle/70 bg-muted/40 px-3 py-3 text-sm font-body font-medium text-foreground transition-colors hover:bg-muted/70"
+        >
+          <Youtube className="h-4 w-4 text-primary" />
+          YouTube Music
+          <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+        </a>
         <StreamingLibraryActions
           spotifyTrackId={spotifyTrackId}
           appleMusicTrackId={resolvedAppleId}

@@ -3,7 +3,7 @@ import { unstable_batchedUpdates } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { setPlaybackToggleHandler } from "@/lib/playbackToggleBridge";
 import { toast } from "sonner";
-import { Play, Pause, SkipBack, SkipForward, Heart, Volume2, VolumeX, Info } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Heart, Volume2, VolumeX, Info, Youtube } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import type { Song } from "@/data/mockData";
 import { useAppleMusic } from "@/context/useAppleMusic";
@@ -98,6 +98,9 @@ const FullPlayer = ({
   // Determine playback source
   const spotifyTrackId = song?.spotifyUri?.replace("spotify:track:", "");
   const appleMusicId = song?.appleMusicId;
+  const youtubeMusicUrl =
+    song?.youtubeMusicUrl ||
+    (song?.youtubeMusicVideoId ? `https://music.youtube.com/watch?v=${encodeURIComponent(song.youtubeMusicVideoId)}` : undefined);
   const appleResolutionComplete = song?.id ? isAppleMusicResolutionComplete(song.id) : false;
   /** Con Apple preferito ma ID ancora in risoluzione: non usare previewUrl (spesso è Spotify) finché non c’è match Apple. */
   const suppressNonApplePreview =
@@ -370,6 +373,11 @@ const FullPlayer = ({
         window.open(`https://open.spotify.com/track/${sp}`, "_blank", "noopener,noreferrer");
       } else if (am) {
         window.open(`https://music.apple.com/us/song/${am}`, "_blank", "noopener,noreferrer");
+      } else if (s.youtubeMusicUrl || s.youtubeMusicVideoId) {
+        const ym =
+          s.youtubeMusicUrl ||
+          `https://music.youtube.com/watch?v=${encodeURIComponent(s.youtubeMusicVideoId!)}`;
+        window.open(ym, "_blank", "noopener,noreferrer");
       }
       return;
     }
@@ -426,6 +434,8 @@ const FullPlayer = ({
       window.open(`https://open.spotify.com/track/${spotifyTrackId}`, "_blank", "noopener,noreferrer");
     } else if (appleMusicId) {
       window.open(`https://music.apple.com/us/song/${appleMusicId}`, "_blank", "noopener,noreferrer");
+    } else if (youtubeMusicUrl) {
+      window.open(youtubeMusicUrl, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -717,7 +727,28 @@ const FullPlayer = ({
         </div>
       )}
 
-      {!useAppleKitPlayer && useEmbed && !appleMusicId && !spotifyTrackId && (
+      {!useAppleKitPlayer && useEmbed && !appleMusicId && !spotifyTrackId && youtubeMusicUrl && (
+        <div className="w-full px-2 mt-2 text-center">
+          <button
+            type="button"
+            onClick={openExternalStream}
+            className="mx-auto inline-flex items-center justify-center gap-2 rounded-xl border border-borderSubtle/70 bg-muted/40 px-4 py-3 text-sm font-body font-medium text-foreground transition-colors hover:bg-muted/70"
+          >
+            <Youtube className="h-4 w-4 text-primary" />
+            YouTube Music
+          </button>
+          <div className="flex items-center justify-center gap-6 mt-3">
+            <button onClick={handlePrev} disabled={currentIndex === 0} className="p-2 rounded-full text-foreground hover:bg-muted transition-colors disabled:opacity-30">
+              <SkipBack className="w-5 h-5" />
+            </button>
+            <button onClick={handleNext} disabled={currentIndex === songs.length - 1} className="p-2 rounded-full text-foreground hover:bg-muted transition-colors disabled:opacity-30">
+              <SkipForward className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!useAppleKitPlayer && useEmbed && !appleMusicId && !spotifyTrackId && !youtubeMusicUrl && (
         <div className="w-full px-2 mt-2 text-center">
           <p className="text-xs text-muted-foreground font-body py-4">{t("player.previewUnavailable")}</p>
           <div className="flex items-center justify-center gap-6">

@@ -321,10 +321,12 @@ interface TrackResult {
   artist: string;
   album: string;
   artworkUrl: string;
-  provider: 'spotify' | 'apple_music';
+  provider: 'spotify' | 'apple_music' | 'youtube_music';
   previewUrl?: string;
   spotifyUri?: string;
   appleMusicId?: string;
+  youtubeMusicVideoId?: string;
+  youtubeMusicUrl?: string;
   releaseYear?: number;
 }
 
@@ -334,7 +336,7 @@ interface TrendingTrackResult extends TrackResult {
   trendSource: string;
 }
 
-type StreamingProviderPreference = 'auto' | 'spotify' | 'apple_music';
+type StreamingProviderPreference = 'auto' | 'spotify' | 'apple_music' | 'youtube_music';
 type DiscoveryMode = 'search' | 'lucky' | 'creator_trends';
 
 const SEARCH_QUERY_LIMIT = 12;
@@ -390,6 +392,19 @@ type AppleMusicChart = {
 type AppleMusicChartsResponse = {
   results?: {
     songs?: AppleMusicChart[];
+  };
+};
+
+type YouTubeSearchItem = {
+  id?: { videoId?: string };
+  snippet?: {
+    title?: string;
+    channelTitle?: string;
+    thumbnails?: {
+      high?: { url?: string };
+      medium?: { url?: string };
+      default?: { url?: string };
+    };
   };
 };
 
@@ -508,6 +523,70 @@ async function searchAppleMusic(query: string, limit = 5): Promise<TrackResult[]
     appleMusicId: s.id,
     releaseYear: releaseYearFromDateString(s.attributes.releaseDate),
   }));
+}
+
+function splitYouTubeMusicTitle(rawTitle: string, channelTitle = ''): { title: string; artist: string } {
+  const cleaned = normalizeWhitespace(
+    rawTitle
+      .replace(/\s*\[[^\]]*(?:official|video|audio|lyrics?|visualizer|remaster|hd|hq)[^\]]*\]\s*/gi, ' ')
+      .replace(/\s*\([^)]*(?:official|video|audio|lyrics?|visualizer|remaster|hd|hq)[^)]*\)\s*/gi, ' '),
+  );
+  const byDash = cleaned.split(/\s+-\s+/);
+  if (byDash.length >= 2) {
+    return {
+      artist: normalizeWhitespace(byDash[0]),
+      title: normalizeWhitespace(byDash.slice(1).join(' - ')),
+    };
+  }
+  const artist = normalizeWhitespace(
+    channelTitle
+      .replace(/\s+-\s+topic$/i, '')
+      .replace(/\s+vevo$/i, '')
+      .replace(/\s+official$/i, ''),
+  );
+  return { title: cleaned, artist: artist || channelTitle || 'YouTube Music' };
+}
+
+async function searchYouTubeMusic(query: string, limit = 5): Promise<TrackResult[]> {
+  const apiKey =
+    Deno.env.get('YOUTUBE_MUSIC_API_KEY')?.trim() ||
+    Deno.env.get('YOUTUBE_DATA_API_KEY')?.trim();
+  if (!apiKey) return [];
+
+  const params = new URLSearchParams({
+    part: 'snippet',
+    type: 'video',
+    videoCategoryId: '10',
+    maxResults: String(limit),
+    q: query,
+    key: apiKey,
+  });
+  const res = await fetch(`https://www.googleapis.com/youtube/v3/search?${params.toString()}`);
+  if (!res.ok) {
+    console.error('YouTube Music search error:', res.status, (await res.text()).slice(0, 300));
+    return [];
+  }
+  const data = await res.json() as { items?: YouTubeSearchItem[] };
+  return (data.items || []).flatMap((item) => {
+    const videoId = item.id?.videoId?.trim();
+    const rawTitle = item.snippet?.title?.trim();
+    if (!videoId || !rawTitle) return [];
+    const parsed = splitYouTubeMusicTitle(rawTitle, item.snippet?.channelTitle);
+    return [{
+      trackId: videoId,
+      title: parsed.title,
+      artist: parsed.artist,
+      album: 'YouTube Music',
+      artworkUrl:
+        item.snippet?.thumbnails?.high?.url ||
+        item.snippet?.thumbnails?.medium?.url ||
+        item.snippet?.thumbnails?.default?.url ||
+        '',
+      provider: 'youtube_music' as const,
+      youtubeMusicVideoId: videoId,
+      youtubeMusicUrl: `https://music.youtube.com/watch?v=${encodeURIComponent(videoId)}`,
+    }];
+  });
 }
 
 let trendingTracksCache:
@@ -1624,16 +1703,20 @@ Deno.serve(async (req) => {
       .slice(0, SEARCH_QUERY_LIMIT);
 
     // Search in parallel
-    const searchPromises = uniqueQueries.flatMap(q => {
+    const searchPromises = uniqueQueries.flatMap((q, index) => {
       if (streamingProviderPreference === 'spotify') {
         return [searchSpotify(q, SEARCH_RESULTS_PER_QUERY)];
       }
       if (streamingProviderPreference === 'apple_music') {
         return [searchAppleMusic(q, SEARCH_RESULTS_PER_QUERY)];
       }
+      if (streamingProviderPreference === 'youtube_music') {
+        return [searchYouTubeMusic(q, SEARCH_RESULTS_PER_QUERY)];
+      }
       return [
         searchSpotify(q, SEARCH_RESULTS_PER_QUERY),
         searchAppleMusic(q, SEARCH_RESULTS_PER_QUERY),
+        ...(index < 3 ? [searchYouTubeMusic(q, Math.min(3, SEARCH_RESULTS_PER_QUERY))] : []),
       ];
     });
     const searchResults = await Promise.all(searchPromises);
@@ -1687,6 +1770,8 @@ Deno.serve(async (req) => {
           previewUrl: existing.track.previewUrl || track.previewUrl,
           spotifyUri: existing.track.spotifyUri || track.spotifyUri,
           appleMusicId: existing.track.appleMusicId || track.appleMusicId,
+          youtubeMusicVideoId: existing.track.youtubeMusicVideoId || track.youtubeMusicVideoId,
+          youtubeMusicUrl: existing.track.youtubeMusicUrl || track.youtubeMusicUrl,
           artworkUrl: existing.track.artworkUrl || track.artworkUrl,
           releaseYear: existing.track.releaseYear ?? track.releaseYear,
         },
@@ -1731,6 +1816,8 @@ Deno.serve(async (req) => {
           provider: version.provider,
           ...(version.spotifyUri ? { spotifyUri: version.spotifyUri } : {}),
           ...(version.appleMusicId ? { appleMusicId: version.appleMusicId } : {}),
+          ...(version.youtubeMusicVideoId ? { youtubeMusicVideoId: version.youtubeMusicVideoId } : {}),
+          ...(version.youtubeMusicUrl ? { youtubeMusicUrl: version.youtubeMusicUrl } : {}),
           ...(version.previewUrl ? { previewUrl: version.previewUrl } : {}),
         }));
 
@@ -1747,6 +1834,8 @@ Deno.serve(async (req) => {
         provider: track.provider,
         spotifyUri: track.spotifyUri,
         appleMusicId: track.appleMusicId,
+        youtubeMusicVideoId: track.youtubeMusicVideoId,
+        youtubeMusicUrl: track.youtubeMusicUrl,
         previewUrl: track.previewUrl,
         ...(alternateVersions.length ? { alternateVersions } : {}),
       };

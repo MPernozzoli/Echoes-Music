@@ -23,6 +23,7 @@ import {
   Copy,
   Languages,
   BookOpen,
+  Youtube,
 } from "lucide-react";
 import { getUserSettings, persistThemePreference, setAllowAnonymizedData } from "@/services/tracking";
 import { getSpotifyAuthUrl, disconnectSpotify, getSpotifyRedirectUri } from "@/services/spotify";
@@ -428,6 +429,32 @@ const Profile = () => {
               </div>
             </div>
 
+            <div className="surface-card rounded-3xl p-6 mb-6 border border-border/50 opacity-75">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center shrink-0">
+                    <Youtube className="w-5 h-5 text-red-500" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-body text-sm font-medium text-foreground">{t("profile.youtubeMusic")}</h3>
+                      <span className="rounded-full border border-borderSubtle/80 bg-muted/60 px-2 py-0.5 text-[10px] font-body font-semibold uppercase tracking-wide text-muted-foreground">
+                        {t("profile.comingSoon")}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground font-body">{t("profile.youtubeMusicComingSoonHint")}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-border text-sm font-body text-muted-foreground transition-all disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {t("profile.connect")}
+                </button>
+              </div>
+            </div>
+
             <div className="surface-card rounded-3xl p-6 mb-6 border border-border/50">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 min-w-0">
@@ -451,7 +478,7 @@ const Profile = () => {
                   <Music className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-body text-sm font-medium text-foreground">{t("profile.spotify")} / {t("profile.appleMusic")}</h3>
+                  <h3 className="font-body text-sm font-medium text-foreground">{t("profile.spotify")} / {t("profile.appleMusic")} / {t("profile.youtubeMusic")}</h3>
                   <p className="text-xs text-muted-foreground font-body max-w-md">{t("profile.streamingLoginRequired")}</p>
                 </div>
               </div>
