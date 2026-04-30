@@ -4,6 +4,12 @@ import { getSessionId } from "./sessionId";
 const SESSION_ID = getSessionId();
 const PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
 
+export function getSpotifyRedirectUri() {
+  const configuredRedirectUri = import.meta.env.VITE_SPOTIFY_REDIRECT_URI?.trim();
+  if (configuredRedirectUri) return configuredRedirectUri;
+  return `${window.location.origin}/spotify-callback`;
+}
+
 function functionsUrl(name: string) {
   return `https://${PROJECT_ID}.supabase.co/functions/v1/${name}`;
 }

@@ -24,7 +24,7 @@ import {
   Languages,
 } from "lucide-react";
 import { getUserSettings, persistThemePreference, setAllowAnonymizedData } from "@/services/tracking";
-import { getSpotifyAuthUrl, disconnectSpotify } from "@/services/spotify";
+import { getSpotifyAuthUrl, disconnectSpotify, getSpotifyRedirectUri } from "@/services/spotify";
 import { useSpotify } from "@/context/useSpotify";
 import { useAppleMusic } from "@/context/useAppleMusic";
 import { useApp } from "@/context/useApp";
@@ -140,7 +140,7 @@ const Profile = () => {
       return;
     }
     setConnectingSpotify(true);
-    const redirectUri = `${window.location.origin}/spotify-callback`;
+    const redirectUri = getSpotifyRedirectUri();
     const url = await getSpotifyAuthUrl(redirectUri);
     if (url) {
       window.location.href = url;

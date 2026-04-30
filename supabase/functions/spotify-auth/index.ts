@@ -9,6 +9,14 @@ const SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token';
 const SPOTIFY_ME_URL = 'https://api.spotify.com/v1/me';
 const SPOTIFY_API = 'https://api.spotify.com/v1';
 
+function resolveSpotifyRedirectUri(requestRedirectUri: unknown): string | null {
+  const configuredRedirectUri = Deno.env.get('SPOTIFY_REDIRECT_URI')?.trim();
+  if (configuredRedirectUri) return configuredRedirectUri;
+  if (typeof requestRedirectUri !== 'string') return null;
+  const redirectUri = requestRedirectUri.trim();
+  return redirectUri || null;
+}
+
 type SpotifyConn = {
   id: string;
   access_token: string;
@@ -129,6 +137,7 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const { action, code, redirect_uri, session_id } = body;
+    const spotifyRedirectUri = resolveSpotifyRedirectUri(redirect_uri);
     const userId = await getUserIdFromJwt(req.headers.get('Authorization'), supabase);
 
     // --- GET AUTH URL ---
@@ -136,6 +145,12 @@ Deno.serve(async (req) => {
       if (!userId) {
         return new Response(JSON.stringify({ error: 'Login required to connect Spotify' }), {
           status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (!spotifyRedirectUri) {
+        return new Response(JSON.stringify({ error: 'Spotify redirect URI not configured' }), {
+          status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
@@ -155,7 +170,7 @@ Deno.serve(async (req) => {
         response_type: 'code',
         client_id: SPOTIFY_CLIENT_ID,
         scope: scopes,
-        redirect_uri: redirect_uri,
+        redirect_uri: spotifyRedirectUri,
         state: session_id || 'anonymous',
         show_dialog: 'true',
       });
@@ -172,6 +187,12 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+      if (!spotifyRedirectUri) {
+        return new Response(JSON.stringify({ error: 'Spotify redirect URI not configured' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       const tokenRes = await fetch(SPOTIFY_TOKEN_URL, {
         method: 'POST',
         headers: {
@@ -181,7 +202,7 @@ Deno.serve(async (req) => {
         body: new URLSearchParams({
           grant_type: 'authorization_code',
           code,
-          redirect_uri,
+          redirect_uri: spotifyRedirectUri,
         }),
       });
 

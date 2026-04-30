@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { exchangeSpotifyCode } from "@/services/spotify";
+import { exchangeSpotifyCode, getSpotifyRedirectUri } from "@/services/spotify";
 import { useSpotify } from "@/context/useSpotify";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
 
@@ -31,7 +31,7 @@ const SpotifyCallback = () => {
       return;
     }
 
-    const redirectUri = `${window.location.origin}/spotify-callback`;
+    const redirectUri = getSpotifyRedirectUri();
 
     exchangeSpotifyCode(code, redirectUri).then(async (data) => {
       if (data.error) {
