@@ -31,13 +31,17 @@ function parseConversations(raw: unknown): Conversation[] {
   if (!Array.isArray(raw)) return [];
   return raw
     .filter((c): c is Conversation => c && typeof c === "object" && typeof (c as Conversation).id === "string")
-    .map((c) => ({
-      ...c,
-      messages: Array.isArray(c.messages) ? c.messages : [],
-      conversationProfile: c.conversationProfile ?? null,
-      conversationMemory: c.conversationMemory ?? null,
-      title: typeof c.title === "string" ? c.title : "Chat",
-    }));
+    .map((c) => {
+      const messages = Array.isArray(c.messages) ? c.messages : [];
+      const hasAssistantResult = messages.some((m) => m?.role === "assistant");
+      return {
+        ...c,
+        messages,
+        conversationProfile: hasAssistantResult ? c.conversationProfile ?? null : null,
+        conversationMemory: hasAssistantResult ? c.conversationMemory ?? null : null,
+        title: typeof c.title === "string" ? c.title : "Chat",
+      };
+    });
 }
 
 function getInitialConversationState(): { conversations: Conversation[]; activeId: string } {
@@ -309,4 +313,3 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
 
   return <ConversationContext.Provider value={value}>{children}</ConversationContext.Provider>;
 };
-

@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { Coins } from "lucide-react";
+import { Coins, Infinity } from "lucide-react";
 import { useAuth } from "@/context/useAuth";
 import { TOKEN_WARNING_THRESHOLD } from "@/constants/tokenAlerts";
 import { cn } from "@/lib/utils";
@@ -10,9 +10,18 @@ const badgeClass =
 
 const TokenBadge = () => {
   const { t } = useTranslation();
-  const { tokenBalance, user } = useAuth();
+  const { tokenBalance, user, plan } = useAuth();
 
   if (!user || tokenBalance === null) return null;
+
+  if ((plan ?? "").toLowerCase() === "premium") {
+    return (
+      <div className={badgeClass} aria-label={t("pricing.tokenBadgeUnlimitedAria")}>
+        <Infinity className="h-3.5 w-3.5" />
+        <span>{t("pricing.tokensUnlimitedShort")}</span>
+      </div>
+    );
+  }
 
   const low = tokenBalance <= TOKEN_WARNING_THRESHOLD;
   const content = (

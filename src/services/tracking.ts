@@ -316,6 +316,10 @@ export async function persistThemePreference(theme: string) {
   await upsertUserSettingsPatch({ theme });
 }
 
+export async function persistTutorialCompletedAt(completedAt = new Date().toISOString()) {
+  await upsertUserSettingsPatch({ tutorial_completed_at: completedAt });
+}
+
 // --- ANONYMIZED TRAINING EVENT ---
 export async function maybeCreateTrainingEvent(params: {
   searchId: string;

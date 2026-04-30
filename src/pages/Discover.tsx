@@ -19,7 +19,6 @@ import { useApp } from "@/context/useApp";
 import { useAuth } from "@/context/useAuth";
 import { usePlaybackQueue } from "@/context/usePlaybackQueue";
 import { useConversations } from "@/context/useConversations";
-import { memoryOrFromProfile } from "@/lib/conversationMemory";
 import { callMusicSearch } from "@/services/musicSearchApi";
 import {
   getRecentFeedbackLearningSummary,
@@ -208,15 +207,13 @@ const Chat = () => {
       setDbSearchId(null);
       setResultIdMap({});
 
-      const memoryPayload = memoryOrFromProfile(conv.conversationMemory, conv.conversationProfile);
-
       try {
         const feedbackLearningSummary = await getRecentFeedbackLearningSummary();
         const data = await callMusicSearch({
           prompt,
           ...(mode !== "search" ? { mode } : {}),
           descriptionLanguage,
-          conversationMemory: memoryPayload,
+          conversationMemory: conv.conversationMemory,
           userTasteProfile,
           feedbackLearningSummary,
           conversationId,
@@ -614,6 +611,7 @@ const Chat = () => {
 
   const memorySummary = activeConversation?.conversationMemory?.threadSummary;
   const standardAxes = activeConversation?.conversationMemory?.standardAxes;
+  const showTextualAxes = Boolean(standardAxes && !activeConversation?.conversationProfile);
   const isLuckyLatestTurn = Boolean(currentResult && isLuckyPrompt(currentResult.prompt));
   const isCreatorLatestTurn = currentResult?.searchMode === "creator_trends";
 
@@ -1049,7 +1047,7 @@ const Chat = () => {
                         {memorySummary}
                       </div>
                     )}
-                    {standardAxes && (
+                    {showTextualAxes && standardAxes && (
                       <div className="glass-card rounded-2xl p-4 text-xs font-body space-y-2 text-muted-foreground">
                         <div>
                           <span className="uppercase tracking-wider text-[10px]">{t("chat.axes")}</span>

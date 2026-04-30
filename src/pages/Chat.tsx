@@ -16,7 +16,6 @@ import { useSpotify } from "@/context/useSpotify";
 import { useAppleMusic } from "@/context/useAppleMusic";
 import { usePlaybackQueue } from "@/context/usePlaybackQueue";
 import { useConversations } from "@/context/useConversations";
-import { memoryOrFromProfile } from "@/lib/conversationMemory";
 import { callMusicSearch } from "@/services/musicSearchApi";
 import {
   getRecentFeedbackLearningSummary,
@@ -327,8 +326,6 @@ const Chat = () => {
       setDbSearchId(null);
       setResultIdMap({});
 
-      const memoryPayload = memoryOrFromProfile(conv.conversationMemory, conv.conversationProfile);
-
       try {
         const feedbackLearningSummary = await getRecentFeedbackLearningSummary();
         const data = await callMusicSearch({
@@ -339,7 +336,7 @@ const Chat = () => {
           ...(mode !== "search" ? { mode } : {}),
           descriptionLanguage,
           streamingProviderPreference,
-          conversationMemory: memoryPayload,
+          conversationMemory: conv.conversationMemory,
           userTasteProfile,
           feedbackLearningSummary,
           conversationId,
@@ -859,6 +856,7 @@ const Chat = () => {
 
   const memorySummary = activeConversation?.conversationMemory?.threadSummary;
   const standardAxes = activeConversation?.conversationMemory?.standardAxes;
+  const showTextualAxes = Boolean(standardAxes && !activeConversation?.conversationProfile);
   const isLuckyLatestTurn = Boolean(currentResult && isLuckyPrompt(currentResult.prompt));
   const isCreatorLatestTurn = currentResult?.searchMode === "creator_trends";
 
@@ -1246,7 +1244,7 @@ const Chat = () => {
                         </p>
                       )}
                     </section>
-                    {standardAxes && (
+                    {showTextualAxes && standardAxes && (
                       <section className="space-y-3 pt-1">
                         <p className="text-[10.5px] text-muted-foreground/65 font-body uppercase tracking-[0.18em] font-semibold">
                           {t("chat.axes")}

@@ -6,19 +6,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, stripe-signature",
 };
 
-/** Allineare a src/constants/tokenEconomy.ts */
 const PREMIUM_PRODUCT_MONTHLY = "prod_UIBycXCJF3PNRB";
 const PREMIUM_PRODUCT_ANNUAL = "prod_UIByOkXl3FXIIZ";
-const TOKENS_MONTHLY_CYCLE = 120;
-const TOKENS_ANNUAL_CYCLE = 1440;
-/** Allineare a src/constants/tokenEconomy.ts REFERRAL_PRO_BONUS_RATE */
-const REFERRAL_PRO_BONUS_RATE = 0.5;
-
-function tokensForPremiumProduct(productId: string | undefined): number {
-  if (productId === PREMIUM_PRODUCT_MONTHLY) return TOKENS_MONTHLY_CYCLE;
-  if (productId === PREMIUM_PRODUCT_ANNUAL) return TOKENS_ANNUAL_CYCLE;
-  return 0;
-}
+const PREMIUM_PRODUCTS = new Set([PREMIUM_PRODUCT_MONTHLY, PREMIUM_PRODUCT_ANNUAL]);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -110,23 +100,8 @@ Deno.serve(async (req) => {
         const productId = typeof price?.product === "string"
           ? price.product
           : (price?.product as Stripe.Product | undefined)?.id;
-        const grant = tokensForPremiumProduct(productId);
-        if (grant > 0) {
-          const { error } = await admin.rpc("grant_tokens", {
-            p_user_id: userId,
-            p_amount: grant,
-            p_type: "subscription_cycle",
-            p_description: `Premium allowance (${grant} tokens)`,
-          });
-          if (error) console.error("grant_tokens subscription:", error);
-          const referralBonus = Math.floor(grant * REFERRAL_PRO_BONUS_RATE);
-          if (referralBonus > 0) {
-            const { error: refErr } = await admin.rpc("try_grant_referral_pro_bonus", {
-              p_referee_id: userId,
-              p_bonus: referralBonus,
-            });
-            if (refErr) console.error("try_grant_referral_pro_bonus:", refErr);
-          }
+        if (PREMIUM_PRODUCTS.has(productId)) {
+          console.info("Premium subscription paid; app tokens are unlimited, no cycle token grant applied.");
         }
         break;
       }

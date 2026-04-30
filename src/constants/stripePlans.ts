@@ -5,7 +5,7 @@ export const STRIPE_PLANS = {
     name: "Premium Monthly",
     price: "€9.99/mo",
     priceAmount: 9.99,
-    features: ["Unlimited searches", "120 tokens/month", "Priority support"],
+    features: ["Unlimited app tokens", "Unlimited searches", "Priority support"],
   },
   premium_annual: {
     price_id: "price_1TJbajLDyBUZjAjaEWAcXTHX",
@@ -13,7 +13,7 @@ export const STRIPE_PLANS = {
     name: "Premium Annual",
     price: "€89.99/yr",
     priceAmount: 89.99,
-    features: ["Unlimited searches", "1440 tokens/year", "Priority support", "Save 25%"],
+    features: ["Unlimited app tokens", "Unlimited searches", "Priority support", "Save 25%"],
   },
   tokens_50: {
     price_id: "price_1TJbb7LDyBUZjAjaSnbhOqxp",

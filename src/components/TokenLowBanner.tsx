@@ -11,6 +11,7 @@ const TokenLowBanner = () => {
   const isPremium = (plan ?? "").toLowerCase() === "premium";
 
   if (!user || tokenBalance === null) return null;
+  if (isPremium) return null;
 
   if (tokenBalance === 0) {
     return (

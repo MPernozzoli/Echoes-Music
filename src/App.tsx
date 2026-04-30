@@ -22,6 +22,7 @@ import SubscribePlan from "./pages/SubscribePlan";
 import BuyTokens from "./pages/BuyTokens";
 import CheckoutReturnHandler from "./components/CheckoutReturnHandler";
 import { ReferralQueryCapture, ReferralClaimOnLogin } from "./components/ReferralProgram";
+import { UserTutorial } from "./components/UserTutorial";
 
 const DiscoverRedirect = () => {
   const { search } = useLocation();
@@ -58,6 +59,7 @@ const App = () => (
             <AppleMusicProvider>
             <PlaybackQueueProvider>
               <FavoritesEchoesPlaylistSync />
+              <UserTutorial />
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/auth" element={<Auth />} />

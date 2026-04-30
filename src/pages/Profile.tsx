@@ -22,6 +22,7 @@ import {
   Gift,
   Copy,
   Languages,
+  BookOpen,
 } from "lucide-react";
 import { getUserSettings, persistThemePreference, setAllowAnonymizedData } from "@/services/tracking";
 import { getSpotifyAuthUrl, disconnectSpotify, getSpotifyRedirectUri } from "@/services/spotify";
@@ -35,9 +36,10 @@ import { toast } from "sonner";
 import { AdvancedAISettings } from "@/components/profile/AdvancedAISettings";
 import { supabase } from "@/integrations/supabase/client";
 import { REFERRAL_QUERY_PARAM } from "@/constants/referralStorage";
-import { REFERRAL_PRO_BONUS_RATE, REFERRAL_SIGNUP_BONUS_EACH } from "@/constants/tokenEconomy";
+import { REFERRAL_SIGNUP_BONUS_EACH } from "@/constants/tokenEconomy";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { openUserTutorial } from "@/lib/tutorialEvents";
 
 const DESCRIPTION_LANGS: { value: string; label: string }[] = [
   { value: "it", label: "Italiano" },
@@ -214,7 +216,7 @@ const Profile = () => {
                     <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary capitalize">{plan}</span>
                     {tokenBalance !== null && (
                       <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Coins className="w-3 h-3" /> {tokenBalance} token
+                        <Coins className="w-3 h-3" /> {plan === "premium" ? t("pricing.tokensUnlimitedShort") : `${tokenBalance} token`}
                       </span>
                     )}
                   </div>
@@ -297,7 +299,6 @@ const Profile = () => {
                   <p className="text-xs text-muted-foreground font-body mt-0.5">
                     {t("referral.subtitle", {
                       signup: REFERRAL_SIGNUP_BONUS_EACH,
-                      pct: Math.round(REFERRAL_PRO_BONUS_RATE * 100),
                     })}
                   </p>
                 </div>
@@ -465,6 +466,24 @@ const Profile = () => {
             </div>
           </div>
         )}
+
+        <div className="surface-card rounded-3xl p-6 mb-6 border border-border/50">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <BookOpen className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-body text-sm font-medium text-foreground">{t("profile.tutorialTitle", "Tutorial")}</h3>
+                <p className="text-xs text-muted-foreground font-body">{t("profile.tutorialHint", "Review the quick guide to Echoes.")}</p>
+              </div>
+            </div>
+            <Button type="button" variant="outline" size="sm" className="rounded-full gap-1.5" onClick={openUserTutorial}>
+              <BookOpen className="w-3.5 h-3.5" />
+              {t("profile.reviewTutorial", "Review tutorial")}
+            </Button>
+          </div>
+        </div>
 
         <div className="surface-card rounded-3xl p-6 mb-6 border border-border/50">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

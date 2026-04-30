@@ -15,7 +15,8 @@ const TOKEN_KEYS = ["tokens_50", "tokens_120"] as const satisfies readonly PlanK
 const BuyTokens = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { user, tokenBalance } = useAuth();
+  const { user, tokenBalance, plan } = useAuth();
+  const hasUnlimitedTokens = plan === "premium";
   const [loading, setLoading] = useState<PlanKey | null>(null);
 
   const runCheckout = async (planKey: PlanKey) => {
@@ -56,7 +57,7 @@ const BuyTokens = () => {
             {tokenBalance !== null && user && (
               <p className="mt-4 inline-flex items-center gap-2 text-sm text-muted-foreground surface-card rounded-full px-4 py-2 border border-border/50">
                 <Coins className="w-4 h-4 text-primary" />
-                {t("pricing.tokensRemaining", { count: tokenBalance })}
+                {hasUnlimitedTokens ? t("pricing.tokensUnlimited") : t("pricing.tokensRemaining", { count: tokenBalance })}
               </p>
             )}
             <p className="mt-4 text-sm">

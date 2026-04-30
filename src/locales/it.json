@@ -98,7 +98,38 @@
     "billingHint": "Abbonati o ricarica quando ti servono più ricerche.",
     "billingPlans": "Vedi piani",
     "billingTokens": "Compra token",
-    "billingManage": "Gestisci abbonamento"
+    "billingManage": "Gestisci abbonamento",
+    "tutorialTitle": "Tutorial",
+    "tutorialHint": "Rivedi la guida rapida di Echoes.",
+    "reviewTutorial": "Rivedi tutorial"
+  },
+  "tutorial": {
+    "kicker": "Avvio rapido",
+    "heroTitle": "Come funziona Echoes",
+    "skip": "Salta",
+    "back": "Indietro",
+    "next": "Avanti",
+    "start": "Inizia dalla chat",
+    "close": "Chiudi tutorial",
+    "goToStep": "Vai al passaggio {{step}} del tutorial",
+    "steps": {
+      "describe": {
+        "title": "Parti da una sensazione",
+        "body": "Apri la chat e descrivi un umore, un ricordo, una scena o un’immagine. Echoes trasforma quel contesto emotivo in consigli musicali."
+      },
+      "results": {
+        "title": "Echoes spiega l’abbinamento",
+        "body": "I risultati includono punteggio di affinità, tag emotivi e una breve ragione per cui il brano funziona. Usa quel contesto per affinare il messaggio successivo."
+      },
+      "playback": {
+        "title": "Collega il tuo streaming",
+        "body": "Echoes funziona anche senza, ma rende meglio con Spotify o Apple Music collegato: abiliti ascolto completo, azioni sulle playlist e sincronizzazione dei preferiti."
+      },
+      "memory": {
+        "title": "Costruisci la tua memoria musicale",
+        "body": "Salva i preferiti, rivedi lo storico e tieni le ricerche correlate nella stessa chat. Più contesto conservi, più è facile trovare brani che calzano."
+      }
+    }
   },
   "favorites": {
     "title": "Preferiti",
@@ -356,9 +387,9 @@
   },
   "pricing": {
     "hubTitle": "Piani e token",
-    "hubSubtitle": "Scegli un abbonamento per vantaggi continuativi, oppure acquista pacchetti token quando ti servono più ricerche.",
+  "hubSubtitle": "Scegli PRO per token illimitati nell’app, oppure acquista pacchetti token quando ti servono più ricerche senza abbonamento.",
     "hubCardPlanTitle": "Abbonati a Premium",
-    "hubCardPlanDesc": "Piano mensile o annuale con token mensili inclusi e accesso completo al prodotto.",
+  "hubCardPlanDesc": "Piano mensile o annuale con token illimitati e accesso completo al prodotto.",
     "hubCardTokensTitle": "Compra pacchetti token",
     "hubCardTokensDesc": "Acquisti una tantum — ideali se ti servono solo ricerche extra senza abbonamento.",
     "hubCardCta": "Continua",
@@ -367,14 +398,16 @@
     "planPageSubtitle": "Il piano gratuito per iniziare; Premium offre più capacità e funzioni.",
     "tokensPageTitle": "Ricarica i token",
     "tokensPageSubtitle": "I token servono per le ricerche musicali con IA. I pacchetti accreditano il saldo dopo il pagamento.",
-    "tokensInfoBox": "Ogni ricerca scala token dal saldo. Premium include un tetto mensile di token; i pacchetti si aggiungono al saldo subito dopo il checkout.",
-    "tokensRemaining": "Hai {{count}} token",
+  "tokensInfoBox": "Ogni ricerca scala token dal saldo. Con PRO i token dell’app sono illimitati; i pacchetti servono agli account senza abbonamento e si aggiungono al saldo subito dopo il checkout.",
+  "tokensRemaining": "Hai {{count}} token",
+  "tokensUnlimited": "Token illimitati con PRO",
+  "tokensUnlimitedShort": "Illimitati",
     "packTokens": "{{count}} token",
     "perSearchApprox": "≈ {{amount}} a ricerca",
     "buy": "Acquista",
     "backHub": "Tutte le opzioni",
     "needOnlyTokens": "Ti servono solo token in più?",
-    "wantSubscriptionInstead": "Preferisci un abbonamento con token mensili?",
+  "wantSubscriptionInstead": "Preferisci un abbonamento con token illimitati?",
     "tierFree": "Gratis",
     "tierPremiumMonthly": "Premium",
     "tierPremiumAnnual": "Annuale",
@@ -392,27 +425,28 @@
     "checkoutError": "Impossibile avviare il pagamento. Riprova.",
     "portalError": "Impossibile aprire il portale. Serve un abbonamento attivo.",
     "bannerEmpty": "Non hai più token. Compra un pacchetto o passa a Premium per continuare a cercare.",
-    "bannerEmptyFree": "Non hai più token. Passa a Pro per avere un accredito mensile, oppure compra un pacchetto una tantum.",
-    "bannerEmptyPremium": "Hai esaurito i token di questo periodo. Ricarica con un pacchetto per continuare subito.",
-    "bannerEmptyPremiumHint": "Al rinnovo del ciclo riceverai di nuovo i token inclusi nel piano.",
+  "bannerEmptyFree": "Non hai più token. Passa a PRO per token illimitati, oppure compra un pacchetto una tantum.",
+  "bannerEmptyPremium": "Hai token illimitati con PRO.",
+  "bannerEmptyPremiumHint": "Il saldo non viene scalato mentre l’abbonamento PRO è attivo.",
     "bannerLow": "Ti restano {{count}} token. Ricarica prima che finiscano.",
-    "bannerLowFree": "Ti restano {{count}} token. Con Pro hai un tetto mensile incluso; puoi anche ricaricare quando vuoi.",
-    "bannerLowPremium": "Ti restano {{count}} token. Ricarica prima che finiscano.",
+  "bannerLowFree": "Ti restano {{count}} token. Con PRO hai token illimitati; puoi anche ricaricare quando vuoi.",
+  "bannerLowPremium": "Token illimitati con PRO.",
     "bannerSubscribeProCta": "Abbonati a Pro",
     "bannerManageBillingCta": "Gestisci abbonamento",
     "buyTokensCta": "Compra token",
     "viewPlansCta": "Vedi piani",
     "topUpCta": "Ricarica",
-    "tokenBadgeLowAria": "Pochi token — acquista altri",
+  "tokenBadgeLowAria": "Pochi token — acquista altri",
+  "tokenBadgeUnlimitedAria": "Token illimitati con PRO",
     "faqTitle": "Domande frequenti",
     "faq": {
       "whatAreTokens": {
         "q": "Cosa sono i token?",
-        "a": "I token alimentano le ricerche musicali con IA in Echoes. A ogni ricerca viene scalato un piccolo saldo. Il piano gratuito include un numero limitato; Premium include token ricorrenti ogni mese."
+      "a": "I token alimentano le ricerche musicali con IA in Echoes. A ogni ricerca viene scalato un piccolo saldo dagli account senza abbonamento. Con PRO i token dell’app sono illimitati."
       },
       "premiumVsTokens": {
         "q": "Abbonamento o pacchetti token?",
-        "a": "Premium conviene se usi Echoes spesso: include un tetto mensile di token e i vantaggi del prodotto. I pacchetti sono ricariche una tantum utili se ti servono solo più ricerche di tanto in tanto."
+      "a": "PRO conviene se usi Echoes spesso: include token illimitati e i vantaggi del prodotto. I pacchetti sono ricariche una tantum utili se ti servono solo più ricerche di tanto in tanto."
       },
       "afterPurchase": {
         "q": "Quando vedo i nuovi token?",
@@ -431,7 +465,7 @@
   "referral": {
     "claimSuccess": "Invito applicato: tu e chi ti ha invitato avete ricevuto token bonus.",
     "title": "Porta un amico",
-    "subtitle": "Chi si iscrive dal tuo link riceve +{{signup}} token e anche tu. Se poi attiva Premium, una sola volta entrambi ottenete il {{pct}}% in token extra sulla quota del ciclo di abbonamento (mensile o annuale).",
+    "subtitle": "Chi si iscrive dal tuo link riceve +{{signup}} token e anche tu. Se poi attiva PRO, avrà token illimitati nell’app.",
     "loading": "Caricamento link…",
     "copy": "Copia link",
     "copied": "Link copiato",
