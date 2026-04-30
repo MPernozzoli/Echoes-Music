@@ -4,9 +4,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2, Plus, X, Tag, Copy, RefreshCw } from "lucide-react";
+
+// Returns Unix timestamp for 23:59:59 on dateStr in Europe/Rome (handles CET/CEST)
+function toRomeEndOfDay(dateStr: string): number {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const noonUTC = new Date(Date.UTC(y, m - 1, d, 12));
+  const romeHour = parseInt(
+    new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Rome", hour: "numeric", hour12: false }).format(noonUTC),
+    10,
+  );
+  const romeOffset = romeHour - 12; // e.g. 1 for CET, 2 for CEST
+  return Math.floor(Date.UTC(y, m - 1, d, 23 - romeOffset, 59, 59) / 1000);
+}
 
 const PRODUCT_IDS = {
   monthly: "prod_UQtOkhToUuJFAA",
@@ -97,6 +110,7 @@ const AdminDiscounts = () => {
   const [appliesTo, setAppliesTo] = useState<AppliesToKey>("all");
   const [maxRedemptions, setMaxRedemptions] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
+  const [firstTimeOnly, setFirstTimeOnly] = useState(false);
 
   const loadCoupons = useCallback(async () => {
     setLoading(true);
@@ -115,6 +129,7 @@ const AdminDiscounts = () => {
     setCode(""); setCouponName(""); setDiscountType("percent");
     setDiscountValue(""); setDuration("once"); setDurationMonths("");
     setAppliesTo("all"); setMaxRedemptions(""); setExpiryDate("");
+    setFirstTimeOnly(false);
   };
 
   const handleCreate = async () => {
@@ -137,7 +152,8 @@ const AdminDiscounts = () => {
         ...(duration === "repeating" ? { duration_in_months: parseInt(durationMonths) } : {}),
         applies_to: getProductIds(appliesTo),
         ...(maxRedemptions && parseInt(maxRedemptions) > 0 ? { max_redemptions: parseInt(maxRedemptions) } : {}),
-        ...(expiryDate ? { redeem_by: Math.floor(new Date(expiryDate).getTime() / 1000) } : {}),
+        ...(expiryDate ? { redeem_by: toRomeEndOfDay(expiryDate) } : {}),
+        first_time_only: firstTimeOnly,
       });
       toast.success(`Codice "${result.code}" creato con successo`);
       setShowForm(false);
@@ -282,7 +298,10 @@ const AdminDiscounts = () => {
             </div>
             <div className="space-y-1.5">
               <Label>
-                Scade il <span className="text-muted-foreground text-xs font-normal">(facoltativo)</span>
+                Scade il{" "}
+                <span className="text-muted-foreground text-xs font-normal">
+                  (fuso di Roma · 23:59:59 · facoltativo)
+                </span>
               </Label>
               <Input
                 type="date"
@@ -292,7 +311,25 @@ const AdminDiscounts = () => {
               />
             </div>
           </div>
-          <div className="flex gap-2 pt-1">
+
+          <div className="flex items-start gap-2.5 pt-1 pb-1">
+            <Checkbox
+              id="first-time-only"
+              checked={firstTimeOnly}
+              onCheckedChange={(v) => setFirstTimeOnly(Boolean(v))}
+              className="mt-0.5"
+            />
+            <div>
+              <label htmlFor="first-time-only" className="text-sm font-medium cursor-pointer">
+                Solo nuovi utenti
+              </label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Stripe accetta il codice solo se il cliente non ha mai completato un pagamento prima.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
             <Button onClick={handleCreate} disabled={creating}>
               {creating
                 ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" />

@@ -19,6 +19,7 @@ type Body =
       applies_to?: string[];
       max_redemptions?: number;
       redeem_by?: number;
+      first_time_only?: boolean;
     }
   | { action: "deactivate"; promotion_code_id: string };
 
@@ -88,6 +89,7 @@ Deno.serve(async (req) => {
         code: body.code.toUpperCase().replace(/\s+/g, ""),
         ...(body.max_redemptions ? { max_redemptions: body.max_redemptions } : {}),
         ...(body.redeem_by ? { expires_at: body.redeem_by } : {}),
+        ...(body.first_time_only ? { restrictions: { first_time_transaction: true } } : {}),
       });
 
       return ok({ coupon_id: coupon.id, promotion_code_id: promoCode.id, code: promoCode.code });
