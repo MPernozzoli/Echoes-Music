@@ -722,6 +722,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_settings: {
         Row: {
           ai_provider_mode: string
@@ -856,6 +877,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_grant_pro: {
+        Args: { p_user_id: string; p_years?: number }
+        Returns: undefined
+      }
+      admin_list_users: {
+        Args: never
+        Returns: {
+          created_at: string
+          current_period_end: string
+          display_name: string
+          email: string
+          is_admin: boolean
+          plan: string
+          status: string
+          user_id: string
+        }[]
+      }
+      admin_revoke_pro: { Args: { p_user_id: string }; Returns: undefined }
       claim_anonymous_search: {
         Args: { p_conversation: string; p_ip: string; p_session: string }
         Returns: Json
@@ -899,6 +938,13 @@ export type Database = {
         }
         Returns: undefined
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       merge_track_streaming_id_cache: {
         Args: {
           p_apple_music_catalog_id?: string
@@ -938,7 +984,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1065,6 +1111,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const
