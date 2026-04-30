@@ -35,6 +35,7 @@ import Insights from "./pages/Insights";
 import SpotifyCallback from "./pages/SpotifyCallback";
 import AuthCallback from "./pages/AuthCallback";
 import NotFound from "./pages/NotFound";
+import Admin from "./pages/Admin";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import CookiePolicy from "./pages/CookiePolicy";
 
@@ -77,6 +78,7 @@ const App = () => (
                 <Route path="/spotify-callback" element={<SpotifyCallback />} />
                 <Route path="/privacy" element={<PrivacyPolicy />} />
                 <Route path="/cookies" element={<CookiePolicy />} />
+                <Route path="/admin" element={<Admin />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </PlaybackQueueProvider>
