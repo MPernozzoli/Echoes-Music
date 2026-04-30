@@ -8,8 +8,8 @@ const corsHeaders = {
 };
 
 const PREMIUM_PRODUCTS = [
-  "prod_UIBycXCJF3PNRB", // monthly
-  "prod_UIByOkXl3FXIIZ", // annual
+  "prod_UQtOkhToUuJFAA", // monthly
+  "prod_UQtOvEkrSURxiY", // annual
 ];
 
 serve(async (req: Request) => {

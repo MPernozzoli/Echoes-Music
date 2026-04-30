@@ -6,8 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, stripe-signature",
 };
 
-const PREMIUM_PRODUCT_MONTHLY = "prod_UIBycXCJF3PNRB";
-const PREMIUM_PRODUCT_ANNUAL = "prod_UIByOkXl3FXIIZ";
+const PREMIUM_PRODUCT_MONTHLY = "prod_UQtOkhToUuJFAA";
+const PREMIUM_PRODUCT_ANNUAL = "prod_UQtOvEkrSURxiY";
 const PREMIUM_PRODUCTS = new Set([PREMIUM_PRODUCT_MONTHLY, PREMIUM_PRODUCT_ANNUAL]);
 
 Deno.serve(async (req) => {

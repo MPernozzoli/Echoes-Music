@@ -9,24 +9,24 @@ const corsHeaders = {
 
 const PLANS: Record<string, { price_id: string; product_id: string; mode: "subscription" | "payment"; tokens?: number }> = {
   premium_monthly: {
-    price_id: "price_1TJbaSLDyBUZjAjaEESklylw",
-    product_id: "prod_UIBycXCJF3PNRB",
+    price_id: "price_1TS1cGLvrRMVmRrQ4Sqamye3",
+    product_id: "prod_UQtOkhToUuJFAA",
     mode: "subscription",
   },
   premium_annual: {
-    price_id: "price_1TJbajLDyBUZjAjaEWAcXTHX",
-    product_id: "prod_UIByOkXl3FXIIZ",
+    price_id: "price_1TS1cJLvrRMVmRrQkwagAU0b",
+    product_id: "prod_UQtOvEkrSURxiY",
     mode: "subscription",
   },
   tokens_50: {
-    price_id: "price_1TJbb7LDyBUZjAjaSnbhOqxp",
-    product_id: "prod_UIBzdydTivyNco",
+    price_id: "price_1TS1cMLvrRMVmRrQPehHnS2o",
+    product_id: "prod_UQtOxKrJQtBKc8",
     mode: "payment",
     tokens: 65,
   },
   tokens_120: {
-    price_id: "price_1TJbbPLDyBUZjAja6Ug6CRRx",
-    product_id: "prod_UIBzM97S90Mchr",
+    price_id: "price_1TS1cQLvrRMVmRrQgba4cATx",
+    product_id: "prod_UQtOrUFUpiWOaq",
     mode: "payment",
     tokens: 160,
   },
@@ -88,6 +88,8 @@ serve(async (req: Request) => {
       line_items: [{ price: plan.price_id, quantity: 1 }],
       mode: plan.mode,
       allow_promotion_codes: true,
+      // Regime forfettario: nessuna IVA applicata
+      automatic_tax: { enabled: false },
       ...(plan.mode === "subscription"
         ? {
           subscription_data: {
