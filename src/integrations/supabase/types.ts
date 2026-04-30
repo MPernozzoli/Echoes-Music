@@ -878,19 +878,19 @@ export type Database = {
     }
     Functions: {
       admin_block_user: { Args: { p_user_id: string }; Returns: undefined }
+      admin_grant_admin: { Args: { p_user_id: string }; Returns: undefined }
       admin_grant_pro: {
         Args: { p_user_id: string; p_years?: number }
         Returns: undefined
       }
-      admin_grant_admin: { Args: { p_user_id: string }; Returns: undefined }
       admin_list_users: {
         Args: never
         Returns: {
-          banned_until: string | null
+          banned_until: string
           created_at: string
-          current_period_end: string | null
-          display_name: string | null
-          email: string | null
+          current_period_end: string
+          display_name: string
+          email: string
           is_admin: boolean
           is_blocked: boolean
           plan: string
