@@ -47,8 +47,8 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <AuthProvider>
         <ReferralQueryCapture />
+        <AuthProvider>
         <ReferralClaimOnLogin />
         <ThemePreferenceSync />
         <CheckoutReturnHandler />
