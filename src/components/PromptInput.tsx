@@ -195,8 +195,11 @@ const PromptInput = ({
                     <Video className="h-4 w-4" />
                   </span>
                   <span className="flex-1 min-w-0 flex flex-col leading-tight">
-                    <span className="text-[13px] font-body font-medium text-foreground">
-                      {t("promptInput.modeCreator")}
+                    <span className="flex items-center gap-1.5 text-[13px] font-body font-medium text-foreground">
+                      <span className="truncate">{t("promptInput.modeCreator")}</span>
+                      <span className="shrink-0 rounded-full border border-primary/25 bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold leading-none text-primary">
+                        BETA
+                      </span>
                     </span>
                     <span className="text-[11px] text-muted-foreground/75 font-body truncate">
                       {t("promptInput.modeCreatorHint")}
