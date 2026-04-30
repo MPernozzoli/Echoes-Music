@@ -78,6 +78,7 @@ const App = () => (
                 <Route path="/spotify-callback" element={<SpotifyCallback />} />
                 <Route path="/privacy" element={<PrivacyPolicy />} />
                 <Route path="/cookies" element={<CookiePolicy />} />
+                <Route path="/admin" element={<Admin />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </PlaybackQueueProvider>
