@@ -85,7 +85,7 @@ bun install
 VITE_SUPABASE_PROJECT_ID=your-project-id
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
-VITE_SPOTIFY_REDIRECT_URI=https://your-domain.com/spotify-callback
+VITE_SPOTIFY_REDIRECT_URI=https://echoesmusic.it/spotify-callback
 ```
 
 3. Avvia il frontend:
@@ -113,7 +113,7 @@ STRIPE_SECRET_KEY=
 
 SPOTIFY_CLIENT_ID=
 SPOTIFY_CLIENT_SECRET=
-SPOTIFY_REDIRECT_URI=https://your-domain.com/spotify-callback
+SPOTIFY_REDIRECT_URI=https://echoesmusic.it/spotify-callback
 
 APPLE_MUSIC_PRIVATE_KEY=
 APPLE_MUSIC_KEY_ID=
@@ -131,7 +131,8 @@ Nota:
 - `LOVABLE_API_KEY` viene usata per la modalita AI gestita.
 - `BYO_*` serve per la modalita "bring your own OpenAI key".
 - Le credenziali Apple Music sono richieste sia per token generation sia per operazioni libreria.
-- `SPOTIFY_REDIRECT_URI` e `VITE_SPOTIFY_REDIRECT_URI` devono coincidere con uno degli URI registrati nella Spotify Developer Dashboard, per esempio `https://your-domain.com/spotify-callback`.
+- `SPOTIFY_REDIRECT_URI` e `VITE_SPOTIFY_REDIRECT_URI` devono coincidere con uno degli URI registrati nella Spotify Developer Dashboard: `https://echoesmusic.it/spotify-callback`.
+- Per test locali Spotify richiede un loopback esplicito: usa `http://127.0.0.1:8080/spotify-callback`, non `http://localhost:8080/spotify-callback`.
 
 ## Edge Functions presenti
 

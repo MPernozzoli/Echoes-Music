@@ -7,7 +7,12 @@ const PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
 export function getSpotifyRedirectUri() {
   const configuredRedirectUri = import.meta.env.VITE_SPOTIFY_REDIRECT_URI?.trim();
   if (configuredRedirectUri) return configuredRedirectUri;
-  return `${window.location.origin}/spotify-callback`;
+
+  const origin = new URL(window.location.origin);
+  if (origin.hostname === "localhost") {
+    origin.hostname = "127.0.0.1";
+  }
+  return `${origin.origin}/spotify-callback`;
 }
 
 function functionsUrl(name: string) {
