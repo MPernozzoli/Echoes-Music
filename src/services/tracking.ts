@@ -76,6 +76,14 @@ export async function trackSearch(params: {
     console.error("trackSearch error:", error);
     return null;
   }
+
+  // Fire-and-forget: ask the AI if this prompt is safe to show publicly
+  void supabase.functions
+    .invoke("process-display-prompt", {
+      body: { search_id: data.id, raw_prompt: params.rawPrompt },
+    })
+    .catch(() => {});
+
   return data.id;
 }
 

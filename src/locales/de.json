@@ -1,5 +1,13 @@
 {
-  "nav": { "chat": "Chat", "history": "Verlauf", "favorites": "Favoriten", "profile": "Profil", "home": "Start", "login": "Anmelden", "signUp": "Registrieren" },
+  "nav": {
+    "chat": "Chat",
+    "history": "Verlauf",
+    "favorites": "Favoriten",
+    "profile": "Profil",
+    "home": "Start",
+    "login": "Anmelden",
+    "signUp": "Registrieren"
+  },
   "auth": {
     "freeTokens": "{{count}} Suchen inklusive bei der Registrierung",
     "loginError": "Anmeldung fehlgeschlagen. Bitte erneut versuchen.",
@@ -28,8 +36,7 @@
     "resultsTitle": "Ergebnisse, die",
     "resultsTitleItalic": "etwas bedeuten",
     "resultsTitleEnd": "",
-    "resultsSubtitle": "Jede Empfehlung hat Kontext — nicht nur Metadaten, sondern warum der Song berührt.",
-    "liveCommunityArtwork": "Basierend auf kürzlich getrackten Suchen der Echoes-Community (anonym und angemeldet), sofern vorhanden.",
+    "resultsSubtitle": "Jede Empfehlung hat Kontext — nicht nur Metadaten, sondern warum das Lied berührt.",
     "enterEchoes": "Echoes öffnen",
     "footerTagline": "Musikentdeckung, neu gedacht.",
     "footerTerms": "Nutzungsbedingungen",
@@ -38,7 +45,8 @@
     "toastRateLimit": "Zu viele Anfragen. Bitte kurz warten.",
     "toastNoCredits": "KI-Guthaben aufgebraucht.",
     "toastNoSongs": "Keine Songs gefunden. Nutze ein paar Suchen, um dein Profil zu verfeinern.",
-    "toastGenericError": "Etwas ist schiefgelaufen"
+    "toastGenericError": "Etwas ist schiefgelaufen",
+    "communityLabel": "Aus der Community"
   },
   "profile": {
     "title": "Einstellungen",
@@ -107,7 +115,10 @@
     "chatWithTitle": "Chat: {{title}}",
     "fromQuote": "Von: „{{prompt}}“"
   },
-  "notFound": { "title": "Seite nicht gefunden", "home": "Zur Startseite" },
+  "notFound": {
+    "title": "Seite nicht gefunden",
+    "home": "Zur Startseite"
+  },
   "insights": {
     "internal": "Intern",
     "title": "Produkt-Insights",
