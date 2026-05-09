@@ -501,6 +501,9 @@ export type Database = {
         Row: {
           anonymous_session_id: string | null
           created_at: string
+          display_approved: boolean
+          display_processed: boolean
+          display_prompt: string | null
           id: string
           interpretation_summary: string | null
           interpreted_catharsis: string | null
@@ -519,6 +522,9 @@ export type Database = {
         Insert: {
           anonymous_session_id?: string | null
           created_at?: string
+          display_approved?: boolean
+          display_processed?: boolean
+          display_prompt?: string | null
           id?: string
           interpretation_summary?: string | null
           interpreted_catharsis?: string | null
@@ -537,6 +543,9 @@ export type Database = {
         Update: {
           anonymous_session_id?: string | null
           created_at?: string
+          display_approved?: boolean
+          display_processed?: boolean
+          display_prompt?: string | null
           id?: string
           interpretation_summary?: string | null
           interpreted_catharsis?: string | null
