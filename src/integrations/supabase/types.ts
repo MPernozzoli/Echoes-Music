@@ -223,6 +223,30 @@ export type Database = {
         }
         Relationships: []
       }
+      email_unsubscribe_tokens: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       homepage_discount_promotions: {
         Row: {
           active: boolean
@@ -256,30 +280,6 @@ export type Database = {
           promotion_code_id?: string
           starts_at?: string | null
           updated_at?: string
-        }
-        Relationships: []
-      }
-      email_unsubscribe_tokens: {
-        Row: {
-          created_at: string
-          email: string
-          id: string
-          token: string
-          used_at: string | null
-        }
-        Insert: {
-          created_at?: string
-          email: string
-          id?: string
-          token: string
-          used_at?: string | null
-        }
-        Update: {
-          created_at?: string
-          email?: string
-          id?: string
-          token?: string
-          used_at?: string | null
         }
         Relationships: []
       }
@@ -942,17 +942,6 @@ export type Database = {
           status: string
           user_id: string
         }[]
-      }
-      admin_upsert_homepage_discount_promotion: {
-        Args: {
-          p_active: boolean
-          p_code: string
-          p_ends_at?: string | null
-          p_messages?: Json
-          p_promotion_code_id: string
-          p_starts_at?: string | null
-        }
-        Returns: Database["public"]["Tables"]["homepage_discount_promotions"]["Row"]
       }
       admin_revoke_admin: { Args: { p_user_id: string }; Returns: undefined }
       admin_revoke_pro: { Args: { p_user_id: string }; Returns: undefined }
