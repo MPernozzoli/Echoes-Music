@@ -291,14 +291,6 @@ const Landing = () => {
           </div>
 
           <div className="relative z-10 max-w-3xl mx-auto px-6 text-center">
-            <div
-              data-anime="hero-badge"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-primary/20 bg-card/60 backdrop-blur-md text-muted-foreground text-sm font-body mb-8 shadow-soft"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
-              {t("landing.badge")}
-            </div>
-
             <h1
               data-anime="hero-title"
               className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-foreground leading-[1.08] mb-6 text-balance"
