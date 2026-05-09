@@ -1303,12 +1303,12 @@ const Chat = () => {
     <div
       aria-hidden
       className="fixed inset-x-0 bottom-0 z-[41] pointer-events-none bg-gradient-to-t from-background via-background/90 to-transparent"
-      style={{ height: `calc(var(--global-player-offset, ${isMobile ? "56px" : "0px"}) + 7.5rem)` }}
+      style={{ height: `calc(${queue.length > 0 ? "var(--global-player-offset, 0px)" : (isMobile ? "56px" : "0px")} + 7.5rem)` }}
     />
     <div
       ref={chatDockRef}
       className="fixed inset-x-0 z-[42] pointer-events-none"
-      style={{ bottom: `var(--global-player-offset, ${isMobile ? "56px" : "0px"})` }}
+      style={{ bottom: queue.length > 0 ? "var(--global-player-offset, 0px)" : (isMobile ? "56px" : "0px") }}
     >
       <div className="relative px-3 md:px-8 pt-3 pb-3 md:pb-5">
         <div className="max-w-3xl w-full mx-auto space-y-2 pointer-events-auto">
