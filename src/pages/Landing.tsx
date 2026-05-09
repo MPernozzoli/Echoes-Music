@@ -307,12 +307,6 @@ const Landing = () => {
               <span className="gradient-warm-text italic">{t("landing.titleItalic")}</span>
             </h1>
 
-            <p
-              data-anime="hero-subtitle"
-              className="text-lg md:text-xl text-muted-foreground font-body max-w-xl mx-auto mb-10 text-balance"
-            >
-              {t("landing.subtitle")}
-            </p>
 
             <div data-anime="hero-composer" className="max-w-2xl mx-auto mb-4">
               <PromptInput
