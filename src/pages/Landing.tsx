@@ -16,6 +16,7 @@ import { callMusicSearch } from "@/services/musicSearchApi";
 import { Button } from "@/components/ui/button";
 import AppLayout from "@/components/AppLayout";
 import { AppLogo } from "@/components/AppLogo";
+import HomepageDiscountBanner from "@/components/HomepageDiscountBanner";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { artworkTintFromId } from "@/lib/artworkTint";
@@ -291,6 +292,7 @@ const Landing = () => {
           </div>
 
           <div className="relative z-10 max-w-3xl mx-auto px-6 text-center">
+            <HomepageDiscountBanner />
             <h1
               data-anime="hero-title"
               className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-foreground leading-[1.08] mb-6 text-balance"

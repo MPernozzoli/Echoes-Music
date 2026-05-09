@@ -2,12 +2,24 @@ import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Plus, X, Tag, Copy, RefreshCw } from "lucide-react";
+import { Loader2, Plus, X, Tag, Copy, RefreshCw, Megaphone, Wand2, Save } from "lucide-react";
+import {
+  fetchAdminHomepageDiscountPromotions,
+  generatePromotionTranslations,
+  normalizePromotionMessages,
+  PROMOTION_LANGS,
+  saveHomepageDiscountPromotion,
+  type HomepageDiscountPromotion,
+  type PromotionMessages,
+} from "@/services/homepageDiscountPromotion";
+import type { SupportedUiLang } from "@/i18n/config";
 
 // Returns Unix timestamp for 23:59:59 on dateStr in Europe/Rome (handles CET/CEST)
 function toRomeEndOfDay(dateStr: string): number {
@@ -49,6 +61,17 @@ type Coupon = {
   promotion_codes: PromoCode[];
 };
 
+type PromoCodeWithCoupon = PromoCode & { coupon: Coupon };
+
+type PromotionFormState = {
+  promotionCodeId: string;
+  code: string;
+  active: boolean;
+  startsAt: string;
+  endsAt: string;
+  messages: PromotionMessages;
+};
+
 async function callCouponsApi(body: object) {
   const { data, error } = await supabase.functions.invoke("stripe-admin-coupons", { body });
   if (error) throw error;
@@ -78,6 +101,26 @@ function appliesToLabel(c: Coupon) {
   return "Prodotti specifici";
 }
 
+function toDatetimeLocal(value: string | null | undefined): string {
+  if (!value) return "";
+  const d = new Date(value);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function localDatetimeToIso(value: string): string | null {
+  return value ? new Date(value).toISOString() : null;
+}
+
+const LANGUAGE_LABELS: Record<SupportedUiLang, string> = {
+  it: "Italiano",
+  en: "English",
+  fr: "Français",
+  de: "Deutsch",
+  es: "Español",
+  pt: "Português",
+};
+
 const APPLIES_TO_OPTIONS = [
   { value: "all", label: "Tutti i prodotti" },
   { value: "subscriptions", label: "Solo abbonamenti" },
@@ -100,6 +143,11 @@ const AdminDiscounts = () => {
   const [showForm, setShowForm] = useState(false);
   const [creating, setCreating] = useState(false);
   const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
+  const [promotions, setPromotions] = useState<HomepageDiscountPromotion[]>([]);
+  const [promotionForm, setPromotionForm] = useState<PromotionFormState | null>(null);
+  const [savingPromotion, setSavingPromotion] = useState(false);
+  const [translatingPromotion, setTranslatingPromotion] = useState(false);
+  const [sourceLanguage, setSourceLanguage] = useState<SupportedUiLang>("it");
 
   const [code, setCode] = useState("");
   const [couponName, setCouponName] = useState("");
@@ -115,8 +163,12 @@ const AdminDiscounts = () => {
   const loadCoupons = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await callCouponsApi({ action: "list" });
+      const [result, homepagePromotions] = await Promise.all([
+        callCouponsApi({ action: "list" }),
+        fetchAdminHomepageDiscountPromotions(),
+      ]);
       setCoupons(result.data ?? []);
+      setPromotions(homepagePromotions);
     } catch (e) {
       toast.error("Errore caricamento sconti", { description: e instanceof Error ? e.message : String(e) });
     }
@@ -180,6 +232,78 @@ const AdminDiscounts = () => {
   const allPromoCodes = coupons.flatMap((c) =>
     c.promotion_codes.map((p) => ({ ...p, coupon: c }))
   );
+
+  const promotionByCodeId = new Map(promotions.map((promotion) => [promotion.promotion_code_id, promotion]));
+
+  const openPromotionForm = (pc: PromoCodeWithCoupon) => {
+    const existing = promotionByCodeId.get(pc.id);
+    const messages = normalizePromotionMessages(existing?.messages);
+    setPromotionForm({
+      promotionCodeId: pc.id,
+      code: pc.code,
+      active: existing?.active ?? false,
+      startsAt: toDatetimeLocal(existing?.starts_at),
+      endsAt: toDatetimeLocal(existing?.ends_at),
+      messages: Object.keys(messages).length > 0
+        ? messages
+        : { it: `Usa il codice ${pc.code} e risparmia su Echoes.` },
+    });
+  };
+
+  const updatePromotionMessage = (lang: SupportedUiLang, value: string) => {
+    setPromotionForm((current) => current
+      ? { ...current, messages: { ...current.messages, [lang]: value } }
+      : current);
+  };
+
+  const handleGenerateTranslations = async () => {
+    if (!promotionForm) return;
+    const sourceMessage = promotionForm.messages[sourceLanguage]?.trim();
+    if (!sourceMessage) return toast.error(`Inserisci prima il testo in ${LANGUAGE_LABELS[sourceLanguage]}`);
+
+    setTranslatingPromotion(true);
+    try {
+      const translations = await generatePromotionTranslations({
+        sourceLanguage,
+        message: sourceMessage,
+        code: promotionForm.code,
+      });
+      setPromotionForm((current) => current
+        ? { ...current, messages: { ...current.messages, ...translations, [sourceLanguage]: sourceMessage } }
+        : current);
+      toast.success("Traduzioni generate");
+    } catch (e) {
+      toast.error("Errore traduzioni IA", { description: e instanceof Error ? e.message : String(e) });
+    }
+    setTranslatingPromotion(false);
+  };
+
+  const handleSavePromotion = async () => {
+    if (!promotionForm) return;
+    if (promotionForm.active && !Object.values(promotionForm.messages).some((msg) => msg?.trim())) {
+      return toast.error("Inserisci almeno una frase promozionale");
+    }
+
+    setSavingPromotion(true);
+    try {
+      await saveHomepageDiscountPromotion({
+        promotionCodeId: promotionForm.promotionCodeId,
+        code: promotionForm.code,
+        active: promotionForm.active,
+        startsAt: localDatetimeToIso(promotionForm.startsAt),
+        endsAt: localDatetimeToIso(promotionForm.endsAt),
+        messages: promotionForm.messages,
+      });
+      toast.success(promotionForm.active
+        ? `Codice "${promotionForm.code}" promosso in homepage`
+        : `Promozione homepage per "${promotionForm.code}" salvata`);
+      setPromotionForm(null);
+      await loadCoupons();
+    } catch (e) {
+      toast.error("Errore salvataggio promozione", { description: e instanceof Error ? e.message : String(e) });
+    }
+    setSavingPromotion(false);
+  };
 
   return (
     <div className="space-y-6">
@@ -343,6 +467,116 @@ const AdminDiscounts = () => {
         </div>
       )}
 
+      {promotionForm && (
+        <div className="rounded-xl border border-primary/25 bg-card/70 p-5 space-y-5 shadow-sm">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <Megaphone className="w-4 h-4 text-primary" />
+                <h3 className="font-medium">Promozione homepage</h3>
+                <Badge variant="outline" className="font-mono">{promotionForm.code}</Badge>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Solo un codice può essere promosso in homepage: attivandolo, gli altri vengono disattivati.
+              </p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => setPromotionForm(null)}>
+              <X className="w-4 h-4 mr-1" /> Chiudi
+            </Button>
+          </div>
+
+          <div className="flex items-start gap-3 rounded-lg border border-borderSubtle bg-muted/20 p-3">
+            <Switch
+              id="homepage-promotion-active"
+              checked={promotionForm.active}
+              onCheckedChange={(checked) => setPromotionForm({ ...promotionForm, active: checked })}
+            />
+            <div>
+              <Label htmlFor="homepage-promotion-active" className="cursor-pointer">Promuovi in homepage</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Il banner appare solo se il codice è attivo e dentro la finestra data/ora configurata.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Inizio promozione <span className="text-muted-foreground text-xs font-normal">(facoltativo)</span></Label>
+              <Input
+                type="datetime-local"
+                value={promotionForm.startsAt}
+                onChange={(e) => setPromotionForm({ ...promotionForm, startsAt: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Fine promozione <span className="text-muted-foreground text-xs font-normal">(facoltativo)</span></Label>
+              <Input
+                type="datetime-local"
+                value={promotionForm.endsAt}
+                onChange={(e) => setPromotionForm({ ...promotionForm, endsAt: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+              <div>
+                <Label>Frase promozionale localizzata</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  La homepage usa la lingua dell’interfaccia, con fallback automatico.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Select value={sourceLanguage} onValueChange={(v) => setSourceLanguage(v as SupportedUiLang)}>
+                  <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {PROMOTION_LANGS.map((lang) => (
+                      <SelectItem key={lang} value={lang}>{LANGUAGE_LABELS[lang]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void handleGenerateTranslations()}
+                  disabled={translatingPromotion}
+                >
+                  {translatingPromotion
+                    ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                    : <Wand2 className="w-4 h-4 mr-1.5" />}
+                  Traduci con IA
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {PROMOTION_LANGS.map((lang) => (
+                <div key={lang} className="space-y-1.5">
+                  <Label>{LANGUAGE_LABELS[lang]}</Label>
+                  <Textarea
+                    value={promotionForm.messages[lang] ?? ""}
+                    onChange={(e) => updatePromotionMessage(lang, e.target.value)}
+                    placeholder={`Frase banner in ${LANGUAGE_LABELS[lang]}`}
+                    maxLength={180}
+                    className="min-h-[78px] resize-y"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <Button onClick={() => void handleSavePromotion()} disabled={savingPromotion}>
+              {savingPromotion
+                ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                : <Save className="w-4 h-4 mr-1.5" />}
+              Salva promozione
+            </Button>
+            <Button variant="ghost" onClick={() => setPromotionForm(null)}>Annulla</Button>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -381,6 +615,9 @@ const AdminDiscounts = () => {
                         {!pc.active && (
                           <Badge variant="outline" className="text-[10px] text-muted-foreground">Disattivo</Badge>
                         )}
+                        {promotionByCodeId.get(pc.id)?.active && (
+                          <Badge className="text-[10px] bg-primary/15 text-primary hover:bg-primary/20">Homepage</Badge>
+                        )}
                       </div>
                       {coupon.name && coupon.name !== pc.code && (
                         <div className="text-xs text-muted-foreground mt-0.5">{coupon.name}</div>
@@ -398,6 +635,14 @@ const AdminDiscounts = () => {
                       {pc.max_redemptions != null ? ` / ${pc.max_redemptions}` : ""}
                     </td>
                     <td className="px-4 py-3 text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openPromotionForm({ ...pc, coupon })}
+                        >
+                          <Megaphone className="w-4 h-4 mr-1" /> Homepage
+                        </Button>
                       {pc.active && (
                         <Button
                           variant="ghost"
@@ -410,6 +655,7 @@ const AdminDiscounts = () => {
                             : <><X className="w-4 h-4 mr-1" /> Disattiva</>}
                         </Button>
                       )}
+                      </div>
                     </td>
                   </tr>
                 ))}
