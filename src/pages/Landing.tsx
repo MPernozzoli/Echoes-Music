@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { animate, stagger } from "animejs";
-import { splitText } from "animejs";
 import { Trans, useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Sparkles, Search, Music, Wand2 } from "lucide-react";
@@ -34,50 +33,30 @@ const Landing = () => {
   const [communityGalleryActive, setCommunityGalleryActive] = useState(false);
 
   const heroRef = useRef<HTMLDivElement | null>(null);
-  const heroTitleRef = useRef<HTMLHeadingElement | null>(null);
   const heroCollageRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
 
-    const cleanups: Array<() => void> = [];
-
-    if (heroTitleRef.current) {
-      const splitter = splitText(heroTitleRef.current, { words: true, chars: false });
-      if (splitter.words.length > 0) {
-        splitter.words.forEach((w) => {
-          (w as HTMLElement).style.willChange = "transform, opacity, filter";
-          (w as HTMLElement).style.display = "inline-block";
-        });
-        animate(splitter.words, {
-          opacity: [0, 1],
-          translateY: [16, 0],
-          filter: ["blur(6px)", "blur(0px)"],
-          duration: 900,
-          delay: stagger(55, { start: 120 }),
-          ease: "outQuart",
-        });
-      }
-      cleanups.push(() => splitter.revert());
-    }
-
     const heroRoot = heroRef.current;
     if (heroRoot) {
+      const title = heroRoot.querySelector<HTMLElement>("[data-anime='hero-title']");
       const badge = heroRoot.querySelector<HTMLElement>("[data-anime='hero-badge']");
       const subtitle = heroRoot.querySelector<HTMLElement>("[data-anime='hero-subtitle']");
       const composer = heroRoot.querySelector<HTMLElement>("[data-anime='hero-composer']");
       const lucky = heroRoot.querySelector<HTMLElement>("[data-anime='hero-lucky']");
       const chips = heroRoot.querySelectorAll<HTMLElement>("[data-anime='hero-chip']");
 
-      [badge, subtitle, composer, lucky].forEach((el, i) => {
+      [badge, title, subtitle, composer, lucky].forEach((el, i) => {
         if (!el) return;
         el.style.opacity = "0";
         animate(el, {
           opacity: [0, 1],
-          translateY: [14, 0],
-          duration: 700,
-          delay: 350 + i * 90,
+          translateY: [i === 1 ? 18 : 14, 0],
+          filter: i === 1 ? ["blur(6px)", "blur(0px)"] : undefined,
+          duration: i === 1 ? 850 : 700,
+          delay: 120 + i * 90,
           ease: "outQuart",
         });
       });
@@ -116,7 +95,13 @@ const Landing = () => {
     }
 
     return () => {
-      cleanups.forEach((fn) => fn());
+      heroRoot
+        ?.querySelectorAll<HTMLElement>("[data-anime]")
+        .forEach((el) => {
+          el.style.opacity = "";
+          el.style.transform = "";
+          el.style.filter = "";
+        });
     };
   }, []);
 
@@ -248,7 +233,7 @@ const Landing = () => {
   return (
     <AppLayout headerVariant="marketing">
       <div className="min-h-screen bg-background">
-        <section ref={heroRef} className="relative min-h-[92vh] flex items-center justify-center overflow-hidden">
+        <section ref={heroRef} className="relative min-h-[calc(100svh-3.5rem)] flex items-center justify-center overflow-hidden py-14 md:py-20">
           <img
             src={heroBg}
             alt=""
@@ -292,7 +277,7 @@ const Landing = () => {
             </div>
 
             <h1
-              ref={heroTitleRef}
+              data-anime="hero-title"
               className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-foreground leading-[1.08] mb-6 text-balance"
             >
               {t("landing.title")}{" "}
