@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { ArrowRight, Music2, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { artworkTintFromId } from "@/lib/artworkTint";
@@ -19,50 +19,62 @@ const MicroConversationCard = ({ displayPrompt, songs, className }: Props) => {
     <div
       style={tintStyle}
       className={cn(
-        "group relative overflow-hidden rounded-2xl border border-border/50 transition-all duration-500",
-        "bg-gradient-to-br from-card/95 via-card/90 to-background/80 backdrop-blur-xl shadow-elevated",
-        "hover:border-primary/35 hover:shadow-glow",
+        "group relative overflow-hidden rounded-[1.35rem] border border-border/50 transition-all duration-500",
+        "bg-gradient-to-br from-card/95 via-card/88 to-background/80 backdrop-blur-xl shadow-elevated",
+        "hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-glow motion-reduce:hover:translate-y-0",
         className,
       )}
     >
       <div className="pointer-events-none absolute inset-0 gradient-artwork opacity-90" aria-hidden />
-      <div className="relative grid gap-5 p-5 md:grid-cols-[1fr_auto_1.35fr] md:items-center md:p-6">
-        <div className="space-y-2">
-          <span className="text-[0.65rem] uppercase tracking-[0.22em] text-primary/80 font-body">
+      <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" aria-hidden />
+      <div className="relative grid gap-5 p-5 md:grid-cols-[minmax(0,0.9fr)_auto_minmax(0,1.25fr)] md:items-center md:p-6">
+        <div className="space-y-3">
+          <span className="inline-flex items-center gap-2 text-[0.68rem] uppercase tracking-[0.2em] text-primary/80 font-body">
+            <Search className="h-3.5 w-3.5" aria-hidden />
             {t("landing.promptLabel")}
           </span>
-          <div className="flex items-start gap-2.5">
-            <span className="mt-0.5 shrink-0 flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 border border-primary/20">
-              <Search className="w-3 h-3 text-primary" />
-            </span>
-            <p className="text-sm font-body text-foreground/85 leading-snug italic">
-              &ldquo;{displayPrompt}&rdquo;
-            </p>
-          </div>
+          <p className="font-display text-lg leading-snug text-foreground md:text-xl">
+            &ldquo;{displayPrompt}&rdquo;
+          </p>
         </div>
 
-        <div className="hidden h-px w-full bg-border/50 md:block md:h-16 md:w-px" aria-hidden />
+        <div
+          className="flex h-8 w-8 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary md:h-9 md:w-9"
+          aria-hidden
+        >
+          <ArrowRight className="h-4 w-4" />
+        </div>
 
-        <div className="space-y-2">
-          <span className="text-[0.65rem] uppercase tracking-[0.22em] text-primary/80 font-body">
+        <div className="space-y-3">
+          <span className="inline-flex items-center gap-2 text-[0.68rem] uppercase tracking-[0.2em] text-primary/80 font-body">
+            <Music2 className="h-3.5 w-3.5" aria-hidden />
             {t("landing.selectedTrackLabel")}
           </span>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <img
               src={selectedSong.artwork}
               alt={`${selectedSong.title} by ${selectedSong.artist}`}
-              className="h-14 w-14 rounded-xl object-cover shrink-0 ring-1 ring-border/40"
+              className="h-20 w-20 rounded-2xl object-cover shrink-0 ring-1 ring-border/40 shadow-lg shadow-background/40 md:h-24 md:w-24"
               loading="lazy"
-              width={56}
-              height={56}
+              width={96}
+              height={96}
             />
             <div className="flex-1 min-w-0">
-              <p className="text-base font-display font-semibold truncate leading-tight">{selectedSong.title}</p>
-              <p className="text-sm text-muted-foreground font-body truncate">{selectedSong.artist}</p>
+              <div className="mb-2 flex items-start gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-display text-xl font-semibold leading-tight text-foreground">
+                    {selectedSong.title}
+                  </p>
+                  <p className="truncate text-sm text-muted-foreground font-body">{selectedSong.artist}</p>
+                </div>
+                <span className="text-xs font-body text-primary shrink-0 px-2.5 py-1 rounded-full bg-primary/15 border border-primary/20">
+                  {selectedSong.relevanceScore}%
+                </span>
+              </div>
+              <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground font-body">
+                {selectedSong.explanation}
+              </p>
             </div>
-            <span className="text-xs font-body text-primary shrink-0 px-2.5 py-1 rounded-full bg-primary/15 border border-primary/20">
-              {selectedSong.relevanceScore}%
-            </span>
           </div>
         </div>
       </div>

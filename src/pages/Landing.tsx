@@ -378,7 +378,7 @@ const Landing = () => {
         >
           <div className="absolute inset-0 gradient-warm rounded-t-[2.5rem] md:rounded-t-[3rem]" aria-hidden />
           <div className="absolute inset-0 bg-artwork-radial opacity-50 pointer-events-none rounded-t-[2.5rem] md:rounded-t-[3rem]" aria-hidden />
-          <div className="relative max-w-2xl mx-auto">
+          <div className="relative max-w-4xl mx-auto">
             <p className="text-xs uppercase tracking-widest text-primary font-body mb-3 text-center">
               {communityGalleryActive ? t("landing.communityLabel") : t("landing.preview")}
             </p>
@@ -386,7 +386,7 @@ const Landing = () => {
               {t("landing.resultsTitle")} <span className="italic">{t("landing.resultsTitleItalic")}</span>
               {t("landing.resultsTitleEnd")}
             </h2>
-            <div className="space-y-5">
+            <div className="space-y-4 md:space-y-5">
               {displayedMicroConversations.map((convo) => (
                 <MicroConversationCard key={convo.searchId} {...convo} />
               ))}
