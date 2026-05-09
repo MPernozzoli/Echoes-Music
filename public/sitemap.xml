@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://echoesmusic.it/en</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://echoesmusic.it/en" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://echoesmusic.it/it" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://echoesmusic.it/fr" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://echoesmusic.it/de" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://echoesmusic.it/es" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://echoesmusic.it/pt" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://echoesmusic.it/" />
+  </url>
+  <url>
+    <loc>https://echoesmusic.it/it</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://echoesmusic.it/en" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://echoesmusic.it/it" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://echoesmusic.it/fr" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://echoesmusic.it/de" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://echoesmusic.it/es" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://echoesmusic.it/pt" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://echoesmusic.it/" />
+  </url>
+  <url>
+    <loc>https://echoesmusic.it/fr</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://echoesmusic.it/en" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://echoesmusic.it/it" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://echoesmusic.it/fr" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://echoesmusic.it/de" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://echoesmusic.it/es" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://echoesmusic.it/pt" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://echoesmusic.it/" />
+  </url>
+  <url>
+    <loc>https://echoesmusic.it/de</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://echoesmusic.it/en" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://echoesmusic.it/it" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://echoesmusic.it/fr" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://echoesmusic.it/de" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://echoesmusic.it/es" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://echoesmusic.it/pt" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://echoesmusic.it/" />
+  </url>
+  <url>
+    <loc>https://echoesmusic.it/es</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://echoesmusic.it/en" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://echoesmusic.it/it" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://echoesmusic.it/fr" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://echoesmusic.it/de" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://echoesmusic.it/es" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://echoesmusic.it/pt" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://echoesmusic.it/" />
+  </url>
+  <url>
+    <loc>https://echoesmusic.it/pt</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://echoesmusic.it/en" />
+    <xhtml:link rel="alternate" hreflang="it" href="https://echoesmusic.it/it" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://echoesmusic.it/fr" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://echoesmusic.it/de" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://echoesmusic.it/es" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://echoesmusic.it/pt" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://echoesmusic.it/" />
+  </url>
+</urlset>

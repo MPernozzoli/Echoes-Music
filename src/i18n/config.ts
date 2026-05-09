@@ -16,10 +16,23 @@ export function isSupported(lang: string): lang is SupportedUiLang {
   return (SUPPORTED_UI_LANGS as readonly string[]).includes(lang);
 }
 
-export function resolveUiLanguage(stored: string | null, navigatorLang?: string): SupportedUiLang {
+function primaryLanguage(lang: string): string {
+  return lang.split("-")[0]?.toLowerCase() ?? "";
+}
+
+function browserLanguages(): string[] {
+  if (typeof navigator === "undefined") return ["en"];
+  const langs = Array.isArray(navigator.languages) && navigator.languages.length > 0 ? navigator.languages : [navigator.language];
+  return langs.filter(Boolean);
+}
+
+export function resolveUiLanguage(stored: string | null, navigatorLangs?: string | readonly string[]): SupportedUiLang {
   if (stored && isSupported(stored)) return stored;
-  const nav = (navigatorLang ?? (typeof navigator !== "undefined" ? navigator.language : "en")).slice(0, 2).toLowerCase();
-  if (isSupported(nav)) return nav;
+  const preferred = typeof navigatorLangs === "string" ? [navigatorLangs] : navigatorLangs ?? browserLanguages();
+  for (const lang of preferred) {
+    const nav = primaryLanguage(lang);
+    if (isSupported(nav)) return nav;
+  }
   return "en";
 }
 

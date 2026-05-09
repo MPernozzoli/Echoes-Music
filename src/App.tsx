@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
-import { BrowserRouter, Route, Routes, Navigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { BrowserRouter, Route, Routes, Navigate, useLocation, useParams } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +14,9 @@ import { PlaybackQueueProvider } from "@/context/PlaybackQueueContext";
 import { FavoritesEchoesPlaylistSync } from "@/components/FavoritesEchoesPlaylistSync";
 import { ThemePreferenceSync } from "@/components/ThemePreferenceSync";
 import { ThemeFaviconSync } from "@/components/AppLogo";
+import { SeoHead } from "@/components/SeoHead";
+import { isSupported, type SupportedUiLang } from "@/i18n/config";
+import { useApp } from "@/context/useApp";
 import Landing from "./pages/Landing";
 import Chat from "./pages/Chat";
 import Auth from "./pages/Auth";
@@ -27,6 +31,20 @@ import { UserTutorial } from "./components/UserTutorial";
 const DiscoverRedirect = () => {
   const { search } = useLocation();
   return <Navigate to={`/chat${search}`} replace />;
+};
+
+const LocalizedLanding = () => {
+  const { locale } = useParams();
+  const { setUiLanguage } = useApp();
+
+  useEffect(() => {
+    if (locale && isSupported(locale)) {
+      setUiLanguage(locale as SupportedUiLang);
+    }
+  }, [locale, setUiLanguage]);
+
+  if (!locale || !isSupported(locale)) return <NotFound />;
+  return <Landing />;
 };
 import History from "./pages/History";
 import Favorites from "./pages/Favorites";
@@ -50,6 +68,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <SeoHead />
         <ReferralQueryCapture />
         <AuthProvider>
         <ReferralClaimOnLogin />
@@ -64,6 +83,7 @@ const App = () => (
               <UserTutorial />
               <Routes>
                 <Route path="/" element={<Landing />} />
+                <Route path="/:locale" element={<LocalizedLanding />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/auth/callback" element={<AuthCallback />} />
                 <Route path="/invite/:code" element={<Invite />} />

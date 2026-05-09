@@ -5,7 +5,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Sparkles, Search, Music, Wand2 } from "lucide-react";
 import heroBg from "@/assets/hero-bg.jpg";
 import PromptInput, { type PromptSubmitPayload } from "@/components/PromptInput";
-import SongCard from "@/components/SongCard";
 import MicroConversationCard from "@/components/MicroConversationCard";
 import { mockSongs } from "@/data/mockData";
 import { fetchRecentSearchArtworks, fetchRecentMicroConversations, type MicroConversation } from "@/services/recentSearchGallery";
@@ -230,6 +229,30 @@ const Landing = () => {
     [t],
   );
 
+  const previewConversations = useMemo<MicroConversation[]>(
+    () => [
+      {
+        searchId: "preview-1",
+        displayPrompt: t("landing.previewPrompt1"),
+        songs: [mockSongs[0]],
+      },
+      {
+        searchId: "preview-2",
+        displayPrompt: t("landing.previewPrompt2"),
+        songs: [mockSongs[1]],
+      },
+      {
+        searchId: "preview-3",
+        displayPrompt: t("landing.previewPrompt3"),
+        songs: [mockSongs[5]],
+      },
+    ],
+    [t],
+  );
+
+  const displayedMicroConversations =
+    microConversations.length > 0 ? microConversations : previewConversations;
+
   return (
     <AppLayout headerVariant="marketing">
       <div className="min-h-screen bg-background">
@@ -373,22 +396,14 @@ const Landing = () => {
             <p className="text-xs uppercase tracking-widest text-primary font-body mb-3 text-center">
               {communityGalleryActive ? t("landing.communityLabel") : t("landing.preview")}
             </p>
-            <h2 className="font-display text-3xl md:text-4xl font-semibold text-center mb-4 text-balance">
+            <h2 className="font-display text-3xl md:text-4xl font-semibold text-center mb-12 text-balance">
               {t("landing.resultsTitle")} <span className="italic">{t("landing.resultsTitleItalic")}</span>
               {t("landing.resultsTitleEnd")}
             </h2>
-            <p className="text-muted-foreground text-center font-body mb-12 max-w-lg mx-auto text-balance">
-              {t("landing.resultsSubtitle")}
-            </p>
-
             <div className="space-y-5">
-              {microConversations.length > 0
-                ? microConversations.map((convo) => (
-                    <MicroConversationCard key={convo.searchId} {...convo} />
-                  ))
-                : mockSongs.slice(0, 3).map((song, i) => (
-                    <SongCard key={`${song.id}-${i}`} {...song} index={i} showPlayer={false} />
-                  ))}
+              {displayedMicroConversations.map((convo) => (
+                <MicroConversationCard key={convo.searchId} {...convo} />
+              ))}
             </div>
 
             <div className="text-center mt-14">
