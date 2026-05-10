@@ -45,6 +45,7 @@ type PromoCode = {
   times_redeemed: number;
   max_redemptions: number | null;
   expires_at: number | null;
+  first_time_only: boolean;
 };
 
 type Coupon = {
@@ -70,6 +71,8 @@ type PromotionFormState = {
   startsAt: string;
   endsAt: string;
   messages: PromotionMessages;
+  firstTimeOnly: boolean;
+  appliesToProducts: string[];
 };
 
 async function callCouponsApi(body: object) {
@@ -244,6 +247,8 @@ const AdminDiscounts = () => {
       active: existing?.active ?? false,
       startsAt: toDatetimeLocal(existing?.starts_at),
       endsAt: toDatetimeLocal(existing?.ends_at),
+      firstTimeOnly: existing?.first_time_only ?? pc.first_time_only,
+      appliesToProducts: existing?.applies_to_products ?? pc.coupon.applies_to?.products ?? [],
       messages: Object.keys(messages).length > 0
         ? messages
         : { it: `Usa il codice ${pc.code} e risparmia su Echoes.` },
@@ -293,6 +298,8 @@ const AdminDiscounts = () => {
         startsAt: localDatetimeToIso(promotionForm.startsAt),
         endsAt: localDatetimeToIso(promotionForm.endsAt),
         messages: promotionForm.messages,
+        firstTimeOnly: promotionForm.firstTimeOnly,
+        appliesToProducts: promotionForm.appliesToProducts,
       });
       toast.success(promotionForm.active
         ? `Codice "${promotionForm.code}" promosso in homepage`
@@ -495,6 +502,11 @@ const AdminDiscounts = () => {
               <Label htmlFor="homepage-promotion-active" className="cursor-pointer">Promuovi in homepage</Label>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Il banner appare solo se il codice è attivo e dentro la finestra data/ora configurata.
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Requisiti rilevati: {promotionForm.firstTimeOnly ? "solo prima transazione" : "nessun vincolo prima transazione"}
+                {" · "}
+                {promotionForm.appliesToProducts.length > 0 ? "prodotti specifici" : "tutti i prodotti"}.
               </p>
             </div>
           </div>

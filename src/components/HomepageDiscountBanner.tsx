@@ -4,6 +4,8 @@ import { Copy, Sparkles } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/useAuth";
 import {
   fetchActiveHomepageDiscountPromotion,
   localizedPromotionMessage,
@@ -11,9 +13,17 @@ import {
   type HomepageDiscountPromotion,
 } from "@/services/homepageDiscountPromotion";
 
+const SUBSCRIPTION_PRODUCT_IDS = new Set([
+  "prod_UQtOkhToUuJFAA",
+  "prod_UQtOvEkrSURxiY",
+]);
+
 const HomepageDiscountBanner = () => {
   const { i18n, t } = useTranslation();
+  const { user, loading: authLoading, plan } = useAuth();
   const [promotion, setPromotion] = useState<HomepageDiscountPromotion | null>(null);
+  const [eligible, setEligible] = useState(false);
+  const [checkingEligibility, setCheckingEligibility] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -30,6 +40,76 @@ const HomepageDiscountBanner = () => {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    setCheckingEligibility(true);
+
+    void (async () => {
+      if (!promotion) {
+        if (!cancelled) {
+          setEligible(false);
+          setCheckingEligibility(false);
+        }
+        return;
+      }
+
+      if (authLoading) return;
+
+      if (!user) {
+        if (!cancelled) {
+          setEligible(true);
+          setCheckingEligibility(false);
+        }
+        return;
+      }
+
+      const appliesToProducts = promotion.applies_to_products ?? [];
+      const appliesToSubscriptions =
+        appliesToProducts.length === 0 ||
+        appliesToProducts.some((productId) => SUBSCRIPTION_PRODUCT_IDS.has(productId));
+
+      if (appliesToSubscriptions && plan === "premium") {
+        if (!cancelled) {
+          setEligible(false);
+          setCheckingEligibility(false);
+        }
+        return;
+      }
+
+      if (promotion.first_time_only) {
+        const [{ data: subscriptions }, { data: purchases }] = await Promise.all([
+          supabase
+            .from("user_subscriptions")
+            .select("id, stripe_customer_id, stripe_subscription_id")
+            .eq("user_id", user.id)
+            .limit(1),
+          supabase
+            .from("token_transactions")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("type", "purchase")
+            .limit(1),
+        ]);
+
+        const hasPreviousStripeActivity = Boolean(subscriptions?.length || purchases?.length);
+        if (!cancelled) {
+          setEligible(!hasPreviousStripeActivity);
+          setCheckingEligibility(false);
+        }
+        return;
+      }
+
+      if (!cancelled) {
+        setEligible(true);
+        setCheckingEligibility(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, plan, promotion, user]);
+
   const message = useMemo(() => {
     if (!promotion) return "";
     return localizedPromotionMessage(
@@ -38,7 +118,7 @@ const HomepageDiscountBanner = () => {
     );
   }, [i18n.language, i18n.resolvedLanguage, promotion]);
 
-  if (!promotion || !message) return null;
+  if (!promotion || !message || checkingEligibility || !eligible) return null;
 
   const copyCode = () => {
     void navigator.clipboard.writeText(promotion.code);

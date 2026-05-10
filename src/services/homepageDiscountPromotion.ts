@@ -55,6 +55,8 @@ export async function saveHomepageDiscountPromotion(input: {
   startsAt: string | null;
   endsAt: string | null;
   messages: PromotionMessages;
+  firstTimeOnly: boolean;
+  appliesToProducts: string[];
 }) {
   const messages = PROMOTION_LANGS.reduce<Record<string, string>>((acc, lang) => {
     const value = input.messages[lang]?.trim();
@@ -69,6 +71,8 @@ export async function saveHomepageDiscountPromotion(input: {
     p_starts_at: input.startsAt,
     p_ends_at: input.endsAt,
     p_messages: messages,
+    p_first_time_only: input.firstTimeOnly,
+    p_applies_to_products: input.appliesToProducts,
   });
 
   if (error) throw error;

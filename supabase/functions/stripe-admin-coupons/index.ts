@@ -66,6 +66,7 @@ Deno.serve(async (req) => {
               times_redeemed: p.times_redeemed,
               max_redemptions: p.max_redemptions,
               expires_at: p.expires_at,
+              first_time_only: p.restrictions?.first_time_transaction === true,
             })),
           };
         })

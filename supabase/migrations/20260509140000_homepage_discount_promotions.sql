@@ -3,6 +3,8 @@ CREATE TABLE IF NOT EXISTS public.homepage_discount_promotions (
   promotion_code_id text NOT NULL UNIQUE,
   code text NOT NULL,
   active boolean NOT NULL DEFAULT false,
+  first_time_only boolean NOT NULL DEFAULT false,
+  applies_to_products text[] NOT NULL DEFAULT '{}'::text[],
   starts_at timestamptz,
   ends_at timestamptz,
   messages jsonb NOT NULL DEFAULT '{}'::jsonb,
@@ -13,6 +15,10 @@ CREATE TABLE IF NOT EXISTS public.homepage_discount_promotions (
   CONSTRAINT homepage_discount_promotions_valid_range
     CHECK (starts_at IS NULL OR ends_at IS NULL OR starts_at < ends_at)
 );
+
+ALTER TABLE public.homepage_discount_promotions
+  ADD COLUMN IF NOT EXISTS first_time_only boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS applies_to_products text[] NOT NULL DEFAULT '{}'::text[];
 
 CREATE UNIQUE INDEX IF NOT EXISTS homepage_discount_promotions_one_active
   ON public.homepage_discount_promotions ((active))
@@ -85,7 +91,9 @@ CREATE OR REPLACE FUNCTION public.admin_upsert_homepage_discount_promotion(
   p_active boolean,
   p_starts_at timestamptz DEFAULT NULL,
   p_ends_at timestamptz DEFAULT NULL,
-  p_messages jsonb DEFAULT '{}'::jsonb
+  p_messages jsonb DEFAULT '{}'::jsonb,
+  p_first_time_only boolean DEFAULT false,
+  p_applies_to_products text[] DEFAULT '{}'::text[]
 )
 RETURNS public.homepage_discount_promotions
 LANGUAGE plpgsql
@@ -114,6 +122,8 @@ BEGIN
     promotion_code_id,
     code,
     active,
+    first_time_only,
+    applies_to_products,
     starts_at,
     ends_at,
     messages
@@ -122,6 +132,8 @@ BEGIN
     p_promotion_code_id,
     upper(trim(p_code)),
     p_active,
+    COALESCE(p_first_time_only, false),
+    COALESCE(p_applies_to_products, '{}'::text[]),
     p_starts_at,
     p_ends_at,
     COALESCE(p_messages, '{}'::jsonb)
@@ -129,6 +141,8 @@ BEGIN
   ON CONFLICT (promotion_code_id) DO UPDATE
     SET code = excluded.code,
         active = excluded.active,
+        first_time_only = excluded.first_time_only,
+        applies_to_products = excluded.applies_to_products,
         starts_at = excluded.starts_at,
         ends_at = excluded.ends_at,
         messages = excluded.messages
