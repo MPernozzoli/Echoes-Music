@@ -223,6 +223,30 @@ export type Database = {
         }
         Relationships: []
       }
+      email_unsubscribe_tokens: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       homepage_discount_promotions: {
         Row: {
           active: boolean
@@ -262,30 +286,6 @@ export type Database = {
           promotion_code_id?: string
           starts_at?: string | null
           updated_at?: string
-        }
-        Relationships: []
-      }
-      email_unsubscribe_tokens: {
-        Row: {
-          created_at: string
-          email: string
-          id: string
-          token: string
-          used_at: string | null
-        }
-        Insert: {
-          created_at?: string
-          email: string
-          id?: string
-          token: string
-          used_at?: string | null
-        }
-        Update: {
-          created_at?: string
-          email?: string
-          id?: string
-          token?: string
-          used_at?: string | null
         }
         Relationships: []
       }
@@ -949,22 +949,43 @@ export type Database = {
           user_id: string
         }[]
       }
+      admin_revoke_admin: { Args: { p_user_id: string }; Returns: undefined }
+      admin_revoke_pro: { Args: { p_user_id: string }; Returns: undefined }
+      admin_unblock_user: { Args: { p_user_id: string }; Returns: undefined }
       admin_upsert_homepage_discount_promotion: {
         Args: {
           p_active: boolean
           p_applies_to_products?: string[]
           p_code: string
+<<<<<<< HEAD
           p_ends_at?: string | null
           p_first_time_only?: boolean
           p_messages?: Json
+=======
+          p_ends_at: string
+          p_messages: Json
+>>>>>>> 5971a302f9616b5cd4a1935f7dd2001ba5b70279
           p_promotion_code_id: string
-          p_starts_at?: string | null
+          p_starts_at: string
         }
-        Returns: Database["public"]["Tables"]["homepage_discount_promotions"]["Row"]
+        Returns: {
+          active: boolean
+          code: string
+          created_at: string
+          ends_at: string | null
+          id: string
+          messages: Json
+          promotion_code_id: string
+          starts_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "homepage_discount_promotions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
-      admin_revoke_admin: { Args: { p_user_id: string }; Returns: undefined }
-      admin_revoke_pro: { Args: { p_user_id: string }; Returns: undefined }
-      admin_unblock_user: { Args: { p_user_id: string }; Returns: undefined }
       claim_anonymous_search: {
         Args: { p_conversation: string; p_ip: string; p_session: string }
         Returns: Json
