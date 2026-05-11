@@ -218,7 +218,32 @@ Deno.serve(async (req) => {
       const meRes = await fetch(SPOTIFY_ME_URL, {
         headers: { 'Authorization': `Bearer ${tokens.access_token}` },
       });
-      const me = await meRes.json();
+      if (!meRes.ok) {
+        const raw = await meRes.text();
+        // L'app Spotify in Development Mode rifiuta gli utenti non in allowlist con un testo
+        // tipo "User not registered in the Developer Dashboard". Lo intercettiamo per dare
+        // un messaggio chiaro al client invece di farlo crashare su un res.json() non-JSON.
+        const notAllowlisted = /not registered/i.test(raw) || meRes.status === 403;
+        const userMessage = notAllowlisted
+          ? "Spotify non autorizza ancora questo account: aggiungilo all'allowlist della tua app Spotify (Development Mode), oppure richiedi l'Extended Quota."
+          : `Spotify /me failed (${meRes.status}): ${raw.slice(0, 200)}`;
+        return new Response(JSON.stringify({ error: userMessage }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      let me: { id?: string; display_name?: string; product?: string };
+      try {
+        me = await meRes.json();
+      } catch {
+        return new Response(JSON.stringify({ error: 'Risposta /me non valida da Spotify' }), {
+          status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (!me.id) {
+        return new Response(JSON.stringify({ error: 'Profilo Spotify senza id utente' }), {
+          status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
 
       const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
 

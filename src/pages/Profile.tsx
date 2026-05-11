@@ -5,6 +5,16 @@ import { useNavigate, Link } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
   User,
   Music,
   Palette,
@@ -142,7 +152,11 @@ const Profile = () => {
     await setAllowAnonymizedData(checked);
   };
 
-  const handleConnectSpotify = async () => {
+  const [spotifyGateOpen, setSpotifyGateOpen] = useState(false);
+  const [spotifyGateFullName, setSpotifyGateFullName] = useState("");
+  const [spotifyGateSpotifyEmail, setSpotifyGateSpotifyEmail] = useState("");
+
+  const startSpotifyOAuth = async () => {
     if (!user) {
       navigate("/auth");
       return;
@@ -157,6 +171,40 @@ const Profile = () => {
       toast.error(t("profile.streamingLoginRequired"));
       navigate("/auth");
     }
+  };
+
+  const handleConnectSpotify = () => {
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+    // Spotify è in Development Mode: l'utente deve essere in allowlist. Gate informativo prima dell'OAuth.
+    setSpotifyGateOpen(true);
+  };
+
+  const handleSpotifyGateContact = () => {
+    const fullName = spotifyGateFullName.trim();
+    const spotifyEmail = spotifyGateSpotifyEmail.trim();
+    if (!fullName || !spotifyEmail) {
+      toast.error(t("profile.spotifyGate.missingFields"));
+      return;
+    }
+    const subject = t("profile.spotifyGate.mailSubject");
+    const body = [
+      t("profile.spotifyGate.mailBodyIntro"),
+      "",
+      `${t("profile.spotifyGate.mailBodyName")}: ${fullName}`,
+      `${t("profile.spotifyGate.mailBodySpotifyEmail")}: ${spotifyEmail}`,
+      `${t("profile.spotifyGate.mailBodyEchoesEmail")}: ${user?.email ?? ""}`,
+      "",
+      t("profile.spotifyGate.mailBodyOutro"),
+    ].join("\n");
+    window.location.href = `mailto:info@pynkstudio.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  };
+
+  const handleSpotifyGateApproved = () => {
+    setSpotifyGateOpen(false);
+    void startSpotifyOAuth();
   };
 
   const handleDisconnectSpotify = async () => {
@@ -333,7 +381,12 @@ const Profile = () => {
                     <Music className="w-5 h-5 text-[hsl(141,73%,42%)]" />
                   </div>
                   <div>
-                    <h3 className="font-body text-sm font-medium text-foreground">{t("profile.spotify")}</h3>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-body text-sm font-medium text-foreground">{t("profile.spotify")}</h3>
+                      <span className="rounded-full border border-[hsl(141,73%,42%)]/40 bg-[hsl(141,73%,42%)]/10 px-2 py-0.5 text-[10px] font-body font-semibold uppercase tracking-wide text-[hsl(141,73%,42%)]">
+                        {t("profile.beta")}
+                      </span>
+                    </div>
                     {spotifyLoading ? (
                       <p className="text-xs text-muted-foreground font-body">{t("profile.checking")}</p>
                     ) : spotifyConnected ? (
@@ -382,7 +435,12 @@ const Profile = () => {
                     <Music className="w-5 h-5 text-[hsl(350,80%,55%)]" />
                   </div>
                   <div>
-                    <h3 className="font-body text-sm font-medium text-foreground">{t("profile.appleMusic")}</h3>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-body text-sm font-medium text-foreground">{t("profile.appleMusic")}</h3>
+                      <span className="rounded-full border border-[hsl(350,80%,55%)]/40 bg-[hsl(350,80%,55%)]/10 px-2 py-0.5 text-[10px] font-body font-semibold uppercase tracking-wide text-[hsl(350,80%,55%)]">
+                        {t("profile.recommended")}
+                      </span>
+                    </div>
                     {appleMusicLoading ? (
                       <p className="text-xs text-muted-foreground font-body">{t("profile.loadingMusickit")}</p>
                     ) : !appleMusicAvailable ? (
@@ -629,6 +687,71 @@ const Profile = () => {
           {t("profile.signOut")}
         </Button>
       </div>
+
+      <Dialog open={spotifyGateOpen} onOpenChange={setSpotifyGateOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("profile.spotifyGate.title")}</DialogTitle>
+            <DialogDescription className="leading-relaxed">
+              {t("profile.spotifyGate.description")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-2">
+              <Label htmlFor="spotify-gate-name" className="font-body text-xs">
+                {t("profile.spotifyGate.fullNameLabel")}
+              </Label>
+              <Input
+                id="spotify-gate-name"
+                value={spotifyGateFullName}
+                onChange={(e) => setSpotifyGateFullName(e.target.value)}
+                placeholder={t("profile.spotifyGate.fullNamePlaceholder")}
+                autoComplete="name"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="spotify-gate-email" className="font-body text-xs">
+                {t("profile.spotifyGate.spotifyEmailLabel")}
+              </Label>
+              <Input
+                id="spotify-gate-email"
+                type="email"
+                value={spotifyGateSpotifyEmail}
+                onChange={(e) => setSpotifyGateSpotifyEmail(e.target.value)}
+                placeholder={t("profile.spotifyGate.spotifyEmailPlaceholder")}
+                autoComplete="email"
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setSpotifyGateOpen(false)}
+              className="font-body"
+            >
+              {t("profile.spotifyGate.cancel")}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSpotifyGateContact}
+              className="font-body gap-2"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              {t("profile.spotifyGate.contactCta")}
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSpotifyGateApproved}
+              className="font-body gap-2 bg-[hsl(141,73%,42%)] hover:bg-[hsl(141,73%,38%)] text-white"
+            >
+              <Check className="w-3.5 h-3.5" />
+              {t("profile.spotifyGate.approvedCta")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 };

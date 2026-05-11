@@ -54,7 +54,14 @@ export async function getSpotifyAuthUrl(redirectUri: string): Promise<string | n
 
 export async function exchangeSpotifyCode(code: string, redirectUri: string) {
   const res = await spotifyFetch({ action: "exchange_code", code, redirect_uri: redirectUri });
-  return res.json();
+  // La edge function può rispondere in plain text se è crashata (es. /me Spotify ha restituito
+  // testo non-JSON per un utente fuori allowlist). Wrappiamo per non rompere l'UI.
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: text || `Spotify exchange failed (HTTP ${res.status})` };
+  }
 }
 
 export async function getSpotifyToken(): Promise<{ access_token: string; product: string } | null> {
