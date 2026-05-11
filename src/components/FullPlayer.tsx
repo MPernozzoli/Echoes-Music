@@ -3,7 +3,7 @@ import { unstable_batchedUpdates } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { setPlaybackToggleHandler } from "@/lib/playbackToggleBridge";
 import { toast } from "sonner";
-import { Play, Pause, SkipBack, SkipForward, Heart, Volume2, VolumeX, Info, Youtube } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Heart, Volume2, VolumeX, Info, Youtube, ExternalLink } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import type { Song } from "@/data/mockData";
 import { useAppleMusic } from "@/context/useAppleMusic";
@@ -128,6 +128,10 @@ const FullPlayer = ({
     appleMusic.isAuthorized &&
     appleMusic.isAvailable &&
     !kitFailedForCurrent;
+  /** L'utente ha Apple Music collegato all'account ma il browser non ha (più) una sessione MusicKit valida.
+   *  In questo stato non vogliamo cadere su preview/embed Spotify: mostriamo un CTA di riautorizzazione. */
+  const needsAppleReauth =
+    applePreferred && !appleMusic.isAuthorized && appleMusic.isAvailable;
 
   const kitPlayerRef = useRef<AppleMusicKitPlayerHandle>(null);
   const spotifyPlayerRef = useRef<SpotifyWebPlaybackHandle>(null);
@@ -304,6 +308,14 @@ const FullPlayer = ({
       return;
     }
 
+    // L'utente ha Apple linkato ma il browser non è autorizzato: niente preview 30s automatica —
+    // mostriamo il CTA di riautorizzazione e basta.
+    if (needsAppleReauth) {
+      queueContinueAfterLoad.current = false;
+      setAudioReady(false);
+      return;
+    }
+
     if (previewUrl) {
       const audio = new Audio(previewUrl);
       audioRef.current = audio;
@@ -393,7 +405,7 @@ const FullPlayer = ({
         setUseEmbed(true);
       }
     }
-  }, [song?.id, previewUrl, useAppleKitPlayer, suppressNonApplePreview]);
+  }, [song?.id, previewUrl, useAppleKitPlayer, suppressNonApplePreview, needsAppleReauth]);
 
   useEffect(() => {
     setSpotifyPlayerUnavailable(false);
@@ -750,7 +762,18 @@ const FullPlayer = ({
             airPlayOnClick={dockAirPlayUi ? handleDockAirPlay : undefined}
             seekBarLoading={seekBarAppleResolving}
           />
-          {embedOnlyDock && useEmbed && spotifyTrackId && !(appleMusicId && (useApplePlayback || !spotifyTrackId)) ? (
+          {needsAppleReauth ? (
+            <div className="px-3 sm:px-4 pb-3">
+              <button
+                type="button"
+                onClick={() => void appleMusic.authorize()}
+                className="w-full flex items-center justify-center gap-2 rounded-xl border border-[hsl(350,80%,55%)]/40 bg-[hsl(350,80%,55%)]/10 px-4 py-3 text-sm font-body text-[hsl(350,80%,55%)] hover:bg-[hsl(350,80%,55%)]/20 transition-colors"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                {t("profile.appleConfirmBrowser")}
+              </button>
+            </div>
+          ) : embedOnlyDock && useEmbed && spotifyTrackId && !(appleMusicId && (useApplePlayback || !spotifyTrackId)) ? (
             <div className="px-3 sm:px-4 pb-3">
               <iframe
                 src={`https://open.spotify.com/embed/track/${spotifyTrackId}?utm_source=generator&theme=0`}
@@ -814,7 +837,33 @@ const FullPlayer = ({
 
       <p className="text-sm text-muted-foreground font-body line-clamp-2 px-2 mb-4 w-full">{song.explanation}</p>
 
-      {useAppleKitPlayer && (
+      {needsAppleReauth && (
+        <div className="w-full px-2 mt-2">
+          <div className="rounded-2xl border border-[hsl(350,80%,55%)]/30 bg-[hsl(350,80%,55%)]/8 p-4 flex flex-col items-center gap-3 text-center">
+            <p className="text-sm font-body text-foreground">
+              {t("profile.appleLinkedNeedsBrowser")}
+            </p>
+            <button
+              type="button"
+              onClick={() => void appleMusic.authorize()}
+              className="inline-flex items-center gap-2 rounded-xl border border-[hsl(350,80%,55%)]/50 bg-[hsl(350,80%,55%)]/10 px-4 py-2 text-sm font-body text-[hsl(350,80%,55%)] hover:bg-[hsl(350,80%,55%)]/20 transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              {t("profile.appleConfirmBrowser")}
+            </button>
+          </div>
+          <div className="flex items-center justify-center gap-6 mt-4">
+            <button onClick={handlePrev} disabled={currentIndex === 0} className="p-2 rounded-full text-foreground hover:bg-muted transition-colors disabled:opacity-30">
+              <SkipBack className="w-5 h-5" />
+            </button>
+            <button onClick={handleNext} disabled={currentIndex === songs.length - 1} className="p-2 rounded-full text-foreground hover:bg-muted transition-colors disabled:opacity-30">
+              <SkipForward className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!needsAppleReauth && useAppleKitPlayer && (
         <AppleMusicKitPlayer
           chromeMode="default"
           trackId={appleMusicId!}
@@ -830,7 +879,7 @@ const FullPlayer = ({
       )}
 
       {/* HTML5 preview (in Apple mode usa la preview Apple, altrimenti quella Spotify) */}
-      {!useAppleKitPlayer && !useEmbed && (
+      {!needsAppleReauth && !useAppleKitPlayer && !useEmbed && (
         <>
           <div className="w-full px-2 mb-2 relative">
             {seekBarAppleResolving ? (
@@ -918,7 +967,7 @@ const FullPlayer = ({
       )}
 
       {/* Fallback iframe: nessun audio inline. Prima Apple (se preferito / disponibile), poi Spotify. */}
-      {!useAppleKitPlayer && useEmbed && appleMusicId && (useApplePlayback || !spotifyTrackId) && (
+      {!needsAppleReauth && !useAppleKitPlayer && useEmbed && appleMusicId && (useApplePlayback || !spotifyTrackId) && (
         <div className="w-full px-2 mt-2 space-y-3">
           <AppleMusicEmbed trackId={appleMusicId} trackTitle={song.title} height={152} />
           <div className="flex items-center justify-center gap-6">
@@ -932,7 +981,7 @@ const FullPlayer = ({
         </div>
       )}
 
-      {!appleResolutionPending && !useAppleKitPlayer && useEmbed && spotifyTrackId && !(appleMusicId && (useApplePlayback || !spotifyTrackId)) && (
+      {!needsAppleReauth && !appleResolutionPending && !useAppleKitPlayer && useEmbed && spotifyTrackId && !(appleMusicId && (useApplePlayback || !spotifyTrackId)) && (
         <div className="w-full px-2 mt-2">
           <iframe
             src={`https://open.spotify.com/embed/track/${spotifyTrackId}?utm_source=generator&theme=0`}
@@ -955,7 +1004,7 @@ const FullPlayer = ({
         </div>
       )}
 
-      {appleResolutionPending && (
+      {!needsAppleReauth && appleResolutionPending && (
         <div className="w-full px-2 mt-2">
           <div className="rounded-2xl ring-1 ring-border/40 shadow-soft min-h-[152px] flex items-center justify-center bg-card/60">
             <p className="text-xs text-muted-foreground font-body">{t("profile.loadingMusickit")}</p>
@@ -971,7 +1020,7 @@ const FullPlayer = ({
         </div>
       )}
 
-      {!useAppleKitPlayer && useEmbed && !appleMusicId && !spotifyTrackId && youtubeMusicUrl && (
+      {!needsAppleReauth && !useAppleKitPlayer && useEmbed && !appleMusicId && !spotifyTrackId && youtubeMusicUrl && (
         <div className="w-full px-2 mt-2 text-center">
           <button
             type="button"
@@ -992,7 +1041,7 @@ const FullPlayer = ({
         </div>
       )}
 
-      {!useAppleKitPlayer && useEmbed && !appleMusicId && !spotifyTrackId && !youtubeMusicUrl && (
+      {!needsAppleReauth && !useAppleKitPlayer && useEmbed && !appleMusicId && !spotifyTrackId && !youtubeMusicUrl && (
         <div className="w-full px-2 mt-2 text-center">
           <p className="text-xs text-muted-foreground font-body py-4">{t("player.previewUnavailable")}</p>
           <div className="flex items-center justify-center gap-6">

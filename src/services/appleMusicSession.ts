@@ -3,28 +3,6 @@ type MusicKitTokenInstance = {
 };
 
 const CACHE_KEY_PREFIX = "echoes_apple_music_user_token";
-const HELD_KEY_PREFIX = "echoes_apple_music_held";
-
-function heldKey(userId?: string | null) {
-  return userId ? `${HELD_KEY_PREFIX}:${userId}` : HELD_KEY_PREFIX;
-}
-
-export function getHeldAppleMusicSession(userId?: string | null): boolean {
-  try {
-    return sessionStorage.getItem(heldKey(userId)) === "1";
-  } catch {
-    return false;
-  }
-}
-
-export function setHeldAppleMusicSession(value: boolean, userId?: string | null) {
-  try {
-    if (value) sessionStorage.setItem(heldKey(userId), "1");
-    else sessionStorage.removeItem(heldKey(userId));
-  } catch {
-    /* sessionStorage non disponibile (es. private mode) */
-  }
-}
 
 function getMusicKitInstance(): MusicKitTokenInstance | undefined {
   return (window as unknown as { MusicKit?: { getInstance: () => MusicKitTokenInstance } }).MusicKit?.getInstance();

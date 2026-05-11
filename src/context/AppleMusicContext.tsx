@@ -10,9 +10,7 @@ import {
 import {
   clearCachedAppleMusicUserToken,
   getCachedAppleMusicUserToken,
-  getHeldAppleMusicSession,
   setCachedAppleMusicUserToken,
-  setHeldAppleMusicSession,
 } from "@/services/appleMusicSession";
 import { AppleMusicContext } from "@/context/appleMusicContextObject";
 
@@ -85,12 +83,6 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
     isLinkedAccountRef.current = isLinkedAccount;
   }, [isLinkedAccount]);
 
-  // Riprende lo stato "held" dalla sessione del browser: evita il flicker "disconnesso" subito dopo un reload,
-  // mentre MusicKit sta ancora idratando il user token dal proprio storage interno.
-  useEffect(() => {
-    heldAppleSessionRef.current = getHeldAppleMusicSession(user?.id);
-  }, [user?.id]);
-
   const clearRuntimeListeners = useCallback(() => {
     cleanupRef.current?.();
     cleanupRef.current = null;
@@ -114,17 +106,10 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
         next = true;
       }
     }
-    if (next) {
-      heldAppleSessionRef.current = true;
-      setHeldAppleMusicSession(true, user?.id);
-    } else if (document.visibilityState === "hidden" && heldAppleSessionRef.current) {
-      return;
-    }
+    if (next) heldAppleSessionRef.current = true;
+    else if (document.visibilityState === "hidden" && heldAppleSessionRef.current) return;
     setIsAuthorized(next);
-    if (!next) {
-      heldAppleSessionRef.current = false;
-      setHeldAppleMusicSession(false, user?.id);
-    }
+    if (!next) heldAppleSessionRef.current = false;
   }, [user?.id]);
 
   const refresh = useCallback(async () => {
@@ -278,7 +263,6 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
   const repairMusicKitSession = useCallback(async () => {
     clearCachedAppleMusicUserToken(user?.id);
     heldAppleSessionRef.current = false;
-    setHeldAppleMusicSession(false, user?.id);
     await resyncMusicKit();
   }, [user?.id, resyncMusicKit]);
 
@@ -339,7 +323,6 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
         setIsAuthorized(Boolean(mk.isAuthorized || token));
         if (mk.isAuthorized || token) {
           heldAppleSessionRef.current = true;
-          setHeldAppleMusicSession(true, user.id);
           await upsertAppleMusicConnection(user.id);
           setIsLinkedAccount(true);
           isLinkedAccountRef.current = true;
@@ -363,7 +346,6 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
       }
       clearCachedAppleMusicUserToken(user?.id);
       heldAppleSessionRef.current = false;
-      setHeldAppleMusicSession(false, user?.id);
       const mk = getMKGlobal()?.getInstance();
       if (mk) {
         void mk.unauthorize();

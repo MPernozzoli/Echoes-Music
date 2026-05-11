@@ -425,6 +425,19 @@ const Landing = () => {
               ]}
             />
           </p>
+          <a
+            href="https://www.producthunt.com/products/echoes-music?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-echoes-music"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-6 inline-flex"
+          >
+            <img
+              alt="Echoes Music - Discover new music in a human way | Product Hunt"
+              width="250"
+              height="54"
+              src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1142995&theme=light&t=1778505526738"
+            />
+          </a>
           <nav className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs font-body">
             <Link to="/terms" className="text-muted-foreground hover:text-foreground underline-offset-4 hover:underline">
               {t("landing.footerTerms")}
