@@ -30,7 +30,6 @@ import { buildThreadSummaryFromChatText, normalizeStandardAxes } from "@/lib/mem
 import { dedupeSongVersions, filterSongsByMinRelevance } from "@/lib/dedupeSongs";
 import { buildEmptySearchResult } from "@/lib/emptySearchResult";
 import { fallbackNarrativeForResult } from "@/lib/assistantNarrative";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
 import { isLuckyPrompt } from "@/constants/luckyPrompt";
 import type { MusicSearchMode } from "@/services/musicSearchApi";
@@ -57,6 +56,7 @@ import {
   Loader2,
   Lightbulb,
   RefreshCw,
+  Heart,
 } from "lucide-react";
 import { AppLogo } from "@/components/AppLogo";
 import TokenBadge from "@/components/TokenBadge";
@@ -249,6 +249,8 @@ interface NowPlayingRailProps {
   onPickFromQueue: (i: number) => void;
   onRemoveFromQueue: (i: number) => void;
   moodTags: string[];
+  onAddToLibrary?: () => void;
+  onAddToPlaylist?: () => void;
 }
 
 function NowPlayingRail({
@@ -262,8 +264,26 @@ function NowPlayingRail({
   onPickFromQueue,
   onRemoveFromQueue,
   moodTags,
+  onAddToLibrary,
+  onAddToPlaylist,
 }: NowPlayingRailProps) {
   const wave = useMemo(() => waveBars(seedFromSong(song)), [song?.id]);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => { setProgress(0); }, [song?.id]);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+    const id = setInterval(() => {
+      setProgress((p) => (p >= 0.99 ? 0.99 : p + 1 / 240));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [isPlaying]);
+
+  const totalSecs = 240;
+  const elapsed = Math.floor(progress * totalSecs);
+  const remaining = totalSecs - elapsed;
+  const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   return (
     <aside className="pf-rail">
@@ -293,20 +313,41 @@ function NowPlayingRail({
         <p className="pf-track-album">{song?.album ?? ""}</p>
       </div>
 
+      <div className="pf-rail-actions">
+        <button
+          className="pf-rail-action-btn"
+          onClick={onAddToLibrary}
+          aria-label="Aggiungi a Libreria"
+          disabled={!song}
+        >
+          <Heart className="w-3.5 h-3.5" />
+          <span>Libreria</span>
+        </button>
+        <button
+          className="pf-rail-action-btn"
+          onClick={onAddToPlaylist}
+          aria-label="Aggiungi a playlist"
+          disabled={!song}
+        >
+          <ListMusic className="w-3.5 h-3.5" />
+          <span>+ Playlist</span>
+        </button>
+      </div>
+
       {/* Waveform — decorative */}
       <div className="pf-scrubber">
         <div className="pf-wave">
           {wave.map((h, i) => (
             <span
               key={i}
-              className={cn("pf-bar", i / wave.length < 0.28 ? "played" : "")}
+              className={cn("pf-bar", i / wave.length < progress ? "played" : "")}
               style={{ height: `${h * 100}%` }}
             />
           ))}
         </div>
         <div className="pf-wave-times">
-          <span>0:13</span>
-          <span>−3:59</span>
+          <span>{fmtTime(elapsed)}</span>
+          <span>−{fmtTime(remaining)}</span>
         </div>
       </div>
 
@@ -717,7 +758,16 @@ const ChatPlayerFirst = () => {
   const [expandedEmotion, setExpandedEmotion] = useState("");
   const appRef = useRef<HTMLDivElement>(null);
 
-  const isMobile = useIsMobile();
+  const [showRail, setShowRail] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth >= 920 : false
+  );
+  useEffect(() => {
+    const mql = window.matchMedia("(min-width: 920px)");
+    const handler = (e: MediaQueryListEvent) => setShowRail(e.matches);
+    mql.addEventListener("change", handler);
+    setShowRail(mql.matches);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
   const { refreshTokenBalance, user, tokenBalance, plan } = useAuth();
   const {
     queue,
@@ -1408,7 +1458,7 @@ const ChatPlayerFirst = () => {
       {/* Full-screen player-first shell */}
       <div className="pf-app" ref={appRef}>
         {/* Now Playing Rail */}
-        {!isMobile && (
+        {showRail && (
           <NowPlayingRail
             song={currentSong}
             isPlaying={isGloballyPlaying}
@@ -1420,6 +1470,13 @@ const ChatPlayerFirst = () => {
             onPickFromQueue={(i) => setCurrentIndex(i)}
             onRemoveFromQueue={(i) => removeFromQueue(i)}
             moodTags={moodTags}
+            onAddToLibrary={() => {
+              if (!currentSong) return;
+              const wasFav = isFavorite(currentSong.id);
+              toggleFavorite(currentSong.id);
+              toast.success(wasFav ? "Rimosso dalla libreria" : "Aggiunto alla libreria");
+            }}
+            onAddToPlaylist={() => toast.info("Aggiungi a playlist — prossimamente")}
           />
         )}
 
