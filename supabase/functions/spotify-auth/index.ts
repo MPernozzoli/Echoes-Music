@@ -286,9 +286,32 @@ Deno.serve(async (req) => {
           status: auth.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+      // Riallinea il `product` con il valore live di Spotify: se l'utente fa upgrade a Premium dopo
+      // il primo collegamento, il DB resta "free" e il client cadrebbe su preview 30s. Best-effort.
+      let liveProduct = auth.product;
+      try {
+        const meRes = await fetch('https://api.spotify.com/v1/me', {
+          headers: { Authorization: `Bearer ${auth.access_token}` },
+        });
+        if (meRes.ok) {
+          const me = await meRes.json();
+          if (me?.product && me.product !== auth.product) {
+            liveProduct = me.product;
+            const conn = await resolveSpotifyConnection(supabase, session_id, userId);
+            if (conn) {
+              await supabase
+                .from('spotify_connections')
+                .update({ product: me.product })
+                .eq('id', (conn as SpotifyConn).id);
+            }
+          }
+        }
+      } catch {
+        /* ignora: torniamo comunque l'access token */
+      }
       return new Response(JSON.stringify({
         access_token: auth.access_token,
-        product: auth.product,
+        product: liveProduct,
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
