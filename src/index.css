@@ -479,6 +479,25 @@
   --pf-art-l: 50%;
 }
 
+/* CSS tokens for out-of-tree overlays (drawer, detail panel are siblings of .pf-app,
+   not children, so they can't inherit its custom properties) */
+.pf-drawer, .pf-track-detail {
+  --pf-bg: #0a0907;
+  --pf-bg-elev: #100e0b;
+  --pf-bg-card: #161310;
+  --pf-fg: #f0ece4;
+  --pf-fg-soft: rgba(240, 236, 228, 0.72);
+  --pf-fg-mute: rgba(240, 236, 228, 0.48);
+  --pf-fg-faint: rgba(240, 236, 228, 0.24);
+  --pf-line: rgba(240, 236, 228, 0.09);
+  --pf-line-strong: rgba(240, 236, 228, 0.16);
+  --pf-accent: hsl(35 90% 58%);
+  --pf-accent-soft: hsl(35 70% 50% / 0.18);
+  --pf-art-h: 35;
+  --pf-art-s: 78%;
+  --pf-art-l: 50%;
+}
+
 /* Shell — full-screen grid */
 .pf-app {
   position: fixed;
@@ -1183,7 +1202,9 @@
 .pf-drawer {
   position: fixed; top: 0; left: 0; bottom: 0;
   width: 380px; max-width: 90vw; z-index: 201;
-  background: var(--pf-bg-elev);
+  background: rgba(16, 14, 11, 0.92);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
   border-right: 1px solid var(--pf-line-strong);
   transform: translateX(-100%);
   transition: transform 320ms cubic-bezier(.4,0,.2,1);

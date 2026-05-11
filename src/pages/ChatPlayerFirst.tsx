@@ -621,7 +621,7 @@ function PFTrackShelf({ songs, currentSong, isGloballyPlaying, onPlay, onOpenDet
                   </div>
                 )}
                 <span className="pf-tc-relevance">
-                  {Math.round((song.relevanceScore ?? 0.8) * 100)}% MATCH
+                  {Math.min(100, Math.round(song.relevanceScore ?? 80))}% MATCH
                 </span>
                 <div className="pf-tc-play">
                   <button
@@ -697,7 +697,7 @@ function PFTrackDetail({
             <p className="pf-td-artist">{song.artist}</p>
             <div className="pf-td-stats">
               {song.relevanceScore != null && (
-                <span><b>{Math.round(song.relevanceScore * 100)}%</b> match</span>
+                <span><b>{Math.min(100, Math.round(song.relevanceScore))}%</b> match</span>
               )}
               <span><b>{versions.length}</b> {versions.length === 1 ? "versione" : "versioni"}</span>
             </div>
@@ -1588,7 +1588,7 @@ const ChatPlayerFirst = () => {
                             currentSong={currentSong}
                             isGloballyPlaying={isGloballyPlaying}
                             onPlay={(songs, idx) => handleTrackPlay(songs, idx, r)}
-                            onOpenDetail={(song) => handleOpenDetail(song, narrative, emotionLine)}
+                            onOpenDetail={(song) => handleOpenDetail(song, song.explanation.trim() || narrative, emotionLine)}
                           />
                         </>
                       ) : (
