@@ -1,7 +1,25 @@
 const PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const DEVELOPER_TOKEN_STORAGE_KEY = "echoes_apple_music_developer_token";
 
 let cachedToken: string | null = null;
+
+function readPersistedDeveloperToken(): string | null {
+  try {
+    return localStorage.getItem(DEVELOPER_TOKEN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function persistDeveloperToken(token: string | null) {
+  try {
+    if (token) localStorage.setItem(DEVELOPER_TOKEN_STORAGE_KEY, token);
+    else localStorage.removeItem(DEVELOPER_TOKEN_STORAGE_KEY);
+  } catch {
+    /* storage non disponibile */
+  }
+}
 
 /** Decodifica `exp` dal JWT (developer token Apple) per non tenere in cache token scaduti. */
 function jwtExpSeconds(token: string): number | null {
@@ -28,6 +46,15 @@ function isCachedDeveloperTokenValid(token: string): boolean {
 
 export async function getAppleMusicDeveloperToken(): Promise<string | null> {
   if (cachedToken && isCachedDeveloperTokenValid(cachedToken)) return cachedToken;
+
+  // Riusa il JWT persistito in localStorage tra reload: lo stesso developer token preserva la sessione
+  // utente di MusicKit. Generarne uno nuovo ad ogni reload fa scattare il riautorizzazione su Safari.
+  const persisted = readPersistedDeveloperToken();
+  if (persisted && isCachedDeveloperTokenValid(persisted)) {
+    cachedToken = persisted;
+    return persisted;
+  }
+
   cachedToken = null;
 
   const res = await fetch(`https://${PROJECT_ID}.supabase.co/functions/v1/apple-music-token`, {
@@ -38,9 +65,11 @@ export async function getAppleMusicDeveloperToken(): Promise<string | null> {
   if (!res.ok) return null;
   const data = await res.json();
   cachedToken = data.token;
+  persistDeveloperToken(data.token ?? null);
   return data.token;
 }
 
 export function clearAppleMusicToken() {
   cachedToken = null;
+  persistDeveloperToken(null);
 }
