@@ -14,21 +14,9 @@ import {
   setCachedAppleMusicUserToken,
   setHeldAppleMusicSession,
 } from "@/services/appleMusicSession";
+import { AppleMusicContext } from "@/context/appleMusicContextObject";
 
-interface AppleMusicState {
-  isAvailable: boolean;
-  isAuthorized: boolean;
-  isLinkedAccount: boolean;
-  developerToken: string | null;
-  loading: boolean;
-  authorize: () => Promise<void>;
-  unauthorize: () => void;
-  refresh: () => Promise<void>;
-  /** Aggiorna developer token + stato MusicKit senza distruggere il provider (tab lunga / JWT vicino alla scadenza). */
-  resyncMusicKit: () => Promise<void>;
-  /** Dopo errori di play: pulisce cache user token locale e ri-allinea MusicKit (spesso equivale a un nuovo login AM). */
-  repairMusicKitSession: () => Promise<void>;
-}
+export { AppleMusicContext };
 
 type MKInstance = {
   isAuthorized: boolean;
