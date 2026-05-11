@@ -726,6 +726,21 @@ const Chat = () => {
     void runSearch(activeConversationId, interp, undefined, currentResult?.searchMode === "creator_trends" ? "creator_trends" : "search");
   };
 
+  const handleRerunUserMessage = useCallback(
+    (text: string) => {
+      const prompt = text.trim();
+      if (!activeConversationId || !prompt || isLoading) return;
+      appendUserMessage(activeConversationId, prompt);
+      void runSearch(
+        activeConversationId,
+        prompt,
+        undefined,
+        currentResult?.searchMode === "creator_trends" ? "creator_trends" : "search"
+      );
+    },
+    [activeConversationId, appendUserMessage, currentResult?.searchMode, isLoading, runSearch]
+  );
+
   const handleNewChat = () => {
     const id = createConversation();
     navigate(`${CHAT_PATH}?conversation=${id}`, { replace: true });
@@ -1208,13 +1223,28 @@ const Chat = () => {
                   )}
                   {activeConversation?.messages.map((m, mi) => {
                     if (m.role === "user") {
+                      const canRerunMessage = Boolean(m.text.trim()) && !isLoading;
                       return (
                         <div
                           key={m.id}
-                          className="flex justify-end animate-fade-slide-up"
+                          className="group flex justify-end animate-fade-slide-up"
                           style={{ animationDelay: `${mi * 30}ms` }}
                         >
-                          <div className="max-w-[min(85%,480px)]">
+                          <div className="flex max-w-[min(92%,540px)] items-end justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleRerunUserMessage(m.text)}
+                              disabled={!canRerunMessage}
+                              className={cn(
+                                "mb-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-borderSubtle/70 bg-card/80 text-muted-foreground shadow-sm transition-all hover:border-primary/30 hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:pointer-events-none disabled:opacity-35 md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100",
+                                canRerunMessage && "active:scale-95"
+                              )}
+                              aria-label={t("chat.rerunMessage", "Rilancia questo messaggio")}
+                              title={t("chat.rerunMessage", "Rilancia questo messaggio")}
+                            >
+                              <RefreshCw className={cn("h-3.5 w-3.5", isLoading && "animate-spin")} />
+                            </button>
+                            <div className="max-w-[min(100%,480px)]">
                             <div className="rounded-2xl rounded-br-md bg-gradient-to-br from-primary/22 to-primary/8 border border-primary/25 px-5 py-4 text-sm md:text-[15px] font-body text-foreground leading-relaxed shadow-md ring-1 ring-primary/10 space-y-2">
                               {m.imagePreviewUrl ? (
                                 <img
@@ -1224,6 +1254,7 @@ const Chat = () => {
                                 />
                               ) : null}
                               {m.text ? <p className="whitespace-pre-wrap">{m.text}</p> : null}
+                            </div>
                             </div>
                           </div>
                         </div>
