@@ -12,6 +12,7 @@ import { SpotifyProvider } from "@/context/SpotifyContext";
 import { AppleMusicProvider } from "@/context/AppleMusicContext";
 import { PlaybackQueueProvider } from "@/context/PlaybackQueueContext";
 import { FavoritesEchoesPlaylistSync } from "@/components/FavoritesEchoesPlaylistSync";
+import { GlobalPlaybackDock } from "@/components/GlobalPlaybackDock";
 import { ThemePreferenceSync } from "@/components/ThemePreferenceSync";
 import { ThemeFaviconSync } from "@/components/AppLogo";
 import { SeoHead } from "@/components/SeoHead";
@@ -104,6 +105,7 @@ const App = () => (
                 <Route path="/admin" element={<Admin />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
+              <GlobalPlaybackDock />
             </PlaybackQueueProvider>
             </AppleMusicProvider>
           </SpotifyProvider>

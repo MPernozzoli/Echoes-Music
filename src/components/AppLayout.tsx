@@ -6,7 +6,6 @@ import { animate } from "animejs";
 import { useAuth } from "@/context/useAuth";
 import TokenBadge from "@/components/TokenBadge";
 import { AppLogo } from "@/components/AppLogo";
-import { GlobalPlaybackDock } from "@/components/GlobalPlaybackDock";
 import TokenLowBanner from "@/components/TokenLowBanner";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -158,7 +157,6 @@ const AppLayout = ({ children, headerVariant = "app" }: AppLayoutProps) => {
       </nav>
       )}
 
-      {!isMarketing && <GlobalPlaybackDock />}
     </div>
   );
 };

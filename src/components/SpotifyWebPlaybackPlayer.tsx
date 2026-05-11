@@ -113,6 +113,19 @@ export const SpotifyWebPlaybackPlayer = forwardRef<SpotifyWebPlaybackHandle, Spo
       [onReadyChange],
     );
 
+    const reportPlaybackState = useCallback((state: SpotifyPlaybackState | null) => {
+      if (!state) return;
+      const uri = state.track_window.current_track?.uri;
+      if (uri) activeUriRef.current = uri;
+      onTelemetryRef.current?.({
+        current: state.position / 1000,
+        duration: state.duration / 1000,
+        isPlaying: !state.paused,
+        uri: uri ?? undefined,
+      });
+      onPlaybackStateChangeRef.current?.(!state.paused);
+    }, []);
+
     useEffect(() => {
       if (!accessToken) {
         reportReady(false);
@@ -157,17 +170,7 @@ export const SpotifyWebPlaybackPlayer = forwardRef<SpotifyWebPlaybackHandle, Spo
             onPlaybackErrorRef.current?.((payload as { message?: string }).message ?? "Spotify playback error");
           });
           player.addListener("player_state_changed", (state) => {
-            const s = state as SpotifyPlaybackState | null;
-            if (!s) return;
-            const uri = s.track_window.current_track?.uri;
-            if (uri) activeUriRef.current = uri;
-            onTelemetryRef.current?.({
-              current: s.position / 1000,
-              duration: s.duration / 1000,
-              isPlaying: !s.paused,
-              uri: uri ?? undefined,
-            });
-            onPlaybackStateChangeRef.current?.(!s.paused);
+            reportPlaybackState(state as SpotifyPlaybackState | null);
           });
 
           playerRef.current = player;
@@ -182,7 +185,15 @@ export const SpotifyWebPlaybackPlayer = forwardRef<SpotifyWebPlaybackHandle, Spo
         playerRef.current = null;
         player?.disconnect();
       };
-    }, [accessToken, reportReady]);
+    }, [accessToken, reportPlaybackState, reportReady]);
+
+    useEffect(() => {
+      if (!ready) return undefined;
+      const interval = window.setInterval(() => {
+        void playerRef.current?.getCurrentState().then(reportPlaybackState);
+      }, 500);
+      return () => window.clearInterval(interval);
+    }, [ready, reportPlaybackState]);
 
     useEffect(() => {
       if (!ready) return;
