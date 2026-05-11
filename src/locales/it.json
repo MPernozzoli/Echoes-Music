@@ -410,6 +410,7 @@
     "previewUnavailable": "Anteprima non disponibile per questo brano",
     "appleConnectHint": "Stai ascoltando l’anteprima di 30 secondi. Apri Apple Music per la versione completa.",
     "appleFallbackToPreview": "Apple Music non ha potuto riprodurre il brano — passo all’anteprima.",
+    "spotifyFallbackToEmbed": "Spotify non ha potuto riprodurre il brano nel player interno — uso il fallback integrato.",
     "appleSessionRepaired": "Sessione Apple Music aggiornata. Prova di nuovo Play; se non parte, riconnetti da Impostazioni."
   },
   "appleMusic": {

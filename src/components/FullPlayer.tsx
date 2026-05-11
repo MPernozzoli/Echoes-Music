@@ -7,6 +7,7 @@ import { Play, Pause, SkipBack, SkipForward, Heart, Volume2, VolumeX, Info, Yout
 import { Slider } from "@/components/ui/slider";
 import type { Song } from "@/data/mockData";
 import { useAppleMusic } from "@/context/useAppleMusic";
+import { useSpotify } from "@/context/useSpotify";
 import { useApp } from "@/context/useApp";
 import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
 import { useAppleEnrichedSong } from "@/hooks/useAppleMusicResolution";
@@ -14,6 +15,7 @@ import { usePrefetchAppleMusicCatalogIds } from "@/hooks/usePrefetchAppleMusicCa
 import { isAppleMusicResolutionComplete } from "@/services/appleMusicEnrichment";
 import { AppleMusicEmbed } from "@/components/AppleMusicEmbed";
 import { AppleMusicKitPlayer, type AppleMusicKitPlayerHandle } from "@/components/AppleMusicKitPlayer";
+import { SpotifyWebPlaybackPlayer, type SpotifyWebPlaybackHandle } from "@/components/SpotifyWebPlaybackPlayer";
 import { StreamingLibraryActions } from "@/components/StreamingLibraryActions";
 import { DockStreamingActions } from "@/components/DockStreamingActions";
 import { PlayerDockChrome, type DockRepeatMode } from "@/components/PlayerDockChrome";
@@ -35,11 +37,20 @@ interface FullPlayerProps {
   /** desktop: barra compatta in basso */
   variant?: "default" | "dock";
   onPlaybackStateChange?: (playing: boolean) => void;
+  onPlaybackEvent?: (event: PlaybackTelemetryEvent) => void;
   /** Barra dock: apre il pannello coda */
   onOpenQueue?: () => void;
   /** Barra dock: sostituisce mic/coda con azioni custom (es. Popover) */
   dockPanelActions?: ReactNode;
 }
+
+export type PlaybackTelemetryEvent = {
+  type: "play_start" | "pause" | "complete" | "skip_next" | "skip_previous" | "replay" | "external_open";
+  currentTime?: number;
+  duration?: number;
+  provider: "apple_music" | "spotify" | "preview" | "external";
+  reason?: "ended" | "manual" | "repeat_one";
+};
 
 function formatTime(seconds: number): string {
   if (!isFinite(seconds) || seconds < 0) return "0:00";
@@ -59,6 +70,7 @@ const FullPlayer = ({
   onAutoplayConsumed,
   variant = "default",
   onPlaybackStateChange,
+  onPlaybackEvent,
   onOpenQueue,
   dockPanelActions,
 }: FullPlayerProps) => {
@@ -77,6 +89,8 @@ const FullPlayer = ({
   const isDock = variant === "dock";
   const playbackCbRef = useRef(onPlaybackStateChange);
   playbackCbRef.current = onPlaybackStateChange;
+  const playbackEventCbRef = useRef(onPlaybackEvent);
+  playbackEventCbRef.current = onPlaybackEvent;
   /** Dopo fine brano / avanti: riprendi subito la preview HTML5 sul nuovo indice */
   const queueContinueAfterLoad = useRef(false);
   const [kitAutoplayNonce, setKitAutoplayNonce] = useState(0);
@@ -90,6 +104,7 @@ const FullPlayer = ({
   const playbackMode = useStreamingPlaybackMode();
   const { descriptionLanguage } = useApp();
   const appleMusic = useAppleMusic();
+  const spotify = useSpotify();
   const applePreferred = appleMusic.isAuthorized || appleMusic.isLinkedAccount;
 
   const [kitUnavailableSongIds, setKitUnavailableSongIds] = useState<Set<string>>(() => new Set());
@@ -115,14 +130,29 @@ const FullPlayer = ({
     !kitFailedForCurrent;
 
   const kitPlayerRef = useRef<AppleMusicKitPlayerHandle>(null);
+  const spotifyPlayerRef = useRef<SpotifyWebPlaybackHandle>(null);
+  const spotifyAutoplayTriedRef = useRef<string | null>(null);
   const [kitTelemetry, setKitTelemetry] = useState({ current: 0, duration: 0, isPlaying: false });
+  const [spotifyTelemetry, setSpotifyTelemetry] = useState({
+    current: 0,
+    duration: 0,
+    isPlaying: false,
+    uri: undefined as string | undefined,
+  });
+  const [spotifyPlayerReady, setSpotifyPlayerReady] = useState(false);
+  const [spotifyPlayerUnavailable, setSpotifyPlayerUnavailable] = useState(false);
   const [dockShuffle, setDockShuffle] = useState(false);
   const [dockRepeat, setDockRepeat] = useState<DockRepeatMode>("all");
   const dockRepeatRef = useRef<DockRepeatMode>(dockRepeat);
   dockRepeatRef.current = dockRepeat;
 
+  const emitPlaybackEvent = useCallback((event: PlaybackTelemetryEvent) => {
+    playbackEventCbRef.current?.(event);
+  }, []);
+
   useEffect(() => {
     setKitTelemetry({ current: 0, duration: 0, isPlaying: false });
+    setSpotifyTelemetry({ current: 0, duration: 0, isPlaying: false, uri: undefined });
   }, [song?.id]);
 
   useEffect(() => {
@@ -156,8 +186,22 @@ const FullPlayer = ({
     const i = indexRef.current;
     const len = songsLenRef.current;
     const repeat = dockRepeatRef.current;
+    emitPlaybackEvent({
+      type: "complete",
+      provider: "apple_music",
+      currentTime: kitTelemetry.current,
+      duration: kitTelemetry.duration,
+      reason: "ended",
+    });
     if (repeat === "one") {
       // Replay same track
+      emitPlaybackEvent({
+        type: "replay",
+        provider: "apple_music",
+        currentTime: 0,
+        duration: kitTelemetry.duration,
+        reason: "repeat_one",
+      });
       setKitAutoplayNonce((n) => n + 1);
       return;
     }
@@ -174,7 +218,35 @@ const FullPlayer = ({
     } else {
       playbackCbRef.current?.(false);
     }
-  }, []);
+  }, [emitPlaybackEvent, kitTelemetry]);
+
+  const handleKitPlaybackStateChange = useCallback(
+    (playing: boolean) => {
+      onPlaybackStateChange?.(playing);
+      emitPlaybackEvent({
+        type: playing ? "play_start" : "pause",
+        provider: "apple_music",
+        currentTime: kitTelemetry.current,
+        duration: kitTelemetry.duration,
+        reason: "manual",
+      });
+    },
+    [emitPlaybackEvent, kitTelemetry, onPlaybackStateChange],
+  );
+
+  const handleSpotifyPlaybackStateChange = useCallback(
+    (playing: boolean) => {
+      onPlaybackStateChange?.(playing);
+      emitPlaybackEvent({
+        type: playing ? "play_start" : "pause",
+        provider: "spotify",
+        currentTime: spotifyTelemetry.current,
+        duration: spotifyTelemetry.duration,
+        reason: "manual",
+      });
+    },
+    [emitPlaybackEvent, onPlaybackStateChange, spotifyTelemetry],
+  );
 
   const onKitQueueAutoplayConsumed = useCallback(() => {
     setKitAutoplayNonce(0);
@@ -204,6 +276,14 @@ const FullPlayer = ({
     [appleMusic, songs, rawSong?.id, t],
   );
 
+  const handleSpotifyPlaybackError = useCallback(
+    (message: string) => {
+      setSpotifyPlayerUnavailable(true);
+      toast.info(t("player.spotifyFallbackToEmbed"), { description: message });
+    },
+    [t],
+  );
+
   // Reset state when song changes
   useEffect(() => {
     autoplayTried.current = false;
@@ -229,16 +309,48 @@ const FullPlayer = ({
       audioRef.current = audio;
       audio.volume = isMuted ? 0 : volume / 100;
 
-      const onPlay = () => playbackCbRef.current?.(true);
-      const onPause = () => playbackCbRef.current?.(false);
+      const onPlay = () => {
+        playbackCbRef.current?.(true);
+        playbackEventCbRef.current?.({
+          type: "play_start",
+          provider: "preview",
+          currentTime: audio.currentTime,
+          duration: audio.duration,
+          reason: "manual",
+        });
+      };
+      const onPause = () => {
+        playbackCbRef.current?.(false);
+        playbackEventCbRef.current?.({
+          type: "pause",
+          provider: "preview",
+          currentTime: audio.currentTime,
+          duration: audio.duration,
+          reason: "manual",
+        });
+      };
       const onEnded = () => {
         const i = indexRef.current;
         const len = songsLenRef.current;
         const repeat = dockRepeatRef.current;
+        playbackEventCbRef.current?.({
+          type: "complete",
+          provider: "preview",
+          currentTime: audio.duration,
+          duration: audio.duration,
+          reason: "ended",
+        });
         if (repeat === "one") {
           // Replay same track from the start
           if (audio) {
             audio.currentTime = 0;
+            playbackEventCbRef.current?.({
+              type: "replay",
+              provider: "preview",
+              currentTime: 0,
+              duration: audio.duration,
+              reason: "repeat_one",
+            });
             audio.play().catch(() => {});
           }
           return;
@@ -282,6 +394,11 @@ const FullPlayer = ({
       }
     }
   }, [song?.id, previewUrl, useAppleKitPlayer, suppressNonApplePreview]);
+
+  useEffect(() => {
+    setSpotifyPlayerUnavailable(false);
+    setSpotifyPlayerReady(false);
+  }, [spotifyTrackId]);
 
   useEffect(() => {
     if (useAppleKitPlayer || useEmbed || !audioReady || !audioRef.current) return;
@@ -344,44 +461,131 @@ const FullPlayer = ({
   }, [audioReady]);
 
   const handlePrev = useCallback(() => {
-    if (currentIndex > 0) onChangeIndex(currentIndex - 1);
-  }, [currentIndex, onChangeIndex]);
+    if (currentIndex > 0) {
+      emitPlaybackEvent({
+        type: "skip_previous",
+        provider: useAppleKitPlayer ? "apple_music" : spotifyTelemetry.uri ? "spotify" : "preview",
+        currentTime: useAppleKitPlayer ? kitTelemetry.current : spotifyTelemetry.uri ? spotifyTelemetry.current : currentTime,
+        duration: useAppleKitPlayer ? kitTelemetry.duration : spotifyTelemetry.uri ? spotifyTelemetry.duration : duration,
+        reason: "manual",
+      });
+      onChangeIndex(currentIndex - 1);
+    }
+  }, [
+    currentIndex,
+    onChangeIndex,
+    emitPlaybackEvent,
+    useAppleKitPlayer,
+    kitTelemetry,
+    spotifyTelemetry,
+    currentTime,
+    duration,
+  ]);
 
   const handleNext = useCallback(() => {
     if (currentIndex < songs.length - 1) {
+      emitPlaybackEvent({
+        type: "skip_next",
+        provider: useAppleKitPlayer ? "apple_music" : spotifyTelemetry.uri ? "spotify" : "preview",
+        currentTime: useAppleKitPlayer ? kitTelemetry.current : spotifyTelemetry.uri ? spotifyTelemetry.current : currentTime,
+        duration: useAppleKitPlayer ? kitTelemetry.duration : spotifyTelemetry.uri ? spotifyTelemetry.duration : duration,
+        reason: "manual",
+      });
       queueContinueAfterLoad.current = true;
       setKitAutoplayNonce((n) => n + 1);
       onChangeIndex(currentIndex + 1);
     } else if (dockRepeat === "all" && songs.length > 0) {
+      emitPlaybackEvent({
+        type: "skip_next",
+        provider: useAppleKitPlayer ? "apple_music" : spotifyTelemetry.uri ? "spotify" : "preview",
+        currentTime: useAppleKitPlayer ? kitTelemetry.current : spotifyTelemetry.uri ? spotifyTelemetry.current : currentTime,
+        duration: useAppleKitPlayer ? kitTelemetry.duration : spotifyTelemetry.uri ? spotifyTelemetry.duration : duration,
+        reason: "manual",
+      });
       queueContinueAfterLoad.current = true;
       setKitAutoplayNonce((n) => n + 1);
       onChangeIndex(0);
     }
-  }, [currentIndex, songs.length, onChangeIndex, dockRepeat]);
+  }, [
+    currentIndex,
+    songs.length,
+    onChangeIndex,
+    dockRepeat,
+    emitPlaybackEvent,
+    useAppleKitPlayer,
+    kitTelemetry,
+    spotifyTelemetry,
+    currentTime,
+    duration,
+  ]);
+
+  const canUseSpotifyWebPlayback =
+    playbackMode === "spotify" &&
+    spotify.isConnected &&
+    spotify.isPremium &&
+    !!spotify.accessToken &&
+    !!spotifyTrackId &&
+    !spotifyPlayerUnavailable;
+
+  useEffect(() => {
+    if (!canUseSpotifyWebPlayback || !spotifyPlayerReady || !spotifyTrackId || !song?.id) return;
+
+    if (queueContinueAfterLoad.current) {
+      queueContinueAfterLoad.current = false;
+      void spotifyPlayerRef.current
+        ?.togglePlay(`spotify:track:${spotifyTrackId}`)
+        .catch(handleSpotifyPlaybackError);
+      return;
+    }
+
+    if (!autoplay || spotifyAutoplayTriedRef.current === song.id) return;
+    spotifyAutoplayTriedRef.current = song.id;
+    void spotifyPlayerRef.current
+      ?.togglePlay(`spotify:track:${spotifyTrackId}`)
+      .then(() => onAutoplayConsumed?.())
+      .catch((err) => {
+        onAutoplayConsumed?.();
+        handleSpotifyPlaybackError(err instanceof Error ? err.message : String(err));
+      });
+  }, [
+    autoplay,
+    canUseSpotifyWebPlayback,
+    handleSpotifyPlaybackError,
+    onAutoplayConsumed,
+    song?.id,
+    spotifyPlayerReady,
+    spotifyTrackId,
+  ]);
 
   const onDockPlayPause = useCallback(() => {
     const s = song ?? songs[currentIndex];
     if (!s) return;
     const sp = s.spotifyUri?.replace("spotify:track:", "");
     const am = s.appleMusicId;
-    const hasInlineAudio = useAppleKitPlayer || (!!s.previewUrl && !useEmbed);
+    const hasInlineAudio = useAppleKitPlayer || canUseSpotifyWebPlayback || (!!s.previewUrl && !useEmbed);
     if (isDock && !hasInlineAudio) {
-      // Fallback: niente audio inline nel dock → apri lo streaming esterno (priorità al provider preferito)
+      // Fallback: niente audio controllabile nel dock. Spotify resta embedded; gli altri provider aprono lo streaming.
       if (useApplePlayback && am) {
+        emitPlaybackEvent({ type: "external_open", provider: "external", reason: "manual" });
         window.open(`https://music.apple.com/us/song/${am}`, "_blank", "noopener,noreferrer");
       } else if (sp) {
-        window.open(`https://open.spotify.com/track/${sp}`, "_blank", "noopener,noreferrer");
+        setUseEmbed(true);
       } else if (am) {
+        emitPlaybackEvent({ type: "external_open", provider: "external", reason: "manual" });
         window.open(`https://music.apple.com/us/song/${am}`, "_blank", "noopener,noreferrer");
       } else if (s.youtubeMusicUrl || s.youtubeMusicVideoId) {
         const ym =
           s.youtubeMusicUrl ||
           `https://music.youtube.com/watch?v=${encodeURIComponent(s.youtubeMusicVideoId!)}`;
+        emitPlaybackEvent({ type: "external_open", provider: "external", reason: "manual" });
         window.open(ym, "_blank", "noopener,noreferrer");
       }
       return;
     }
     if (useAppleKitPlayer) void kitPlayerRef.current?.togglePlay();
+    else if (canUseSpotifyWebPlayback && sp) {
+      void spotifyPlayerRef.current?.togglePlay(`spotify:track:${sp}`).catch(handleSpotifyPlaybackError);
+    }
     else void togglePlay();
   }, [
     song,
@@ -391,7 +595,10 @@ const FullPlayer = ({
     useApplePlayback,
     useEmbed,
     useAppleKitPlayer,
+    canUseSpotifyWebPlayback,
     togglePlay,
+    emitPlaybackEvent,
+    handleSpotifyPlaybackError,
   ]);
 
   const toggleGlobalPlayback = useCallback(() => {
@@ -424,10 +631,11 @@ const FullPlayer = ({
   const fav = isFavorite(song.id);
   const yearSuffix = song.releaseYear != null ? ` · ${song.releaseYear}` : "";
 
-  const hasInlineAudio = useAppleKitPlayer || (!!previewUrl && !useEmbed);
+  const hasInlineAudio = useAppleKitPlayer || canUseSpotifyWebPlayback || (!!previewUrl && !useEmbed);
   const embedOnlyDock = isDock && !hasInlineAudio;
 
   const openExternalStream = () => {
+    emitPlaybackEvent({ type: "external_open", provider: "external", reason: "manual" });
     if (useApplePlayback && appleMusicId) {
       window.open(`https://music.apple.com/us/song/${appleMusicId}`, "_blank", "noopener,noreferrer");
     } else if (spotifyTrackId) {
@@ -445,6 +653,7 @@ const FullPlayer = ({
 
   const onDockSeek = (seconds: number) => {
     if (useAppleKitPlayer) kitPlayerRef.current?.seek(seconds);
+    else if (canUseSpotifyWebPlayback) spotifyPlayerRef.current?.seek(seconds);
     else if (audioRef.current && audioReady) {
       audioRef.current.currentTime = seconds;
       setCurrentTime(seconds);
@@ -453,9 +662,17 @@ const FullPlayer = ({
 
   const dockSeekDisabled =
     embedOnlyDock ||
-    (useAppleKitPlayer ? kitTelemetry.duration <= 0 : !audioReady || duration <= 0);
+    (useAppleKitPlayer
+      ? kitTelemetry.duration <= 0
+      : canUseSpotifyWebPlayback
+        ? !spotifyPlayerReady || spotifyTelemetry.duration <= 0
+        : !audioReady || duration <= 0);
 
-  const dockPlayDisabled = !embedOnlyDock && !useAppleKitPlayer && !audioReady;
+  const dockPlayDisabled =
+    !embedOnlyDock &&
+    !useAppleKitPlayer &&
+    !(canUseSpotifyWebPlayback && spotifyPlayerReady) &&
+    !audioReady;
 
   if (isDock) {
     return (
@@ -467,11 +684,22 @@ const FullPlayer = ({
             trackId={appleMusicId!}
             trackKey={song.id}
             onTelemetry={setKitTelemetry}
-            onPlaybackStateChange={onPlaybackStateChange}
+            onPlaybackStateChange={handleKitPlaybackStateChange}
             onTrackEnded={handleKitTrackEnded}
             queueAutoplayNonce={kitAutoplayNonce}
             onQueueAutoplayConsumed={onKitQueueAutoplayConsumed}
             onPlaybackError={handleKitPlaybackError}
+          />
+        )}
+        {canUseSpotifyWebPlayback && (
+          <SpotifyWebPlaybackPlayer
+            ref={spotifyPlayerRef}
+            accessToken={spotify.accessToken}
+            volume={isMuted ? 0 : volume / 100}
+            onReadyChange={setSpotifyPlayerReady}
+            onTelemetry={setSpotifyTelemetry}
+            onPlaybackStateChange={handleSpotifyPlaybackStateChange}
+            onPlaybackError={handleSpotifyPlaybackError}
           />
         )}
         <div className="w-full">
@@ -493,11 +721,11 @@ const FullPlayer = ({
             onNext={handleNext}
             prevDisabled={currentIndex === 0}
             nextDisabled={currentIndex === songs.length - 1 && dockRepeat !== "all"}
-            isPlaying={useAppleKitPlayer ? kitTelemetry.isPlaying : isPlaying}
+            isPlaying={useAppleKitPlayer ? kitTelemetry.isPlaying : canUseSpotifyWebPlayback ? spotifyTelemetry.isPlaying : isPlaying}
             onPlayPause={onDockPlayPause}
             playDisabled={dockPlayDisabled}
-            currentTime={useAppleKitPlayer ? kitTelemetry.current : currentTime}
-            duration={useAppleKitPlayer ? kitTelemetry.duration : duration}
+            currentTime={useAppleKitPlayer ? kitTelemetry.current : canUseSpotifyWebPlayback ? spotifyTelemetry.current : currentTime}
+            duration={useAppleKitPlayer ? kitTelemetry.duration : canUseSpotifyWebPlayback ? spotifyTelemetry.duration : duration}
             onSeek={onDockSeek}
             seekDisabled={dockSeekDisabled}
             volume={volume}
@@ -506,11 +734,13 @@ const FullPlayer = ({
               setVolume(v);
               setIsMuted(false);
               if (useAppleKitPlayer) kitPlayerRef.current?.setVolume(v / 100);
+              if (canUseSpotifyWebPlayback) spotifyPlayerRef.current?.setVolume(v / 100);
             }}
             onMuteToggle={() => {
               setIsMuted((m) => {
                 const next = !m;
                 if (useAppleKitPlayer) kitPlayerRef.current?.setVolume(next ? 0 : volume / 100);
+                if (canUseSpotifyWebPlayback) spotifyPlayerRef.current?.setVolume(next ? 0 : volume / 100);
                 return next;
               });
             }}
@@ -520,6 +750,20 @@ const FullPlayer = ({
             airPlayOnClick={dockAirPlayUi ? handleDockAirPlay : undefined}
             seekBarLoading={seekBarAppleResolving}
           />
+          {embedOnlyDock && useEmbed && spotifyTrackId && !(appleMusicId && (useApplePlayback || !spotifyTrackId)) ? (
+            <div className="px-3 sm:px-4 pb-3">
+              <iframe
+                src={`https://open.spotify.com/embed/track/${spotifyTrackId}?utm_source=generator&theme=0`}
+                width="100%"
+                height="80"
+                frameBorder="0"
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                loading="lazy"
+                className="rounded-xl ring-1 ring-border/40 bg-background/60"
+                title={t("player.artworkAlt", { title: song.title, artist: song.artist })}
+              />
+            </div>
+          ) : null}
         </div>
       </>
     );
@@ -577,7 +821,7 @@ const FullPlayer = ({
           trackKey={song.id}
           title={song.title}
           artist={song.artist}
-          onPlaybackStateChange={onPlaybackStateChange}
+          onPlaybackStateChange={handleKitPlaybackStateChange}
           onTrackEnded={handleKitTrackEnded}
           queueAutoplayNonce={kitAutoplayNonce}
           onQueueAutoplayConsumed={onKitQueueAutoplayConsumed}

@@ -15,6 +15,10 @@ export interface FeedbackLearningSummary {
     artist: string;
     prompt?: string;
     label: string;
+    signal?: string;
+    playCount?: number;
+    completionCount?: number;
+    replayCount?: number;
   }>;
   negativeTracks: Array<{
     title: string;
@@ -22,8 +26,20 @@ export interface FeedbackLearningSummary {
     prompt?: string;
     label: string;
     text?: string;
+    signal?: string;
   }>;
   negativePatterns: string[];
+  playbackSignals: Array<{
+    title: string;
+    artist: string;
+    prompt?: string;
+    signal: string;
+    playCount?: number;
+    completionCount?: number;
+    skipCount?: number;
+    replayCount?: number;
+    avgCompletionRatio?: number;
+  }>;
 }
 
 async function authUserId(): Promise<string | null> {
@@ -125,9 +141,11 @@ export async function trackInteraction(params: {
   interactionType: string;
   metadata?: Record<string, unknown>;
 }) {
+  const uid = await authUserId();
   const { error } = await supabase.from("result_interactions").insert({
     search_result_id: params.searchResultId,
     search_id: params.searchId,
+    user_id: uid,
     anonymous_session_id: sessionId,
     interaction_type: params.interactionType,
     interaction_metadata: (params.metadata ?? null) as unknown as import("@/integrations/supabase/types").Json,
@@ -186,23 +204,44 @@ export async function getRecentFeedbackLearningSummary(limit = 24): Promise<Feed
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  const [searchFeedbackRes, resultFeedbackRes] = await Promise.all([
+  const interactionQuery = supabase
+    .from("result_interactions")
+    .select("search_id, search_result_id, interaction_type, interaction_metadata, created_at")
+    .in("interaction_type", [
+      "playback_started",
+      "playback_completed",
+      "playback_skipped",
+      "playback_paused",
+      "playback_replayed",
+      "implicit_preferred_non_first",
+    ])
+    .order("created_at", { ascending: false })
+    .limit(limit * 3);
+
+  const [searchFeedbackRes, resultFeedbackRes, interactionRes] = await Promise.all([
     uid ? searchFeedbackQuery.eq("user_id", uid) : searchFeedbackQuery.eq("anonymous_session_id", sessionId),
     uid ? resultFeedbackQuery.eq("user_id", uid) : resultFeedbackQuery.eq("anonymous_session_id", sessionId),
+    uid ? interactionQuery.eq("user_id", uid) : interactionQuery.eq("anonymous_session_id", sessionId),
   ]);
 
   if (searchFeedbackRes.error) console.error("getRecentFeedbackLearningSummary search error:", searchFeedbackRes.error);
   if (resultFeedbackRes.error) console.error("getRecentFeedbackLearningSummary result error:", resultFeedbackRes.error);
+  if (interactionRes.error) console.error("getRecentFeedbackLearningSummary interactions error:", interactionRes.error);
 
   const searchFeedback = searchFeedbackRes.data ?? [];
   const resultFeedback = resultFeedbackRes.data ?? [];
-  if (!searchFeedback.length && !resultFeedback.length) return null;
+  const interactions = interactionRes.data ?? [];
+  if (!searchFeedback.length && !resultFeedback.length && !interactions.length) return null;
 
   const searchIds = Array.from(new Set([
     ...searchFeedback.map((f) => f.search_id),
     ...resultFeedback.map((f) => f.search_id),
+    ...interactions.map((f) => f.search_id),
   ].filter(Boolean)));
-  const resultIds = Array.from(new Set(resultFeedback.map((f) => f.search_result_id).filter(Boolean)));
+  const resultIds = Array.from(new Set([
+    ...resultFeedback.map((f) => f.search_result_id),
+    ...interactions.map((f) => f.search_result_id),
+  ].filter(Boolean)));
 
   const [searchRowsRes, resultRowsRes] = await Promise.all([
     searchIds.length
@@ -240,11 +279,12 @@ export async function getRecentFeedbackLearningSummary(limit = 24): Promise<Feed
     if (!track) continue;
     const label = f.feedback_label;
     const prompt = promptBySearchId.get(f.search_id);
-    if (label === "good match") {
+    if (label === "good match" || label === "positive_pick" || label === "implicit_play_choice") {
       positiveTracks.push({
         ...track,
         ...(prompt ? { prompt } : {}),
         label,
+        signal: label === "good match" ? "explicit_positive_feedback" : "implicit_positive_feedback",
       });
       continue;
     }
@@ -258,11 +298,97 @@ export async function getRecentFeedbackLearningSummary(limit = 24): Promise<Feed
     if (f.optional_text_feedback) negativePatterns.add(f.optional_text_feedback.slice(0, 120));
   }
 
+  const playbackByResult = new Map<string, {
+    playCount: number;
+    completionCount: number;
+    skipCount: number;
+    replayCount: number;
+    completionRatios: number[];
+    preferredNonFirst: boolean;
+    searchId?: string;
+  }>();
+
+  for (const event of interactions) {
+    const current = playbackByResult.get(event.search_result_id) ?? {
+      playCount: 0,
+      completionCount: 0,
+      skipCount: 0,
+      replayCount: 0,
+      completionRatios: [],
+      preferredNonFirst: false,
+      searchId: event.search_id,
+    };
+    const metadata = event.interaction_metadata;
+    const ratio =
+      metadata && typeof metadata === "object" && !Array.isArray(metadata)
+        ? (metadata as Record<string, unknown>).completionRatio
+        : undefined;
+    if (event.interaction_type === "playback_started") current.playCount += 1;
+    if (event.interaction_type === "playback_completed") {
+      current.completionCount += 1;
+      if (typeof ratio === "number" && Number.isFinite(ratio)) current.completionRatios.push(ratio);
+    }
+    if (event.interaction_type === "playback_skipped" || event.interaction_type === "playback_paused") {
+      current.skipCount += 1;
+    }
+    if (event.interaction_type === "playback_replayed") current.replayCount += 1;
+    if (event.interaction_type === "implicit_preferred_non_first") current.preferredNonFirst = true;
+    playbackByResult.set(event.search_result_id, current);
+  }
+
+  const playbackSignals: FeedbackLearningSummary["playbackSignals"] = [];
+  for (const [resultId, counts] of playbackByResult) {
+    const track = trackByResultId.get(resultId);
+    if (!track) continue;
+    const prompt = counts.searchId ? promptBySearchId.get(counts.searchId) : undefined;
+    const avgCompletionRatio =
+      counts.completionRatios.length > 0
+        ? counts.completionRatios.reduce((sum, value) => sum + value, 0) / counts.completionRatios.length
+        : undefined;
+    const signal = counts.preferredNonFirst
+      ? "preferred_over_higher_ranked_songs"
+      : counts.completionCount > 0 || counts.replayCount > 0
+        ? "sustained_listening"
+        : counts.skipCount > 0
+          ? "skipped_before_finish"
+          : "started_playback";
+    playbackSignals.push({
+      ...track,
+      ...(prompt ? { prompt } : {}),
+      signal,
+      playCount: counts.playCount,
+      completionCount: counts.completionCount,
+      skipCount: counts.skipCount,
+      replayCount: counts.replayCount,
+      ...(avgCompletionRatio != null ? { avgCompletionRatio: Number(avgCompletionRatio.toFixed(2)) } : {}),
+    });
+    if (signal === "preferred_over_higher_ranked_songs" || signal === "sustained_listening") {
+      positiveTracks.push({
+        ...track,
+        ...(prompt ? { prompt } : {}),
+        label: signal,
+        signal: "implicit_playback",
+        playCount: counts.playCount,
+        completionCount: counts.completionCount,
+        replayCount: counts.replayCount,
+      });
+    } else if (signal === "skipped_before_finish") {
+      negativeTracks.push({
+        ...track,
+        ...(prompt ? { prompt } : {}),
+        label: signal,
+        signal: "implicit_playback",
+      });
+      negativePatterns.add(signal);
+    }
+  }
+
   return {
     searchFeedback: normalizedSearchFeedback,
-    positiveTracks: positiveTracks.slice(0, 8),
+    positiveTracks: positiveTracks.slice(0, 10),
     negativeTracks: negativeTracks.slice(0, 10),
     negativePatterns: Array.from(negativePatterns).slice(0, 10),
+    playbackSignals: playbackSignals.slice(0, 12),
   };
 }
 

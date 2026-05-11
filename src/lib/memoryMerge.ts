@@ -1,4 +1,5 @@
 import type {
+  ChatMessage,
   ConversationMemory,
   StandardEmotionalAxes,
   UserTasteProfile,
@@ -56,6 +57,29 @@ export function normalizeConversationMemory(raw: Partial<ConversationMemory> | n
     turnCount: typeof raw?.turnCount === "number" ? raw.turnCount : undefined,
     lastUpdatedAt: raw?.lastUpdatedAt,
   };
+}
+
+export function buildThreadSummaryFromChatText(
+  messages: ChatMessage[],
+  currentPrompt?: string,
+  max = MAX_SUMMARY
+): string {
+  const userTexts = messages
+    .filter((m): m is Extract<ChatMessage, { role: "user" }> => m.role === "user")
+    .map((m) => m.text.trim() || (m.imagePreviewUrl ? "Immagine allegata" : ""))
+    .filter(Boolean);
+  const prompt = currentPrompt?.trim();
+  if (prompt && userTexts[userTexts.length - 1] !== prompt) {
+    userTexts.push(prompt);
+  }
+  if (!userTexts.length) return "";
+
+  const recentTexts = userTexts.slice(-4);
+  const summary =
+    recentTexts.length === 1
+      ? `Questa chat riguarda: ${recentTexts[0]}`
+      : `Richieste in questa chat: ${recentTexts.join(" | ")}`;
+  return clampSummary(summary, max);
 }
 
 /** Replace thread memory with server update (server is source of truth per turn). */

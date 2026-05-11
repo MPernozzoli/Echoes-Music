@@ -340,7 +340,8 @@
     "addToFavorites": "Favoriten",
     "nowPlayingAria": "Wird abgespielt",
     "previewUnavailable": "Vorschau für diesen Titel nicht verfügbar",
-    "appleConnectHint": "Du hörst eine 30‑Sekunden‑Vorschau. Öffne Apple Music für den vollständigen Titel."
+    "appleConnectHint": "Du hörst eine 30‑Sekunden‑Vorschau. Öffne Apple Music für den vollständigen Titel.",
+    "spotifyFallbackToEmbed": "Spotify konnte diesen Titel im internen Player nicht abspielen — eingebetteter Fallback wird verwendet."
   },
   "appleMusic": {
     "compactLine": "{{action}} · Apple Music-Konto (keine neue Anmeldung)"

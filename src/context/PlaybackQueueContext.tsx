@@ -14,8 +14,20 @@ import { filterSongsByMinRelevance } from "@/lib/dedupeSongs";
 /** Provenienza del brano in coda (chat + turno assistente) */
 export interface QueueListenSource {
   conversationId: string;
+  /** Id locale del SearchResult nella conversazione. */
   searchResultId: string;
   prompt: string;
+  /** Id database della search, disponibile dopo trackSearch. */
+  dbSearchId?: string;
+  /** Mappa song.id -> id database search_results. */
+  resultIdsBySongId?: Record<string, string>;
+  /** Posizione originale del brano nel risultato mostrato all'utente, 1-based. */
+  resultPosition?: number;
+  /** Brano scelto dall'utente quando la coda e' stata creata. */
+  selectedTrackId?: string;
+  /** Posizione originale del brano scelto dall'utente, 1-based. */
+  selectedResultPosition?: number;
+  selectionIntent?: "autoplay" | "play_now" | "queue" | "play_next";
 }
 
 interface PlaybackQueueState {
@@ -50,6 +62,40 @@ interface PlaybackQueueState {
 
 export const PlaybackQueueContext = createContext<PlaybackQueueState | null>(null);
 
+function sourceForSong(
+  song: Song,
+  allSongs: Song[],
+  base: QueueListenSource | null,
+  selection?: {
+    trackId?: string;
+    resultPosition?: number;
+    intent?: QueueListenSource["selectionIntent"];
+  },
+): QueueListenSource | null {
+  if (!base) return null;
+  const resultIndex = allSongs.findIndex((item) => item.id === song.id);
+  return {
+    ...base,
+    resultPosition: resultIndex >= 0 ? resultIndex + 1 : undefined,
+    selectedTrackId: selection?.trackId,
+    selectedResultPosition: selection?.resultPosition,
+    selectionIntent: selection?.intent,
+  };
+}
+
+function sourcesForSongs(
+  songs: Song[],
+  allSongs: Song[],
+  base: QueueListenSource | null,
+  selection?: {
+    trackId?: string;
+    resultPosition?: number;
+    intent?: QueueListenSource["selectionIntent"];
+  },
+): (QueueListenSource | null)[] {
+  return songs.map((song) => sourceForSong(song, allSongs, base, selection));
+}
+
 export const PlaybackQueueProvider = ({ children }: { children: ReactNode }) => {
   const [queue, setQueue] = useState<Song[]>([]);
   const [queueSources, setQueueSources] = useState<(QueueListenSource | null)[]>([]);
@@ -80,8 +126,16 @@ export const PlaybackQueueProvider = ({ children }: { children: ReactNode }) => 
       const orig = songs[Math.min(Math.max(0, startAt), songs.length - 1)];
       const idx = orig ? filtered.findIndex((s) => s.id === orig.id) : -1;
       const i = idx >= 0 ? idx : 0;
+      const selected = filtered[i];
+      const selectedOriginalIndex = selected ? songs.findIndex((s) => s.id === selected.id) : -1;
       setQueue(filtered);
-      setQueueSources(Array.from({ length: filtered.length }, () => source));
+      setQueueSources(
+        sourcesForSongs(filtered, songs, source, {
+          trackId: selected?.id,
+          resultPosition: selectedOriginalIndex >= 0 ? selectedOriginalIndex + 1 : undefined,
+          intent: source?.selectionIntent ?? (autoplay ? "autoplay" : "play_now"),
+        }),
+      );
       setCurrentIndex(i);
       setPendingAutoplay(autoplay);
     },
@@ -91,7 +145,7 @@ export const PlaybackQueueProvider = ({ children }: { children: ReactNode }) => 
   const appendToQueue = useCallback((songs: Song[], source: QueueListenSource | null = null) => {
     const filtered = filterSongsByMinRelevance(songs);
     if (!filtered.length) return;
-    const added = Array.from({ length: filtered.length }, () => source);
+    const added = sourcesForSongs(filtered, songs, source, { intent: "queue" });
     setQueue((q) => (q.length === 0 ? [...filtered] : [...q, ...filtered]));
     setQueueSources((s) => (s.length === 0 ? added : [...s, ...added]));
   }, []);
@@ -99,7 +153,7 @@ export const PlaybackQueueProvider = ({ children }: { children: ReactNode }) => 
   const insertAfterCurrent = useCallback((songs: Song[], source: QueueListenSource | null = null) => {
     const filtered = filterSongsByMinRelevance(songs);
     if (!filtered.length) return;
-    const added = Array.from({ length: filtered.length }, () => source);
+    const added = sourcesForSongs(filtered, songs, source, { intent: "play_next" });
     setQueue((q) => {
       if (q.length === 0) return [...filtered];
       const idx = Math.min(indexRef.current, q.length - 1);
@@ -122,7 +176,15 @@ export const PlaybackQueueProvider = ({ children }: { children: ReactNode }) => 
       if (!filtered.length) return;
       const orig = allSongs[Math.min(Math.max(0, songIndex), allSongs.length - 1)];
       const idx = orig ? filtered.findIndex((s) => s.id === orig.id) : -1;
-      playNowReplace(filtered, idx >= 0 ? idx : 0, true, source);
+      const selected = idx >= 0 ? filtered[idx] : filtered[0];
+      const selectedOriginalIndex = selected ? allSongs.findIndex((s) => s.id === selected.id) : -1;
+      const enrichedSource: QueueListenSource = {
+        ...source,
+        selectedTrackId: selected?.id,
+        selectedResultPosition: selectedOriginalIndex >= 0 ? selectedOriginalIndex + 1 : undefined,
+        selectionIntent: "play_now",
+      };
+      playNowReplace(allSongs, songIndex, true, enrichedSource);
     },
     [playNowReplace]
   );
@@ -213,4 +275,3 @@ export const PlaybackQueueProvider = ({ children }: { children: ReactNode }) => 
     <PlaybackQueueContext.Provider value={value}>{children}</PlaybackQueueContext.Provider>
   );
 };
-

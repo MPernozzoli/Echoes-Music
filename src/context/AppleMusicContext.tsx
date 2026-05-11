@@ -10,7 +10,9 @@ import {
 import {
   clearCachedAppleMusicUserToken,
   getCachedAppleMusicUserToken,
+  getHeldAppleMusicSession,
   setCachedAppleMusicUserToken,
+  setHeldAppleMusicSession,
 } from "@/services/appleMusicSession";
 
 interface AppleMusicState {
@@ -84,6 +86,8 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
   /** Ultimo developer JWT passato a `MusicKit.configure` — evita `configure` ripetuto che su Web spesso resetta la sessione utente. */
   const developerTokenRef = useRef<string | null>(null);
   const isLinkedAccountRef = useRef(false);
+  /** True dopo la prima `configure` riuscita: evita di rifarla in `refresh` (configure ripetuto resetta spesso la sessione Apple). */
+  const musicKitConfiguredRef = useRef(false);
 
   useEffect(() => {
     developerTokenRef.current = developerToken;
@@ -92,6 +96,12 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     isLinkedAccountRef.current = isLinkedAccount;
   }, [isLinkedAccount]);
+
+  // Riprende lo stato "held" dalla sessione del browser: evita il flicker "disconnesso" subito dopo un reload,
+  // mentre MusicKit sta ancora idratando il user token dal proprio storage interno.
+  useEffect(() => {
+    heldAppleSessionRef.current = getHeldAppleMusicSession(user?.id);
+  }, [user?.id]);
 
   const clearRuntimeListeners = useCallback(() => {
     cleanupRef.current?.();
@@ -116,10 +126,17 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
         next = true;
       }
     }
-    if (next) heldAppleSessionRef.current = true;
-    else if (document.visibilityState === "hidden" && heldAppleSessionRef.current) return;
+    if (next) {
+      heldAppleSessionRef.current = true;
+      setHeldAppleMusicSession(true, user?.id);
+    } else if (document.visibilityState === "hidden" && heldAppleSessionRef.current) {
+      return;
+    }
     setIsAuthorized(next);
-    if (!next) heldAppleSessionRef.current = false;
+    if (!next) {
+      heldAppleSessionRef.current = false;
+      setHeldAppleMusicSession(false, user?.id);
+    }
   }, [user?.id]);
 
   const refresh = useCallback(async () => {
@@ -176,11 +193,18 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      await mk.configure({
-        developerToken: token,
-        app: { name: "Echoes", build: "1.0.0" },
-        persist: true,
-      });
+      // (B) Configure ripetuto su Web fa spesso ripartire il flusso di login Apple: chiamiamolo solo se il
+      // developer token è cambiato o se non l'abbiamo mai configurato in questa istanza di MusicKit.
+      const alreadyConfigured =
+        musicKitConfiguredRef.current && developerTokenRef.current === token;
+      if (!alreadyConfigured) {
+        await mk.configure({
+          developerToken: token,
+          app: { name: "Echoes", build: "1.0.0" },
+          persist: true,
+        });
+        musicKitConfiguredRef.current = true;
+      }
       if (cancelledRef.current) return;
 
       setIsAvailable(true);
@@ -251,6 +275,7 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
           app: { name: "Echoes", build: "1.0.0" },
           persist: true,
         });
+        musicKitConfiguredRef.current = true;
         setDeveloperToken(token);
         developerTokenRef.current = token;
       } catch (e) {
@@ -265,6 +290,7 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
   const repairMusicKitSession = useCallback(async () => {
     clearCachedAppleMusicUserToken(user?.id);
     heldAppleSessionRef.current = false;
+    setHeldAppleMusicSession(false, user?.id);
     await resyncMusicKit();
   }, [user?.id, resyncMusicKit]);
 
@@ -325,6 +351,7 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
         setIsAuthorized(Boolean(mk.isAuthorized || token));
         if (mk.isAuthorized || token) {
           heldAppleSessionRef.current = true;
+          setHeldAppleMusicSession(true, user.id);
           await upsertAppleMusicConnection(user.id);
           setIsLinkedAccount(true);
           isLinkedAccountRef.current = true;
@@ -348,6 +375,7 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
       }
       clearCachedAppleMusicUserToken(user?.id);
       heldAppleSessionRef.current = false;
+      setHeldAppleMusicSession(false, user?.id);
       const mk = getMKGlobal()?.getInstance();
       if (mk) {
         void mk.unauthorize();

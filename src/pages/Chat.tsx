@@ -25,7 +25,7 @@ import {
   maybeCreateTrainingEvent,
 } from "@/services/tracking";
 import { emotionalProfileToAxes } from "@/types/conversation";
-import { normalizeStandardAxes } from "@/lib/memoryMerge";
+import { buildThreadSummaryFromChatText, normalizeStandardAxes } from "@/lib/memoryMerge";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -291,6 +291,11 @@ const Chat = () => {
   );
   const currentSong = queue[currentIndex] ?? currentResult?.songs[0] ?? null;
   const hasAnyMessage = (activeConversation?.messages.length ?? 0) > 0;
+  const buildLocalThreadSummary = useCallback(
+    (conversationId: string, prompt: string) =>
+      buildThreadSummaryFromChatText(getConversation(conversationId)?.messages ?? [], prompt),
+    [getConversation]
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -499,16 +504,17 @@ const Chat = () => {
             searchMode: mode,
           });
           appendAssistantResult(conversationId, emptyResult);
+          const localThreadSummary = buildLocalThreadSummary(conversationId, displayPrompt);
           if (data.conversationMemoryUpdate?.standardAxes) {
             mergeConversationMemoryFromUpdate(conversationId, {
-              threadSummary: data.conversationMemoryUpdate.threadSummary ?? "",
+              threadSummary: localThreadSummary,
               standardAxes: normalizeStandardAxes(
                 data.conversationMemoryUpdate.standardAxes as Record<string, unknown>
               ),
             });
           } else if (data.emotionalProfile) {
             mergeConversationMemoryFromUpdate(conversationId, {
-              threadSummary: data.emotionalProfile.mood.slice(0, 400),
+              threadSummary: localThreadSummary,
               standardAxes: emotionalProfileToAxes(data.emotionalProfile),
             });
           }
@@ -546,17 +552,19 @@ const Chat = () => {
             conversationId,
             searchResultId: result.id,
             prompt: result.prompt,
+            selectionIntent: "autoplay",
           });
         }
 
+        const localThreadSummary = buildLocalThreadSummary(conversationId, displayPrompt);
         if (data.conversationMemoryUpdate?.standardAxes) {
           mergeConversationMemoryFromUpdate(conversationId, {
-            threadSummary: data.conversationMemoryUpdate.threadSummary ?? "",
+            threadSummary: localThreadSummary,
             standardAxes: normalizeStandardAxes(data.conversationMemoryUpdate.standardAxes as Record<string, unknown>),
           });
         } else {
           mergeConversationMemoryFromUpdate(conversationId, {
-            threadSummary: data.emotionalProfile.mood.slice(0, 400),
+            threadSummary: localThreadSummary,
             standardAxes: emotionalProfileToAxes(data.emotionalProfile),
           });
         }
@@ -887,16 +895,17 @@ const Chat = () => {
         conversationId: id,
         searchResultId: result.id,
         prompt: result.prompt,
+        selectionIntent: "autoplay",
       });
     }
     if (data.conversationMemoryUpdate?.standardAxes) {
       mergeConversationMemoryFromUpdate(id, {
-        threadSummary: data.conversationMemoryUpdate.threadSummary ?? "",
+        threadSummary: buildLocalThreadSummary(id, surpriseLabel),
         standardAxes: normalizeStandardAxes(data.conversationMemoryUpdate.standardAxes as Record<string, unknown>),
       });
     } else {
       mergeConversationMemoryFromUpdate(id, {
-        threadSummary: data.emotionalProfile!.mood.slice(0, 400),
+        threadSummary: buildLocalThreadSummary(id, surpriseLabel),
         standardAxes: emotionalProfileToAxes(data.emotionalProfile!),
       });
     }
@@ -1296,6 +1305,8 @@ const Chat = () => {
                               conversationId: activeConversationId,
                               searchResultId: r.id,
                               prompt: r.prompt,
+                              dbSearchId: r.tracking?.searchId,
+                              resultIdsBySongId: r.tracking?.resultIdsBySongId,
                             }}
                             queue={queue}
                             currentIndex={currentIndex}

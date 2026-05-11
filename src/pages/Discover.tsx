@@ -832,6 +832,8 @@ const Chat = () => {
                                 conversationId: activeConversationId,
                                 searchResultId: r.id,
                                 prompt: r.prompt,
+                                dbSearchId: r.tracking?.searchId,
+                                resultIdsBySongId: r.tracking?.resultIdsBySongId,
                               })
                             }
                             onAddToQueue={(song) =>
@@ -839,6 +841,8 @@ const Chat = () => {
                                 conversationId: activeConversationId,
                                 searchResultId: r.id,
                                 prompt: r.prompt,
+                                dbSearchId: r.tracking?.searchId,
+                                resultIdsBySongId: r.tracking?.resultIdsBySongId,
                               })
                             }
                             onPlayNext={(song) =>
@@ -846,6 +850,8 @@ const Chat = () => {
                                 conversationId: activeConversationId,
                                 searchResultId: r.id,
                                 prompt: r.prompt,
+                                dbSearchId: r.tracking?.searchId,
+                                resultIdsBySongId: r.tracking?.resultIdsBySongId,
                               })
                             }
                           />

@@ -342,6 +342,7 @@
     "previewUnavailable": "Aperçu indisponible pour ce morceau",
     "appleConnectHint": "Vous écoutez un aperçu de 30 secondes. Ouvrez Apple Music pour le titre complet.",
     "appleFallbackToPreview": "Apple Music n’a pas pu lire ce titre — passage à l’aperçu.",
+    "spotifyFallbackToEmbed": "Spotify n’a pas pu lire ce titre dans le lecteur interne — utilisation du fallback intégré.",
     "appleSessionRepaired": "Session Apple Music mise à jour. Réessayez Lecture ; si ça échoue encore, reconnectez-vous dans Réglages."
   },
   "appleMusic": {
