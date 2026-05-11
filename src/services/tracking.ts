@@ -68,9 +68,11 @@ export async function trackSearch(params: {
   profile: EmotionalProfile;
   refineMetadata?: Record<string, unknown>;
 }): Promise<string | null> {
+  const uid = await authUserId();
   const { data, error } = await supabase
     .from("searches")
     .insert({
+      user_id: uid,
       anonymous_session_id: sessionId,
       raw_prompt: params.rawPrompt,
       prompt_language: "en",

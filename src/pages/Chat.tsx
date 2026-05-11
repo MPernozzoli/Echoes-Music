@@ -213,7 +213,13 @@ const Chat = () => {
     mergeUserTasteFromUpdate,
     getConversation,
     patchSearchResultTracking,
+    refreshConversations,
   } = useConversations();
+
+  useEffect(() => {
+    if (!user?.id) return;
+    void refreshConversations();
+  }, [user?.id, refreshConversations]);
 
   const completedSearchCount = useMemo(
     () =>

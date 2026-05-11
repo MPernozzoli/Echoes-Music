@@ -5,6 +5,7 @@ import {
   useMemo,
   useState,
   useEffect,
+  useRef,
   type ReactNode,
 } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,6 +14,7 @@ import { useAuth } from "@/context/useAuth";
 import type { SearchResult } from "@/data/mockData";
 import type { Conversation, ChatMessage, ConversationMemory, UserTasteProfile } from "@/types/conversation";
 import { applyConversationMemoryUpdate, loadUserTasteProfile, mergeUserTasteProfile } from "@/lib/memoryMerge";
+import { deleteUserConversation, fetchUserConversations, syncUserConversations } from "@/services/conversationSync";
 
 const CONVERSATIONS_KEY = "echoes_conversations";
 const ACTIVE_CONV_KEY = "echoes_active_conversation_id";
@@ -69,6 +71,44 @@ function getInitialConversationState(): { conversations: Conversation[]; activeI
   };
 }
 
+function isEmptyDraftConversation(conversation: Conversation): boolean {
+  return (
+    conversation.messages.length === 0 &&
+    (conversation.title === "Nuova chat" || conversation.title === "Chat")
+  );
+}
+
+function mergeLocalAndRemoteConversations(local: Conversation[], remote: Conversation[]): Conversation[] {
+  const remoteHasContent = remote.length > 0;
+  const byId = new Map<string, Conversation>();
+
+  for (const conversation of remote) {
+    byId.set(conversation.id, conversation);
+  }
+
+  for (const conversation of local) {
+    if (remoteHasContent && !byId.has(conversation.id) && isEmptyDraftConversation(conversation)) {
+      continue;
+    }
+
+    const existing = byId.get(conversation.id);
+    if (!existing) {
+      byId.set(conversation.id, conversation);
+      continue;
+    }
+
+    const localUpdated = new Date(conversation.updatedAt).getTime();
+    const remoteUpdated = new Date(existing.updatedAt).getTime();
+    if (localUpdated > remoteUpdated) {
+      byId.set(conversation.id, conversation);
+    }
+  }
+
+  return [...byId.values()]
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .slice(0, 80);
+}
+
 interface ConversationState {
   conversations: Conversation[];
   activeConversationId: string | null;
@@ -94,6 +134,7 @@ interface ConversationState {
     update: Parameters<typeof applyConversationMemoryUpdate>[1]
   ) => void;
   mergeUserTasteFromUpdate: (update: Parameters<typeof mergeUserTasteProfile>[1]) => void;
+  refreshConversations: () => Promise<void>;
   getConversation: (id: string | null) => Conversation | undefined;
 }
 
@@ -108,9 +149,17 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
   const [userTasteProfile, setUserTasteProfile] = useState<UserTasteProfile>(() =>
     loadUserTasteProfile(loadJSON(USER_TASTE_KEY, null))
   );
+  const [remoteSyncReady, setRemoteSyncReady] = useState(false);
+  const latestConversationsRef = useRef(conversations);
+  const syncTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    latestConversationsRef.current = conversations;
+  }, [conversations]);
 
   useEffect(() => {
     if (user) return;
+    setRemoteSyncReady(false);
     setConversations((prev) => {
       if (prev.length <= 1) return prev;
       const sorted = [...prev].sort(
@@ -135,6 +184,51 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem(USER_TASTE_KEY, JSON.stringify(userTasteProfile));
   }, [userTasteProfile]);
 
+  const refreshConversations = useCallback(async () => {
+    const userId = user?.id;
+    if (!userId) {
+      setRemoteSyncReady(false);
+      return;
+    }
+
+    setRemoteSyncReady(false);
+
+    try {
+      const remoteConversations = await fetchUserConversations(userId);
+      const merged = mergeLocalAndRemoteConversations(latestConversationsRef.current, remoteConversations);
+      setConversations(merged);
+      setActiveConversationId((current) => {
+        if (current && merged.some((conversation) => conversation.id === current)) return current;
+        return merged[0]?.id ?? null;
+      });
+      setRemoteSyncReady(true);
+    } catch (error) {
+      console.error("Unable to load synced conversations:", error);
+      toast.error("Impossibile sincronizzare le chat da questo dispositivo.");
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    void refreshConversations();
+  }, [refreshConversations]);
+
+  useEffect(() => {
+    const userId = user?.id;
+    if (!userId || !remoteSyncReady) return;
+
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    syncTimeoutRef.current = setTimeout(() => {
+      syncUserConversations(userId, latestConversationsRef.current).catch((error) => {
+        console.error("Unable to sync conversations:", error);
+        toast.error("Impossibile salvare le chat sul cloud.");
+      });
+    }, 600);
+
+    return () => {
+      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    };
+  }, [user?.id, remoteSyncReady, conversations]);
+
   const createConversation = useCallback((): string => {
     if (!user && conversations.length >= 1) {
       toast.message(t("anon.loginForNewChat"));
@@ -154,7 +248,7 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
     setConversations((prev) => [conv, ...prev].slice(0, 80));
     setActiveConversationId(id);
     return id;
-  }, [user, conversations.length, conversations, activeConversationId, t]);
+  }, [user, conversations, activeConversationId, t]);
 
   const selectConversation = useCallback((id: string | null) => {
     setActiveConversationId(id);
@@ -165,6 +259,12 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
       if (!user && conversations.length <= 1) {
         toast.message(t("anon.cannotDeleteOnlyChat"));
         return;
+      }
+      if (user) {
+        deleteUserConversation(user.id, id).catch((error) => {
+          console.error("Unable to delete synced conversation:", error);
+          toast.error("Impossibile eliminare la chat dal cloud.");
+        });
       }
       setConversations((prev) => prev.filter((c) => c.id !== id));
       setActiveConversationId((cur) => (cur === id ? null : cur));
@@ -291,6 +391,7 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
       setConversationMemory,
       mergeConversationMemoryFromUpdate,
       mergeUserTasteFromUpdate,
+      refreshConversations,
       getConversation,
     }),
     [
@@ -307,6 +408,7 @@ export const ConversationProvider = ({ children }: { children: ReactNode }) => {
       setConversationMemory,
       mergeConversationMemoryFromUpdate,
       mergeUserTasteFromUpdate,
+      refreshConversations,
       getConversation,
     ]
   );
