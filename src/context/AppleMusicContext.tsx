@@ -183,6 +183,21 @@ export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
       setIsAvailable(true);
       instance = mk.getInstance();
 
+      // MusicKit V3 non auto-persiste il Music User Token in localStorage (lo teneva in un
+      // iframe di terze parti che i browser ora bloccano). Lo persistiamo noi in
+      // `setCachedAppleMusicUserToken` e qui proviamo a re-iniettarlo dopo `configure`
+      // così la sessione sopravvive ai reload.
+      if (!instance.musicUserToken?.trim() && user?.id) {
+        const cached = getCachedAppleMusicUserToken(user.id)?.trim();
+        if (cached) {
+          try {
+            (instance as { musicUserToken: string | null }).musicUserToken = cached;
+          } catch (e) {
+            console.warn("MusicKit: impossibile re-iniettare il user token", e);
+          }
+        }
+      }
+
       syncAuth = () => {
         if (cancelledRef.current) return;
         reconcileAuthorizedFromMusicKit();
