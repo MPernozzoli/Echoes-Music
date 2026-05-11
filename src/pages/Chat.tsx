@@ -1,4 +1,7 @@
-import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, lazy, Suspense } from "react";
+import { useChatDesignPreference } from "@/hooks/useChatDesignPreference";
+
+const ChatPlayerFirst = lazy(() => import("@/pages/ChatPlayerFirst"));
 import { useTranslation } from "react-i18next";
 import { useSearchParams, useNavigate, useLocation, Link } from "react-router-dom";
 import AppLayout from "@/components/AppLayout";
@@ -161,7 +164,7 @@ function conversationPreviewArtwork(c: Conversation): string | undefined {
   return undefined;
 }
 
-const Chat = () => {
+const ChatLegacy = () => {
   const { t, i18n } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -1563,6 +1566,18 @@ const Chat = () => {
     </div>
     </>
   );
+};
+
+const Chat = () => {
+  const { design } = useChatDesignPreference();
+  if (design === "new") {
+    return (
+      <Suspense fallback={null}>
+        <ChatPlayerFirst />
+      </Suspense>
+    );
+  }
+  return <ChatLegacy />;
 };
 
 export default Chat;

@@ -48,9 +48,10 @@ import { AdvancedAISettings } from "@/components/profile/AdvancedAISettings";
 import { supabase } from "@/integrations/supabase/client";
 import { REFERRAL_QUERY_PARAM } from "@/constants/referralStorage";
 import { REFERRAL_SIGNUP_BONUS_EACH } from "@/constants/tokenEconomy";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { openUserTutorial } from "@/lib/tutorialEvents";
+import { useChatDesignPreference } from "@/hooks/useChatDesignPreference";
+import { MessageSquare } from "lucide-react";
 
 const DESCRIPTION_LANGS: { value: string; label: string }[] = [
   { value: "it", label: "Italiano" },
@@ -228,6 +229,8 @@ const Profile = () => {
       toast.error(t("referral.copyFailed"));
     }
   }, [referralUrl, t]);
+
+  const { design: chatDesign, setDesign: setChatDesign } = useChatDesignPreference();
 
   const handleBillingPortal = useCallback(async () => {
     setPortalLoading(true);
@@ -651,6 +654,44 @@ const Profile = () => {
               <option value="dark">{t("profile.themeDark")}</option>
               <option value="system">{t("profile.themeSystem")}</option>
             </select>
+          </div>
+        </div>
+
+        <div className="surface-card rounded-3xl p-6 mb-6 border border-border/50">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <MessageSquare className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-body text-sm font-medium text-foreground">Interfaccia Chat</h3>
+                <p className="text-xs text-muted-foreground font-body">Scegli lo stile visivo della pagina chat</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setChatDesign("new")}
+                className={`px-4 py-2 rounded-full text-sm font-body border transition-all ${
+                  chatDesign === "new"
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                    : "border-border text-muted-foreground hover:border-primary/35 hover:text-foreground"
+                }`}
+              >
+                Player-first
+              </button>
+              <button
+                type="button"
+                onClick={() => setChatDesign("legacy")}
+                className={`px-4 py-2 rounded-full text-sm font-body border transition-all ${
+                  chatDesign === "legacy"
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                    : "border-border text-muted-foreground hover:border-primary/35 hover:text-foreground"
+                }`}
+              >
+                Legacy
+              </button>
+            </div>
           </div>
         </div>
 
