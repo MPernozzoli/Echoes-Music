@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { SpotifyContext } from "@/context/SpotifyContext";
+import { SpotifyContext } from "@/context/spotifyContextObject";
 
 export const useSpotify = () => {
   const ctx = useContext(SpotifyContext);

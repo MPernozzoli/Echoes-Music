@@ -1,20 +1,10 @@
 /* @refresh skip */
-import { createContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { useState, useEffect, useCallback, type ReactNode } from "react";
 import { useAuth } from "@/context/useAuth";
 import { getSpotifyConnection, getSpotifyToken } from "@/services/spotify";
+import { SpotifyContext } from "@/context/spotifyContextObject";
 
-interface SpotifyState {
-  isConnected: boolean;
-  isPremium: boolean;
-  displayName: string | null;
-  accessToken: string | null;
-  loading: boolean;
-  refresh: () => Promise<void>;
-  setConnected: (info: { displayName: string; product: string }) => void;
-  setDisconnected: () => void;
-}
-
-export const SpotifyContext = createContext<SpotifyState | null>(null);
+export { SpotifyContext };
 
 export const SpotifyProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
