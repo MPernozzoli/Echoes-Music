@@ -47,6 +47,9 @@ const AppLayout = ({ children, headerVariant = "app" }: AppLayoutProps) => {
   ] as const;
 
   const isMarketing = headerVariant === "marketing";
+  const playerOffset = isMarketing
+    ? "var(--global-player-offset, 0px)"
+    : `var(--global-player-offset, ${isMobile ? "56px" : "0px"})`;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -123,11 +126,7 @@ const AppLayout = ({ children, headerVariant = "app" }: AppLayoutProps) => {
       <main
         ref={mainRef}
         className="flex-1"
-        style={
-          isMarketing
-            ? undefined
-            : { paddingBottom: `var(--global-player-offset, ${isMobile ? "56px" : "0px"})` }
-        }
+        style={{ paddingBottom: playerOffset, scrollPaddingBottom: playerOffset }}
       >
         {children}
       </main>

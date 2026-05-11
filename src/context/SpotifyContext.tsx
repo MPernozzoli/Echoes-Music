@@ -32,8 +32,24 @@ export const SpotifyProvider = ({ children }: { children: ReactNode }) => {
       setDisplayName(conn.display_name);
       setIsPremium(conn.product === "premium");
 
+      // Il record DB di `product` può essere stantio (utente che ha fatto upgrade a Premium
+      // dopo il primo collegamento). Interroghiamo Spotify /me lato client con l'access token
+      // per avere il valore live ed evitare di cadere su preview 30s a un account Premium.
       const token = await getSpotifyToken();
-      if (token) setAccessToken(token.access_token);
+      if (token) {
+        setAccessToken(token.access_token);
+        try {
+          const me = await fetch("https://api.spotify.com/v1/me", {
+            headers: { Authorization: `Bearer ${token.access_token}` },
+          });
+          if (me.ok) {
+            const profile = (await me.json()) as { product?: string };
+            if (profile.product) setIsPremium(profile.product === "premium");
+          }
+        } catch {
+          /* fallback al valore DB già impostato sopra */
+        }
+      }
     } else {
       setIsConnected(false);
       setDisplayName(null);
