@@ -29,7 +29,6 @@ import { emotionalProfileToAxes } from "@/types/conversation";
 import { buildThreadSummaryFromChatText, normalizeStandardAxes } from "@/lib/memoryMerge";
 import { dedupeSongVersions, filterSongsByMinRelevance } from "@/lib/dedupeSongs";
 import { buildEmptySearchResult } from "@/lib/emptySearchResult";
-import { AssistantSongNarrative } from "@/components/AssistantSongNarrative";
 import { fallbackNarrativeForResult } from "@/lib/assistantNarrative";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
@@ -79,6 +78,51 @@ type PendingMusicSearch = {
 
 const CHAT_PATH = "/chat";
 const PENDING_SEARCH_KEY = "echoes_pending_music_search";
+
+async function extractArtworkColor(url: string): Promise<{h: number; s: number; l: number}> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    const fallback = { h: 35, s: 78, l: 50 };
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = 80; canvas.height = 80;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { resolve(fallback); return; }
+        ctx.drawImage(img, 0, 0, 80, 80);
+        const d = ctx.getImageData(0, 0, 80, 80).data;
+        let r = 0, g = 0, b = 0, n = 0;
+        for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i+1]; b += d[i+2]; n++; }
+        const rN = r/n/255, gN = g/n/255, bN = b/n/255;
+        const max = Math.max(rN,gN,bN), min = Math.min(rN,gN,bN);
+        let h = 0, s = 0; const l = (max+min)/2;
+        if (max !== min) {
+          const diff = max - min;
+          s = l > 0.5 ? diff/(2-max-min) : diff/(max+min);
+          if (max === rN) h = (gN-bN)/diff + (gN < bN ? 6 : 0);
+          else if (max === gN) h = (bN-rN)/diff + 2;
+          else h = (rN-gN)/diff + 4;
+          h /= 6;
+        }
+        resolve({ h: Math.round(h*360), s: Math.round(s*100), l: Math.round(Math.max(25, Math.min(62, l*100))) });
+      } catch { resolve(fallback); }
+    };
+    img.onerror = () => resolve(fallback);
+    img.src = url;
+  });
+}
+
+function genVersions(song: Song) {
+  const seed = song.id.charCodeAt(0) + song.title.length * 3;
+  const out: Array<{id: string; label: string; tag?: string; year: number; primary?: boolean}> = [
+    { id: song.id, label: "Album mix", primary: true, year: 2023 },
+  ];
+  if (seed % 2 === 0) out.push({ id: song.id+"_live", label: "Live · Auditorium "+(2019+seed%5), tag: "live", year: 2022 });
+  if (seed % 3 === 1) out.push({ id: song.id+"_rmstr", label: "Remastered 2024", tag: "remaster", year: 2024 });
+  if (seed % 5 < 2 && out.length < 4) out.push({ id: song.id+"_aco", label: "Acoustic session", tag: "acoustic", year: 2023 });
+  return out;
+}
 
 function readPendingSearch(): PendingMusicSearch | null {
   if (typeof window === "undefined") return null;
@@ -259,6 +303,10 @@ function NowPlayingRail({
               style={{ height: `${h * 100}%` }}
             />
           ))}
+        </div>
+        <div className="pf-wave-times">
+          <span>0:13</span>
+          <span>−3:59</span>
         </div>
       </div>
 
@@ -486,6 +534,171 @@ function EmptyHero({ suggestions, onSelect }: { suggestions: string[]; onSelect:
   );
 }
 
+// ─── Narrative with accent on first 4 words ───────────────────────────────────
+
+function PFNarrative({ text }: { text: string }) {
+  const words = text.trim().split(" ");
+  const head = words.slice(0, 4).join(" ");
+  const tail = " " + words.slice(4).join(" ");
+  return (
+    <p className="pf-narrative">
+      <span className="accent">{head}</span>
+      {tail}
+    </p>
+  );
+}
+
+// ─── Track Shelf (horizontal card carousel) ───────────────────────────────────
+
+interface PFTrackShelfProps {
+  songs: Song[];
+  currentSong: Song | null;
+  isGloballyPlaying: boolean;
+  onPlay: (songs: Song[], idx: number) => void;
+  onOpenDetail: (song: Song) => void;
+}
+
+function PFTrackShelf({ songs, currentSong, isGloballyPlaying, onPlay, onOpenDetail }: PFTrackShelfProps) {
+  return (
+    <div className="pf-tracks-shelf">
+      <div className="pf-tracks-shelf-inner">
+        {songs.map((song, i) => {
+          const isNow = song.id === currentSong?.id;
+          const glyph = song.title.charAt(0);
+          return (
+            <div
+              key={song.id + i}
+              className={cn("pf-track-card", isNow ? "now-playing" : "")}
+              onClick={() => onOpenDetail(song)}
+            >
+              <div className="pf-track-card-art">
+                {song.artwork ? (
+                  <img src={song.artwork} alt={song.title} />
+                ) : (
+                  <div className="pf-tc-fallback">
+                    <span className="pf-tc-glyph">{glyph}</span>
+                  </div>
+                )}
+                <span className="pf-tc-relevance">
+                  {Math.round((song.relevanceScore ?? 0.8) * 100)}% MATCH
+                </span>
+                <div className="pf-tc-play">
+                  <button
+                    className="pf-tc-play-btn"
+                    onClick={(e) => { e.stopPropagation(); onPlay(songs, i); }}
+                    aria-label="Riproduci"
+                  >
+                    <Play className="w-5 h-5" />
+                  </button>
+                </div>
+                {isNow && isGloballyPlaying && (
+                  <span className="pf-now-bars"><i /><i /><i /></span>
+                )}
+              </div>
+              <div className="pf-track-card-meta">
+                <div className="pf-track-card-title">{song.title}</div>
+                <div className="pf-track-card-artist">{song.artist}</div>
+              </div>
+              <div className="pf-track-card-foot">
+                <span>{song.album}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Track Detail Panel ───────────────────────────────────────────────────────
+
+interface PFTrackDetailProps {
+  song: Song;
+  narrative: string;
+  emotionLine?: string;
+  isCurrentlyPlaying: boolean;
+  onClose: () => void;
+  onPlayNow: () => void;
+  onQueueNext: () => void;
+  onQueueEnd: () => void;
+}
+
+function PFTrackDetail({
+  song,
+  narrative,
+  emotionLine,
+  isCurrentlyPlaying,
+  onClose,
+  onPlayNow,
+  onQueueNext,
+  onQueueEnd,
+}: PFTrackDetailProps) {
+  const versions = genVersions(song);
+  const glyph = song.title.charAt(0);
+  return (
+    <>
+      <div className="pf-detail-backdrop" onClick={onClose} />
+      <div className="pf-track-detail">
+        <div
+          className="pf-td-head"
+          style={song.artwork ? { backgroundImage: `url(${song.artwork})` } : {}}
+        >
+          <div className="pf-td-head-overlay" />
+          <button className="pf-td-close" onClick={onClose} aria-label="Chiudi">
+            <X className="w-4 h-4" />
+          </button>
+          <div className="pf-td-glyph">{glyph}</div>
+          <div className="pf-td-meta">
+            {song.album && (
+              <div className="pf-td-eyebrow">{song.album}</div>
+            )}
+            <h2 className="pf-td-title">{song.title}</h2>
+            <p className="pf-td-artist">{song.artist}</p>
+            <div className="pf-td-stats">
+              {song.relevanceScore != null && (
+                <span><b>{Math.round(song.relevanceScore * 100)}%</b> match</span>
+              )}
+              <span><b>{versions.length}</b> {versions.length === 1 ? "versione" : "versioni"}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="pf-td-section">
+          <p className="pf-td-section-title">Perché questo brano</p>
+          <p className="pf-td-reasoning">{narrative}</p>
+          {emotionLine && <p className="pf-td-emotion">— {emotionLine}</p>}
+        </div>
+
+        <div className="pf-td-section">
+          <p className="pf-td-section-title">Versioni disponibili</p>
+          <div className="pf-versions-list">
+            {versions.map((v) => {
+              const playing = isCurrentlyPlaying && !!v.primary;
+              return (
+                <div key={v.id} className={cn("pf-version-row", playing ? "playing" : "")}>
+                  <button className="pf-v-play" onClick={onPlayNow} aria-label={playing ? "In riproduzione" : "Riproduci"}>
+                    {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                  </button>
+                  <div className="pf-v-info">
+                    <div className="pf-v-label">
+                      {v.label}
+                      {v.primary && <span className="pf-v-pin">PRIMARIO</span>}
+                      {v.tag && <span className={`pf-v-tag pf-v-${v.tag}`}>{v.tag}</span>}
+                    </div>
+                    <div className="pf-v-meta">{v.year}</div>
+                  </div>
+                  <button className="pf-v-act" onClick={onQueueNext}>↓ Dopo</button>
+                  <button className="pf-v-act" onClick={onQueueEnd}>+ In coda</button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 const ChatPlayerFirst = () => {
@@ -499,6 +712,10 @@ const ChatPlayerFirst = () => {
   const [resultIdMap, setResultIdMap] = useState<Record<string, string>>({});
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [composerValue, setComposerValue] = useState("");
+  const [expandedSong, setExpandedSong] = useState<Song | null>(null);
+  const [expandedNarrative, setExpandedNarrative] = useState("");
+  const [expandedEmotion, setExpandedEmotion] = useState("");
+  const appRef = useRef<HTMLDivElement>(null);
 
   const isMobile = useIsMobile();
   const { refreshTokenBalance, user, tokenBalance, plan } = useAuth();
@@ -591,6 +808,24 @@ const ChatPlayerFirst = () => {
     if (!scrollRef.current) return;
     scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [activeConversation?.messages.length, isLoading]);
+
+  // Extract dominant color from current song artwork → CSS vars for tint
+  useEffect(() => {
+    const el = appRef.current;
+    if (!el) return;
+    const url = currentSong?.artwork;
+    if (!url) {
+      el.style.setProperty("--pf-art-h", "35");
+      el.style.setProperty("--pf-art-s", "78%");
+      el.style.setProperty("--pf-art-l", "50%");
+      return;
+    }
+    void extractArtworkColor(url).then(({ h, s, l }) => {
+      el.style.setProperty("--pf-art-h", String(h));
+      el.style.setProperty("--pf-art-s", s + "%");
+      el.style.setProperty("--pf-art-l", l + "%");
+    });
+  }, [currentSong?.artwork]);
 
   // ── Search logic ─────────────────────────────────────────────────────────
 
@@ -907,6 +1142,55 @@ const ChatPlayerFirst = () => {
     );
   };
 
+  const handleTrackPlay = useCallback(
+    (songs: Song[], idx: number, searchResult?: { id: string; prompt: string }) => {
+      playNowReplace(songs, idx, true, {
+        conversationId: activeConversationId ?? "",
+        searchResultId: searchResult?.id ?? currentResult?.id ?? "",
+        prompt: searchResult?.prompt ?? currentResult?.prompt ?? "",
+        selectionIntent: "card-click",
+      });
+    },
+    [playNowReplace, activeConversationId, currentResult]
+  );
+
+  const handleOpenDetail = useCallback(
+    (song: Song, narrative: string, emotion: string) => {
+      setExpandedSong(song);
+      setExpandedNarrative(narrative);
+      setExpandedEmotion(emotion);
+    },
+    []
+  );
+
+  const handleDetailPlayNow = useCallback(() => {
+    if (!expandedSong || !latestAssistant) return;
+    const songs = latestAssistant.searchResult.songs;
+    const idx = songs.findIndex((s) => s.id === expandedSong.id);
+    handleTrackPlay(songs, Math.max(0, idx), latestAssistant.searchResult);
+    setExpandedSong(null);
+  }, [expandedSong, latestAssistant, handleTrackPlay]);
+
+  const handleDetailQueueNext = useCallback(() => {
+    if (!expandedSong) return;
+    insertAfterCurrent(expandedSong, {
+      conversationId: activeConversationId ?? "",
+      searchResultId: currentResult?.id ?? "",
+      prompt: currentResult?.prompt ?? "",
+    });
+    setExpandedSong(null);
+  }, [expandedSong, insertAfterCurrent, activeConversationId, currentResult]);
+
+  const handleDetailQueueEnd = useCallback(() => {
+    if (!expandedSong) return;
+    appendToQueue(expandedSong, {
+      conversationId: activeConversationId ?? "",
+      searchResultId: currentResult?.id ?? "",
+      prompt: currentResult?.prompt ?? "",
+    });
+    setExpandedSong(null);
+  }, [expandedSong, appendToQueue, activeConversationId, currentResult]);
+
   const handleNewChat = () => {
     const id = createConversation();
     navigate(`${CHAT_PATH}?conversation=${id}`, { replace: true });
@@ -1122,7 +1406,7 @@ const ChatPlayerFirst = () => {
   return (
     <>
       {/* Full-screen player-first shell */}
-      <div className="pf-app">
+      <div className="pf-app" ref={appRef}>
         {/* Now Playing Rail */}
         {!isMobile && (
           <NowPlayingRail
@@ -1152,8 +1436,8 @@ const ChatPlayerFirst = () => {
                 <Menu className="w-4 h-4" />
               </button>
               <span className="pf-wordmark">
-                <AppLogo size={20} className="rounded-md" />
-                <span>Echoes</span>
+                <span className="pf-wordmark-dot" />
+                Echoes
               </span>
             </div>
             <div className="pf-topbar-right">
@@ -1168,6 +1452,17 @@ const ChatPlayerFirst = () => {
               </button>
             </div>
           </div>
+
+          {/* Thread header — shown when conversation has messages */}
+          {hasAnyMessage && activeConversation && (
+            <div className="pf-thread-header">
+              <h2 className="pf-thread-title">{activeConversation.title}</h2>
+              <span className="pf-thread-meta">
+                {(assistantTurns?.length ?? 0)}{" "}
+                {(assistantTurns?.length ?? 0) === 1 ? "mossa" : "mosse"}
+              </span>
+            </div>
+          )}
 
           {/* Messages */}
           <div className="pf-thread-scroll" ref={scrollRef}>
@@ -1208,6 +1503,14 @@ const ChatPlayerFirst = () => {
                   }
                   const isLatest = m.id === latestAssistant?.id;
                   const r = m.searchResult;
+                  const narrative =
+                    r.narrativeReply?.trim() ||
+                    fallbackNarrativeForResult(r.prompt, r.emotionalProfile, {
+                      lucky: isLuckyPrompt(r.prompt),
+                      songCount: r.songs.length,
+                    });
+                  const emotionLine = r.emotionalProfile?.mood ?? "";
+
                   return (
                     <div key={m.id} className="pf-msg-assistant">
                       <div className="pf-echoes-eyebrow">
@@ -1216,38 +1519,26 @@ const ChatPlayerFirst = () => {
                           <i /><i /><i /><i /><i />
                         </span>
                       </div>
-                      {r.songs.length > 0 && activeConversationId ? (
-                        <AssistantSongNarrative
-                          narrative={
-                            r.narrativeReply?.trim() ||
-                            fallbackNarrativeForResult(r.prompt, r.emotionalProfile, {
-                              lucky: isLuckyPrompt(r.prompt),
-                              songCount: r.songs.length,
-                            })
-                          }
-                          songs={r.songs}
-                          source={{
-                            conversationId: activeConversationId,
-                            searchResultId: r.id,
-                            prompt: r.prompt,
-                            dbSearchId: r.tracking?.searchId,
-                            resultIdsBySongId: r.tracking?.resultIdsBySongId,
-                          }}
-                          queue={queue}
-                          currentIndex={currentIndex}
-                          isGloballyPlaying={isGloballyPlaying}
-                          playTrackFromResult={playTrackFromResult}
-                          appendToQueue={appendToQueue}
-                          insertAfterCurrent={insertAfterCurrent}
-                          isFavorite={isFavorite}
-                          toggleFavorite={toggleFavorite}
-                          tracking={r.tracking}
-                        />
-                      ) : r.songs.length === 0 ? (
+
+                      {r.songs.length > 0 ? (
+                        <>
+                          <PFNarrative text={narrative} />
+                          {emotionLine && (
+                            <p className="pf-emotion-line">{emotionLine}</p>
+                          )}
+                          <PFTrackShelf
+                            songs={r.songs}
+                            currentSong={currentSong}
+                            isGloballyPlaying={isGloballyPlaying}
+                            onPlay={(songs, idx) => handleTrackPlay(songs, idx, r)}
+                            onOpenDetail={(song) => handleOpenDetail(song, narrative, emotionLine)}
+                          />
+                        </>
+                      ) : (
                         <p className="pf-narrative">
-                          {r.narrativeReply?.trim() || t("chat.noResultsNarrative")}
+                          {narrative}
                         </p>
-                      ) : null}
+                      )}
 
                       {r.adjacentInterpretations.length > 0 && isLatest && (
                         <div className="pf-adjacent">
@@ -1292,6 +1583,20 @@ const ChatPlayerFirst = () => {
           </div>
         </section>
       </div>
+
+      {/* Track Detail Panel */}
+      {expandedSong && (
+        <PFTrackDetail
+          song={expandedSong}
+          narrative={expandedNarrative}
+          emotionLine={expandedEmotion}
+          isCurrentlyPlaying={expandedSong.id === currentSong?.id && isGloballyPlaying}
+          onClose={() => setExpandedSong(null)}
+          onPlayNow={handleDetailPlayNow}
+          onQueueNext={handleDetailQueueNext}
+          onQueueEnd={handleDetailQueueEnd}
+        />
+      )}
 
       {/* Conversations Drawer */}
       <ConvDrawer
