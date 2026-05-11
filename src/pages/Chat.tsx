@@ -83,6 +83,72 @@ function buildSearchResult(
 }
 
 const CHAT_PATH = "/chat";
+const PENDING_SEARCH_KEY = "echoes_pending_music_search";
+
+type PendingMusicSearch = {
+  conversationId: string;
+  prompt: string;
+  displayText: string;
+  mode: Extract<MusicSearchMode, "search" | "creator_trends">;
+  media?: { imageBase64: string; imageMimeType: string };
+  imagePreviewUrl?: string;
+  authRequired?: boolean;
+  createdAt: string;
+};
+
+function readPendingSearch(): PendingMusicSearch | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(PENDING_SEARCH_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<PendingMusicSearch>;
+    if (
+      !parsed ||
+      typeof parsed.conversationId !== "string" ||
+      typeof parsed.prompt !== "string" ||
+      typeof parsed.displayText !== "string"
+    ) {
+      window.localStorage.removeItem(PENDING_SEARCH_KEY);
+      return null;
+    }
+    return {
+      conversationId: parsed.conversationId,
+      prompt: parsed.prompt,
+      displayText: parsed.displayText,
+      mode: parsed.mode === "creator_trends" ? "creator_trends" : "search",
+      ...(parsed.media?.imageBase64 && parsed.media?.imageMimeType
+        ? { media: { imageBase64: parsed.media.imageBase64, imageMimeType: parsed.media.imageMimeType } }
+        : {}),
+      ...(typeof parsed.imagePreviewUrl === "string" ? { imagePreviewUrl: parsed.imagePreviewUrl } : {}),
+      ...(parsed.authRequired === true ? { authRequired: true } : {}),
+      createdAt: typeof parsed.createdAt === "string" ? parsed.createdAt : new Date().toISOString(),
+    };
+  } catch {
+    window.localStorage.removeItem(PENDING_SEARCH_KEY);
+    return null;
+  }
+}
+
+function writePendingSearch(pending: PendingMusicSearch) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(PENDING_SEARCH_KEY, JSON.stringify(pending));
+  } catch (err) {
+    console.warn("Unable to persist pending music search:", err);
+  }
+}
+
+function clearPendingSearch(conversationId?: string) {
+  if (typeof window === "undefined") return;
+  if (!conversationId) {
+    window.localStorage.removeItem(PENDING_SEARCH_KEY);
+    return;
+  }
+  const pending = readPendingSearch();
+  if (pending?.conversationId === conversationId) {
+    window.localStorage.removeItem(PENDING_SEARCH_KEY);
+  }
+}
 
 function conversationPreviewArtwork(c: Conversation): string | undefined {
   for (let i = c.messages.length - 1; i >= 0; i--) {
@@ -173,6 +239,7 @@ const Chat = () => {
   const qProcessed = useRef(false);
   const landingFromHomeProcessed = useRef(false);
   const luckyProcessed = useRef(false);
+  const pendingResumeKey = useRef<string | null>(null);
 
   const activeConversation = getConversation(activeConversationId) ?? null;
   const assistantTurns = activeConversation?.messages.filter(
@@ -200,7 +267,7 @@ const Chat = () => {
       }
     }
     return out;
-  }, [queue, currentResult?.songs, currentResult?.id]);
+  }, [queue, currentResult?.songs]);
 
   usePrefetchAppleMusicCatalogIds(
     prefetchCatalogSongs,
@@ -314,11 +381,19 @@ const Chat = () => {
       mode: Extract<MusicSearchMode, "search" | "creator_trends"> = "search"
     ) => {
       const conv = getConversation(conversationId);
-      if (!conv) return;
 
       const displayPrompt =
         prompt.trim() ||
         (media ? t("chat.imageSearchLabel") : prompt);
+      writePendingSearch({
+        conversationId,
+        prompt,
+        displayText: displayPrompt,
+        mode,
+        ...(media ? { media } : {}),
+        ...(media ? { imagePreviewUrl: `data:${media.imageMimeType};base64,${media.imageBase64}` } : {}),
+        createdAt: new Date().toISOString(),
+      });
 
       setIsLoading(true);
       setShowQueue(false);
@@ -336,7 +411,7 @@ const Chat = () => {
           ...(mode !== "search" ? { mode } : {}),
           descriptionLanguage,
           streamingProviderPreference,
-          conversationMemory: conv.conversationMemory,
+          conversationMemory: conv?.conversationMemory ?? null,
           userTasteProfile,
           feedbackLearningSummary,
           conversationId,
@@ -345,16 +420,35 @@ const Chat = () => {
         if (data.error) {
           if (data.code?.startsWith("anon_")) {
             toast.error(data.error || t("chat.anonQuotaLogin"));
+            writePendingSearch({
+              conversationId,
+              prompt,
+              displayText: displayPrompt,
+              mode,
+              ...(media ? { media } : {}),
+              ...(media ? { imagePreviewUrl: `data:${media.imageMimeType};base64,${media.imageBase64}` } : {}),
+              authRequired: true,
+              createdAt: new Date().toISOString(),
+            });
             setIsLoading(false);
             navigate("/auth", { replace: true });
             return;
           }
           if (data.code?.startsWith("byo_")) {
+            appendAssistantResult(
+              conversationId,
+              buildEmptySearchResult({
+                prompt: displayPrompt,
+                narrative: data.error || t("chat.toastSearchFailed"),
+                searchMode: mode,
+              })
+            );
             toast.error(data.error || t("chat.toastSearchFailed"), {
               description: data.byo_fallback_suggested
                 ? "You can return to Echoes managed AI under Profile → Advanced AI Settings."
                 : undefined,
             });
+            clearPendingSearch(conversationId);
             setIsLoading(false);
             void refreshTokenBalance();
             return;
@@ -366,7 +460,27 @@ const Chat = () => {
             data.error.includes("Insufficient")
           ) {
             toast.error(t("chat.toastCredits"));
-          } else toast.error(data.error || t("chat.toastSearchFailed"));
+            appendAssistantResult(
+              conversationId,
+              buildEmptySearchResult({
+                prompt: displayPrompt,
+                narrative: t("chat.toastCredits"),
+                searchMode: mode,
+              })
+            );
+          } else {
+            const narrative = data.code === "request_timeout" ? t("chat.toastSearchError") : data.error || t("chat.toastSearchFailed");
+            toast.error(narrative);
+            appendAssistantResult(
+              conversationId,
+              buildEmptySearchResult({
+                prompt: displayPrompt,
+                narrative,
+                searchMode: mode,
+              })
+            );
+          }
+          clearPendingSearch(conversationId);
           setIsLoading(false);
           void refreshTokenBalance();
           return;
@@ -401,6 +515,7 @@ const Chat = () => {
           if (data.userTasteProfileUpdate) {
             mergeUserTasteFromUpdate(data.userTasteProfileUpdate);
           }
+          clearPendingSearch(conversationId);
           setIsLoading(false);
           void refreshTokenBalance();
           const searchId = await trackSearch({
@@ -450,6 +565,7 @@ const Chat = () => {
           mergeUserTasteFromUpdate(data.userTasteProfileUpdate);
         }
 
+        clearPendingSearch(conversationId);
         setIsLoading(false);
         void refreshTokenBalance();
 
@@ -467,7 +583,17 @@ const Chat = () => {
         }
       } catch (err) {
         console.error("Search error:", err);
-        toast.error(t("chat.toastSearchError"));
+        const narrative = t("chat.toastSearchError");
+        toast.error(narrative);
+        appendAssistantResult(
+          conversationId,
+          buildEmptySearchResult({
+            prompt: displayPrompt,
+            narrative,
+            searchMode: mode,
+          })
+        );
+        clearPendingSearch(conversationId);
         setIsLoading(false);
         void refreshTokenBalance();
       }
@@ -488,6 +614,64 @@ const Chat = () => {
       navigate,
     ]
   );
+
+  useEffect(() => {
+    if (isLoading) return;
+    const pending = readPendingSearch();
+    if (!pending) {
+      pendingResumeKey.current = null;
+      return;
+    }
+    if (pending.authRequired && !user) return;
+
+    const conversation = conversations.find((c) => c.id === pending.conversationId);
+    if (!conversation) return;
+
+    let lastUserIndex = -1;
+    let lastAssistantIndex = -1;
+    for (let i = conversation.messages.length - 1; i >= 0; i -= 1) {
+      const role = conversation.messages[i]?.role;
+      if (lastUserIndex === -1 && role === "user") lastUserIndex = i;
+      if (lastAssistantIndex === -1 && role === "assistant") lastAssistantIndex = i;
+      if (lastUserIndex !== -1 && lastAssistantIndex !== -1) break;
+    }
+    const needsAssistantTurn = lastUserIndex === -1 || lastUserIndex > lastAssistantIndex;
+    if (!needsAssistantTurn) {
+      clearPendingSearch(pending.conversationId);
+      pendingResumeKey.current = null;
+      return;
+    }
+
+    const resumeKey = `${pending.conversationId}:${pending.createdAt}`;
+    if (pendingResumeKey.current === resumeKey) return;
+    pendingResumeKey.current = resumeKey;
+
+    if (activeConversationId !== pending.conversationId) {
+      selectConversation(pending.conversationId);
+      navigate(`${CHAT_PATH}?conversation=${encodeURIComponent(pending.conversationId)}`, { replace: true });
+    }
+
+    if (lastUserIndex === -1) {
+      appendUserMessage(
+        pending.conversationId,
+        pending.displayText,
+        pending.imagePreviewUrl ? { imagePreviewUrl: pending.imagePreviewUrl } : undefined
+      );
+    }
+
+    window.setTimeout(() => {
+      void runSearch(pending.conversationId, pending.prompt, pending.media, pending.mode);
+    }, 0);
+  }, [
+    activeConversationId,
+    appendUserMessage,
+    conversations,
+    isLoading,
+    navigate,
+    runSearch,
+    selectConversation,
+    user,
+  ]);
 
   const handleComposerSubmit = useCallback(
     (payload: PromptSubmitPayload) => {

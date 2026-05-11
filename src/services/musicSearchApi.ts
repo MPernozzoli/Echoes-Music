@@ -41,6 +41,8 @@ export interface MusicSearchResponse {
   byo_fallback_suggested?: boolean;
 }
 
+const MUSIC_SEARCH_TIMEOUT_MS = 90_000;
+
 function projectUrl(): string {
   const id = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   return `https://${id}.supabase.co/functions/v1/music-search`;
@@ -55,15 +57,28 @@ export async function callMusicSearch(body: MusicSearchRequest): Promise<MusicSe
     payload.anonymousSessionId = getSessionId();
     if (body.conversationId) payload.conversationId = body.conversationId;
   }
-  const res = await fetch(projectUrl(), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      apikey: ANON_KEY,
-      Authorization: `Bearer ${bearer}`,
-    },
-    body: JSON.stringify(payload),
-  });
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), MUSIC_SEARCH_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(projectUrl(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: ANON_KEY,
+        Authorization: `Bearer ${bearer}`,
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      return { error: "Search timed out", code: "request_timeout" };
+    }
+    throw err;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 
   const data = (await res.json().catch(() => ({}))) as MusicSearchResponse & {
     error?: string;
