@@ -58,7 +58,7 @@ function waitForMusicKit(maxMs: number): Promise<boolean> {
   });
 }
 
-export const AppleMusicContext = createContext<AppleMusicState | null>(null);
+
 
 export const AppleMusicProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
