@@ -1029,11 +1029,11 @@ Still output full searchQueries and songSuggestions (6-8 real songs).
 ## Memory (structured, not full chat):
 The user message may include JSON blocks "conversationMemory", "userTasteProfile", and "feedbackLearningSummary". Use them ONLY for continuity, taste defaults, and recent preference calibration.
 The **current user message** always wins if it conflicts with memory.
-<<<<<<< Updated upstream
 Treat feedbackLearningSummary as explicit user feedback from prior results: avoid repeating tracks or patterns marked negative unless the current prompt clearly asks for them; softly favor tracks/artists similar to positive feedback when they fit the current prompt. Do not mention feedback in the reply.
-=======
-Keep thread memory and global taste separate: conversationMemoryUpdate must summarize ONLY this chat's prior conversationMemory plus the current turn. Do not copy or infer userTasteProfile facts into conversationMemoryUpdate unless the current turn explicitly restates them.
->>>>>>> Stashed changes
+Keep thread memory and global taste separate:
+- conversationMemoryUpdate is for the current chat only.
+- conversationMemoryUpdate.threadSummary and standardAxes may use ONLY conversationMemory plus the current user prompt.
+- Never copy, infer, or refer to userTasteProfile, feedbackLearningSummary, listening history, other chats, or unrelated searches in conversationMemoryUpdate unless the current prompt explicitly restates that information.
 After interpreting, you MUST output:
 - **conversationMemoryUpdate**: a 2-4 sentence threadSummary merging prior summary with this turn; **standardAxes** using ONLY enums: energy/catharsis/emotionalTension in low|medium|high, intimacy integer 1-5, dominantThemes array (max 8 short tags), moodLabel short.
 - **userTasteProfileUpdate**: optional incremental globalSummary (brief), userStandardAxes (same schema), genreAffinityTags (max 12), preferredLanguages (max 6). Only include fields that should change.`;
@@ -1359,7 +1359,6 @@ CRITICAL:
 async function interpretMemoryCompact(params: {
   descriptionLanguage?: string;
   conversationMemory: Record<string, unknown> | null;
-  userTasteProfile: Record<string, unknown> | null;
   lastUserPrompt?: string;
   route: AiInferenceRoute;
 }): Promise<{
@@ -1370,17 +1369,16 @@ async function interpretMemoryCompact(params: {
 }> {
   const userContent = [
     'Compress and realign conversation memory only. Do not suggest songs.',
-    'Keep thread memory separate from global taste: conversationMemoryUpdate may use only conversationMemory plus the last user prompt. userTasteProfile is taste context for the optional userTasteProfileUpdate, not source material for threadSummary.',
+    'Use only conversationMemory plus the last user prompt. Ignore global taste, feedback, listening history, other chats, and unrelated searches.',
     params.lastUserPrompt ? `Last user prompt snippet: ${params.lastUserPrompt.slice(0, 500)}` : '',
     `conversationMemory: ${JSON.stringify(params.conversationMemory || {})}`,
-    `userTasteProfile: ${JSON.stringify(params.userTasteProfile || {})}`,
   ].filter(Boolean).join('\n');
 
   const chatBody = {
     messages: [
       {
         role: 'system',
-        content: 'Output only structured memory updates. threadSummary 2-4 sentences. standardAxes must use enums low|medium|high and intimacy 1-5. Never mix userTasteProfile into conversationMemoryUpdate unless the last user prompt explicitly restates it.',
+        content: 'Output only structured conversation memory for this single chat. threadSummary 2-4 sentences. standardAxes must use enums low|medium|high and intimacy 1-5. Never mention or infer anything from global taste, feedback, listening history, other chats, or unrelated searches.',
       },
       { role: 'user', content: userContent },
     ],
@@ -1558,7 +1556,6 @@ Deno.serve(async (req) => {
       const compact = await interpretMemoryCompact({
         descriptionLanguage,
         conversationMemory: conversationMemory ?? null,
-        userTasteProfile: userTasteProfile ?? null,
         lastUserPrompt,
         route: routeMc,
       });

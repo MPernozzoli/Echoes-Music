@@ -407,6 +407,12 @@ const Chat = () => {
       setResultIdMap({});
 
       try {
+        const cleanConversationMemory = conv?.conversationMemory
+          ? {
+              ...conv.conversationMemory,
+              threadSummary: buildThreadSummaryFromChatText(conv.messages),
+            }
+          : null;
         const feedbackLearningSummary = await getRecentFeedbackLearningSummary();
         const data = await callMusicSearch({
           ...(prompt.trim() ? { prompt: prompt.trim() } : {}),
@@ -416,7 +422,7 @@ const Chat = () => {
           ...(mode !== "search" ? { mode } : {}),
           descriptionLanguage,
           streamingProviderPreference,
-          conversationMemory: conv?.conversationMemory ?? null,
+          conversationMemory: cleanConversationMemory,
           userTasteProfile,
           feedbackLearningSummary,
           conversationId,

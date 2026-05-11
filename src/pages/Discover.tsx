@@ -29,7 +29,7 @@ import {
   maybeCreateTrainingEvent,
 } from "@/services/tracking";
 import { emotionalProfileToAxes } from "@/types/conversation";
-import { normalizeStandardAxes } from "@/lib/memoryMerge";
+import { buildThreadSummaryFromChatText, normalizeStandardAxes } from "@/lib/memoryMerge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
@@ -190,6 +190,11 @@ const Chat = () => {
   const hasAnyMessage = (activeConversation?.messages.length ?? 0) > 0;
   const showDockPlayer = queue.length > 0 && !isMobile;
   const showMobilePlayer = queue.length > 0 && isMobile;
+  const buildLocalThreadSummary = useCallback(
+    (conversationId: string, prompt: string) =>
+      buildThreadSummaryFromChatText(getConversation(conversationId)?.messages ?? [], prompt),
+    [getConversation]
+  );
 
   const runSearch = useCallback(
     async (
@@ -208,12 +213,18 @@ const Chat = () => {
       setResultIdMap({});
 
       try {
+        const cleanConversationMemory = conv.conversationMemory
+          ? {
+              ...conv.conversationMemory,
+              threadSummary: buildThreadSummaryFromChatText(conv.messages),
+            }
+          : null;
         const feedbackLearningSummary = await getRecentFeedbackLearningSummary();
         const data = await callMusicSearch({
           prompt,
           ...(mode !== "search" ? { mode } : {}),
           descriptionLanguage,
-          conversationMemory: conv.conversationMemory,
+          conversationMemory: cleanConversationMemory,
           userTasteProfile,
           feedbackLearningSummary,
           conversationId,
@@ -262,16 +273,17 @@ const Chat = () => {
             searchMode: mode,
           });
           appendAssistantResult(conversationId, emptyResult);
+          const localThreadSummary = buildLocalThreadSummary(conversationId, prompt);
           if (data.conversationMemoryUpdate?.standardAxes) {
             mergeConversationMemoryFromUpdate(conversationId, {
-              threadSummary: data.conversationMemoryUpdate.threadSummary ?? "",
+              threadSummary: localThreadSummary,
               standardAxes: normalizeStandardAxes(
                 data.conversationMemoryUpdate.standardAxes as Record<string, unknown>
               ),
             });
           } else if (data.emotionalProfile) {
             mergeConversationMemoryFromUpdate(conversationId, {
-              threadSummary: data.emotionalProfile.mood.slice(0, 400),
+              threadSummary: localThreadSummary,
               standardAxes: emotionalProfileToAxes(data.emotionalProfile),
             });
           }
@@ -310,14 +322,15 @@ const Chat = () => {
           });
         }
 
+        const localThreadSummary = buildLocalThreadSummary(conversationId, prompt);
         if (data.conversationMemoryUpdate?.standardAxes) {
           mergeConversationMemoryFromUpdate(conversationId, {
-            threadSummary: data.conversationMemoryUpdate.threadSummary ?? "",
+            threadSummary: localThreadSummary,
             standardAxes: normalizeStandardAxes(data.conversationMemoryUpdate.standardAxes as Record<string, unknown>),
           });
         } else {
           mergeConversationMemoryFromUpdate(conversationId, {
-            threadSummary: data.emotionalProfile.mood.slice(0, 400),
+            threadSummary: localThreadSummary,
             standardAxes: emotionalProfileToAxes(data.emotionalProfile),
           });
         }
@@ -349,6 +362,7 @@ const Chat = () => {
       descriptionLanguage,
       userTasteProfile,
       appendAssistantResult,
+      buildLocalThreadSummary,
       mergeConversationMemoryFromUpdate,
       mergeUserTasteFromUpdate,
       isGloballyPlaying,
@@ -484,12 +498,12 @@ const Chat = () => {
     }
     if (data.conversationMemoryUpdate?.standardAxes) {
       mergeConversationMemoryFromUpdate(id, {
-        threadSummary: data.conversationMemoryUpdate.threadSummary ?? "",
+        threadSummary: buildLocalThreadSummary(id, surpriseLabel),
         standardAxes: normalizeStandardAxes(data.conversationMemoryUpdate.standardAxes as Record<string, unknown>),
       });
     } else {
       mergeConversationMemoryFromUpdate(id, {
-        threadSummary: data.emotionalProfile!.mood.slice(0, 400),
+        threadSummary: buildLocalThreadSummary(id, surpriseLabel),
         standardAxes: emotionalProfileToAxes(data.emotionalProfile!),
       });
     }
@@ -509,6 +523,7 @@ const Chat = () => {
     createConversation,
     appendUserMessage,
     appendAssistantResult,
+    buildLocalThreadSummary,
     mergeConversationMemoryFromUpdate,
     mergeUserTasteFromUpdate,
     navigate,
