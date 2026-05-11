@@ -689,14 +689,14 @@ const Profile = () => {
       </div>
 
       <Dialog open={spotifyGateOpen} onOpenChange={setSpotifyGateOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t("profile.spotifyGate.title")}</DialogTitle>
-            <DialogDescription className="leading-relaxed">
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader className="pr-8">
+            <DialogTitle className="font-display">{t("profile.spotifyGate.title")}</DialogTitle>
+            <DialogDescription className="leading-relaxed text-sm">
               {t("profile.spotifyGate.description")}
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-2">
+          <div className="grid gap-4 py-1">
             <div className="grid gap-2">
               <Label htmlFor="spotify-gate-name" className="font-body text-xs">
                 {t("profile.spotifyGate.fullNameLabel")}
@@ -723,12 +723,12 @@ const Profile = () => {
               />
             </div>
           </div>
-          <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <DialogFooter className="mt-2 grid w-full grid-cols-1 gap-2 sm:flex sm:flex-row sm:justify-end sm:items-center sm:gap-2 sm:space-x-0">
             <Button
               type="button"
               variant="ghost"
               onClick={() => setSpotifyGateOpen(false)}
-              className="font-body"
+              className="font-body w-full sm:w-auto"
             >
               {t("profile.spotifyGate.cancel")}
             </Button>
@@ -736,7 +736,7 @@ const Profile = () => {
               type="button"
               variant="outline"
               onClick={handleSpotifyGateContact}
-              className="font-body gap-2"
+              className="font-body gap-2 w-full sm:w-auto"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               {t("profile.spotifyGate.contactCta")}
@@ -744,7 +744,7 @@ const Profile = () => {
             <Button
               type="button"
               onClick={handleSpotifyGateApproved}
-              className="font-body gap-2 bg-[hsl(141,73%,42%)] hover:bg-[hsl(141,73%,38%)] text-white"
+              className="font-body gap-2 w-full sm:w-auto bg-[hsl(141,73%,42%)] hover:bg-[hsl(141,73%,38%)] text-white"
             >
               <Check className="w-3.5 h-3.5" />
               {t("profile.spotifyGate.approvedCta")}
