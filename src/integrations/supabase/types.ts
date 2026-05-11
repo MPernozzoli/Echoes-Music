@@ -250,11 +250,9 @@ export type Database = {
       homepage_discount_promotions: {
         Row: {
           active: boolean
-          applies_to_products: string[]
           code: string
           created_at: string
           ends_at: string | null
-          first_time_only: boolean
           id: string
           messages: Json
           promotion_code_id: string
@@ -263,11 +261,9 @@ export type Database = {
         }
         Insert: {
           active?: boolean
-          applies_to_products?: string[]
           code: string
           created_at?: string
           ends_at?: string | null
-          first_time_only?: boolean
           id?: string
           messages?: Json
           promotion_code_id: string
@@ -276,11 +272,9 @@ export type Database = {
         }
         Update: {
           active?: boolean
-          applies_to_products?: string[]
           code?: string
           created_at?: string
           ends_at?: string | null
-          first_time_only?: boolean
           id?: string
           messages?: Json
           promotion_code_id?: string
@@ -955,16 +949,9 @@ export type Database = {
       admin_upsert_homepage_discount_promotion: {
         Args: {
           p_active: boolean
-          p_applies_to_products?: string[]
           p_code: string
-<<<<<<< HEAD
-          p_ends_at?: string | null
-          p_first_time_only?: boolean
-          p_messages?: Json
-=======
           p_ends_at: string
           p_messages: Json
->>>>>>> 5971a302f9616b5cd4a1935f7dd2001ba5b70279
           p_promotion_code_id: string
           p_starts_at: string
         }
