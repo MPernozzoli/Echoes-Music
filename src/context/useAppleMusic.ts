@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { AppleMusicContext } from "@/context/AppleMusicContext";
+import { AppleMusicContext } from "@/context/appleMusicContextObject";
 
 export const useAppleMusic = () => {
   const ctx = useContext(AppleMusicContext);
