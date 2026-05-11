@@ -14,6 +14,17 @@ export const SpotifyProvider = ({ children }: { children: ReactNode }) => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const refreshAccessToken = useCallback(async () => {
+    const token = await getSpotifyToken();
+    if (!token) {
+      setAccessToken(null);
+      return null;
+    }
+    setAccessToken(token.access_token);
+    if (token.product) setIsPremium(token.product === "premium");
+    return token.access_token;
+  }, []);
+
   const refresh = useCallback(async () => {
     setLoading(true);
     const conn = await getSpotifyConnection();
@@ -25,12 +36,11 @@ export const SpotifyProvider = ({ children }: { children: ReactNode }) => {
       // Il record DB di `product` può essere stantio (utente che ha fatto upgrade a Premium
       // dopo il primo collegamento). Interroghiamo Spotify /me lato client con l'access token
       // per avere il valore live ed evitare di cadere su preview 30s a un account Premium.
-      const token = await getSpotifyToken();
-      if (token) {
-        setAccessToken(token.access_token);
+      const refreshedToken = await refreshAccessToken();
+      if (refreshedToken) {
         try {
           const me = await fetch("https://api.spotify.com/v1/me", {
-            headers: { Authorization: `Bearer ${token.access_token}` },
+            headers: { Authorization: `Bearer ${refreshedToken}` },
           });
           if (me.ok) {
             const profile = (await me.json()) as { product?: string };
@@ -47,7 +57,7 @@ export const SpotifyProvider = ({ children }: { children: ReactNode }) => {
       setAccessToken(null);
     }
     setLoading(false);
-  }, []);
+  }, [refreshAccessToken]);
 
   const setConnected = useCallback((info: { displayName: string; product: string }) => {
     setIsConnected(true);
@@ -64,10 +74,17 @@ export const SpotifyProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => { void refresh(); }, [user?.id, refresh]);
 
+  useEffect(() => {
+    if (!isConnected) return undefined;
+    const interval = window.setInterval(() => {
+      void refreshAccessToken();
+    }, 45 * 60 * 1000);
+    return () => window.clearInterval(interval);
+  }, [isConnected, refreshAccessToken]);
+
   return (
-    <SpotifyContext.Provider value={{ isConnected, isPremium, displayName, accessToken, loading, refresh, setConnected, setDisconnected }}>
+    <SpotifyContext.Provider value={{ isConnected, isPremium, displayName, accessToken, loading, refresh, refreshAccessToken, setConnected, setDisconnected }}>
       {children}
     </SpotifyContext.Provider>
   );
 };
-

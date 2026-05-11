@@ -39,10 +39,12 @@ export interface SpotifyWebPlaybackHandle {
   togglePlay: (trackUri: string) => Promise<void>;
   seek: (seconds: number) => Promise<void>;
   setVolume: (volume: number) => Promise<void>;
+  reconnect: () => Promise<void>;
 }
 
 interface SpotifyWebPlaybackPlayerProps {
   accessToken: string | null;
+  getAccessToken?: () => Promise<string | null>;
   volume: number;
   onReadyChange?: (ready: boolean) => void;
   onTelemetry?: (state: { current: number; duration: number; isPlaying: boolean; uri?: string }) => void;
@@ -72,7 +74,12 @@ function loadSpotifySdk(): Promise<void> {
   return sdkReadyPromise;
 }
 
-async function spotifyApi(accessToken: string, path: string, init: RequestInit = {}) {
+async function spotifyApi(
+  accessToken: string,
+  path: string,
+  init: RequestInit = {},
+  getAccessToken?: () => Promise<string | null>,
+) {
   const res = await fetch(`https://api.spotify.com/v1${path}`, {
     ...init,
     headers: {
@@ -81,6 +88,12 @@ async function spotifyApi(accessToken: string, path: string, init: RequestInit =
       ...(init.headers ?? {}),
     },
   });
+  if (res.status === 401 && getAccessToken) {
+    const refreshedToken = await getAccessToken();
+    if (refreshedToken && refreshedToken !== accessToken) {
+      return spotifyApi(refreshedToken, path, init);
+    }
+  }
   if (!res.ok && res.status !== 204) {
     throw new Error(`Spotify ${res.status}`);
   }
@@ -88,18 +101,22 @@ async function spotifyApi(accessToken: string, path: string, init: RequestInit =
 }
 
 export const SpotifyWebPlaybackPlayer = forwardRef<SpotifyWebPlaybackHandle, SpotifyWebPlaybackPlayerProps>(
-  ({ accessToken, volume, onReadyChange, onTelemetry, onPlaybackStateChange, onPlaybackError }, ref) => {
+  ({ accessToken, getAccessToken, volume, onReadyChange, onTelemetry, onPlaybackStateChange, onPlaybackError }, ref) => {
     const playerRef = useRef<SpotifySdkPlayer | null>(null);
     const deviceIdRef = useRef<string | null>(null);
     const tokenRef = useRef(accessToken);
+    const getAccessTokenRef = useRef(getAccessToken);
     const volumeRef = useRef(volume);
     const onTelemetryRef = useRef(onTelemetry);
     const onPlaybackStateChangeRef = useRef(onPlaybackStateChange);
     const onPlaybackErrorRef = useRef(onPlaybackError);
     const activeUriRef = useRef<string | null>(null);
+    const reconnectTimerRef = useRef<number | null>(null);
     const [ready, setReady] = useState(false);
+    const hasAccessToken = !!accessToken;
 
     tokenRef.current = accessToken;
+    getAccessTokenRef.current = getAccessToken;
     volumeRef.current = volume;
     onTelemetryRef.current = onTelemetry;
     onPlaybackStateChangeRef.current = onPlaybackStateChange;
@@ -126,8 +143,18 @@ export const SpotifyWebPlaybackPlayer = forwardRef<SpotifyWebPlaybackHandle, Spo
       onPlaybackStateChangeRef.current?.(!state.paused);
     }, []);
 
+    const reconnectPlayer = useCallback(async () => {
+      const player = playerRef.current;
+      if (!player) return;
+      try {
+        await player.connect();
+      } catch {
+        /* the SDK also reports connection failures through its listeners */
+      }
+    }, []);
+
     useEffect(() => {
-      if (!accessToken) {
+      if (!hasAccessToken) {
         reportReady(false);
         return undefined;
       }
@@ -142,7 +169,19 @@ export const SpotifyWebPlaybackPlayer = forwardRef<SpotifyWebPlaybackHandle, Spo
             name: "Echoes Player",
             getOAuthToken: (cb) => {
               const token = tokenRef.current;
-              if (token) cb(token);
+              const refreshToken = getAccessTokenRef.current;
+              if (!refreshToken) {
+                if (token) cb(token);
+                return;
+              }
+              void refreshToken().then((refreshedToken) => {
+                if (refreshedToken) {
+                  tokenRef.current = refreshedToken;
+                  cb(refreshedToken);
+                } else if (token) {
+                  cb(token);
+                }
+              });
             },
             volume: volumeRef.current,
           });
@@ -156,6 +195,11 @@ export const SpotifyWebPlaybackPlayer = forwardRef<SpotifyWebPlaybackHandle, Spo
           player.addListener("not_ready", () => {
             deviceIdRef.current = null;
             reportReady(false);
+            if (reconnectTimerRef.current != null) window.clearTimeout(reconnectTimerRef.current);
+            reconnectTimerRef.current = window.setTimeout(() => {
+              reconnectTimerRef.current = null;
+              void reconnectPlayer();
+            }, 1200);
           });
           player.addListener("initialization_error", (payload) => {
             onPlaybackErrorRef.current?.((payload as { message?: string }).message ?? "Spotify initialization error");
@@ -180,12 +224,16 @@ export const SpotifyWebPlaybackPlayer = forwardRef<SpotifyWebPlaybackHandle, Spo
 
       return () => {
         cancelled = true;
+        if (reconnectTimerRef.current != null) {
+          window.clearTimeout(reconnectTimerRef.current);
+          reconnectTimerRef.current = null;
+        }
         reportReady(false);
         deviceIdRef.current = null;
         playerRef.current = null;
         player?.disconnect();
       };
-    }, [accessToken, reportPlaybackState, reportReady]);
+    }, [hasAccessToken, reconnectPlayer, reportPlaybackState, reportReady]);
 
     useEffect(() => {
       if (!ready) return undefined;
@@ -204,9 +252,13 @@ export const SpotifyWebPlaybackPlayer = forwardRef<SpotifyWebPlaybackHandle, Spo
       ref,
       () => ({
         async togglePlay(trackUri: string) {
-          const token = tokenRef.current;
-          const deviceId = deviceIdRef.current;
+          const token = tokenRef.current ?? await getAccessTokenRef.current?.();
           const player = playerRef.current;
+          if (!deviceIdRef.current && player) {
+            await reconnectPlayer();
+            await new Promise((resolve) => window.setTimeout(resolve, 350));
+          }
+          const deviceId = deviceIdRef.current;
           if (!token || !deviceId || !player) throw new Error("Spotify player not ready");
 
           const state = await player.getCurrentState();
@@ -224,11 +276,11 @@ export const SpotifyWebPlaybackPlayer = forwardRef<SpotifyWebPlaybackHandle, Spo
           await spotifyApi(token, "/me/player", {
             method: "PUT",
             body: JSON.stringify({ device_ids: [deviceId], play: false }),
-          });
+          }, getAccessTokenRef.current);
           await spotifyApi(token, `/me/player/play?device_id=${encodeURIComponent(deviceId)}`, {
             method: "PUT",
             body: JSON.stringify({ uris: [trackUri] }),
-          });
+          }, getAccessTokenRef.current);
           activeUriRef.current = trackUri;
         },
         async seek(seconds: number) {
@@ -237,8 +289,9 @@ export const SpotifyWebPlaybackPlayer = forwardRef<SpotifyWebPlaybackHandle, Spo
         async setVolume(nextVolume: number) {
           await playerRef.current?.setVolume(nextVolume);
         },
+        reconnect: reconnectPlayer,
       }),
-      [],
+      [reconnectPlayer],
     );
 
     return null;

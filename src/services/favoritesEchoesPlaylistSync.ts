@@ -62,7 +62,7 @@ export async function runEchoesFavoritesPlaylistSync(params: {
     ...new Set(favorites.map((s) => String(s.appleMusicId ?? "").trim()).filter((x): x is string => Boolean(x))),
   ];
 
-  if (spotifyConnected) {
+  if (spotifyConnected && spotifyIds.length > 0) {
     let pid = localStorage.getItem(LS_SPOTIFY_PLAYLIST);
     if (!pid) {
       const en = await spotifyEnsureEchoesPlaylist();
@@ -82,7 +82,7 @@ export async function runEchoesFavoritesPlaylistSync(params: {
     if ("error" in repl) throw new Error(`spotify:${repl.error}`);
   }
 
-  if (appleAvailable && appleAuthorized) {
+  if (appleAvailable && appleAuthorized && appleIds.length > 0) {
     const token = await getAppleToken();
     if (!token) throw new Error("apple:no_token");
     const applePlaylistStorage = applePlaylistStorageKey(token);

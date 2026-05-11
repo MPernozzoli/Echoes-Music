@@ -129,9 +129,13 @@ const FullPlayer = ({
     appleMusic.isAvailable &&
     !kitFailedForCurrent;
   /** L'utente ha Apple Music collegato all'account ma il browser non ha (più) una sessione MusicKit valida.
-   *  In questo stato non vogliamo cadere su preview/embed Spotify: mostriamo un CTA di riautorizzazione. */
+   *  Mostriamo un CTA di riautorizzazione solo se non possiamo coprire il gap con Spotify Premium —
+   *  altrimenti meglio far suonare il brano intero e basta. */
   const needsAppleReauth =
-    applePreferred && !appleMusic.isAuthorized && appleMusic.isAvailable;
+    applePreferred &&
+    !appleMusic.isAuthorized &&
+    appleMusic.isAvailable &&
+    !(spotify.isConnected && spotify.isPremium && !!spotify.accessToken && !!spotifyTrackId);
 
   const kitPlayerRef = useRef<AppleMusicKitPlayerHandle>(null);
   const spotifyPlayerRef = useRef<SpotifyWebPlaybackHandle>(null);
@@ -531,13 +535,27 @@ const FullPlayer = ({
     duration,
   ]);
 
+  // Spotify Premium come fallback anche quando Apple è preferito ma la sessione MusicKit non è
+  // utilizzabile su questo browser (no auth) o il brano specifico non è disponibile (CONTENT_UNAVAILABLE):
+  // meglio brano intero su Spotify Premium che 30s di embed.
+  const spotifyCanCoverAppleGap =
+    applePreferred && (!appleMusic.isAuthorized || kitFailedForCurrent);
   const canUseSpotifyWebPlayback =
-    playbackMode === "spotify" &&
+    (playbackMode === "spotify" || spotifyCanCoverAppleGap) &&
     spotify.isConnected &&
     spotify.isPremium &&
     !!spotify.accessToken &&
     !!spotifyTrackId &&
     !spotifyPlayerUnavailable;
+
+  useEffect(() => {
+    if (!canUseSpotifyWebPlayback || spotifyPlayerReady) return undefined;
+    const timeout = window.setTimeout(() => {
+      setSpotifyPlayerUnavailable(true);
+      setUseEmbed(true);
+    }, 15000);
+    return () => window.clearTimeout(timeout);
+  }, [canUseSpotifyWebPlayback, spotifyPlayerReady]);
 
   useEffect(() => {
     if (!canUseSpotifyWebPlayback || !spotifyPlayerReady || !spotifyTrackId || !song?.id) return;
@@ -596,7 +614,14 @@ const FullPlayer = ({
     }
     if (useAppleKitPlayer) void kitPlayerRef.current?.togglePlay();
     else if (canUseSpotifyWebPlayback && sp) {
-      void spotifyPlayerRef.current?.togglePlay(`spotify:track:${sp}`).catch(handleSpotifyPlaybackError);
+      void spotifyPlayerRef.current
+        ?.togglePlay(`spotify:track:${sp}`)
+        .catch(async (err) => {
+          await spotify.refreshAccessToken();
+          await spotifyPlayerRef.current?.reconnect();
+          return spotifyPlayerRef.current?.togglePlay(`spotify:track:${sp}`);
+        })
+        .catch(handleSpotifyPlaybackError);
     }
     else void togglePlay();
   }, [
@@ -611,6 +636,7 @@ const FullPlayer = ({
     togglePlay,
     emitPlaybackEvent,
     handleSpotifyPlaybackError,
+    spotify,
   ]);
 
   const toggleGlobalPlayback = useCallback(() => {
@@ -683,7 +709,7 @@ const FullPlayer = ({
   const dockPlayDisabled =
     !embedOnlyDock &&
     !useAppleKitPlayer &&
-    !(canUseSpotifyWebPlayback && spotifyPlayerReady) &&
+    !canUseSpotifyWebPlayback &&
     !audioReady;
 
   if (isDock) {
@@ -707,6 +733,7 @@ const FullPlayer = ({
           <SpotifyWebPlaybackPlayer
             ref={spotifyPlayerRef}
             accessToken={spotify.accessToken}
+            getAccessToken={spotify.refreshAccessToken}
             volume={isMuted ? 0 : volume / 100}
             onReadyChange={setSpotifyPlayerReady}
             onTelemetry={setSpotifyTelemetry}

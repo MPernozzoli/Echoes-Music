@@ -37,6 +37,7 @@ export function FavoritesEchoesPlaylistSync() {
         } catch (e) {
           if (runId.current !== id) return;
           const msg = e instanceof Error ? e.message : String(e);
+          console.error("Echoes favorites playlist sync failed:", msg);
           if (msg.startsWith("apple:no_token")) {
             toast.error(t("streaming.appleSessionUnavailable"));
             return;

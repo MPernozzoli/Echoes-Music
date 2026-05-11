@@ -7,6 +7,7 @@ export interface SpotifyState {
   accessToken: string | null;
   loading: boolean;
   refresh: () => Promise<void>;
+  refreshAccessToken: () => Promise<string | null>;
   setConnected: (info: { displayName: string; product: string }) => void;
   setDisconnected: () => void;
 }

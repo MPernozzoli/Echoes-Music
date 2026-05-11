@@ -97,6 +97,19 @@ function storefrontFromHint(hint?: string): string {
   return map[region] || "us";
 }
 
+/** Storefront effettivo dell'utente in MusicKit, se autorizzato. Va sempre privilegiato rispetto
+ *  alla lingua del browser: la riproduzione passa per lo storefront di MusicKit e un ID
+ *  trovato in un altro storefront genera CONTENT_UNAVAILABLE. */
+function storefrontFromMusicKit(): string | null {
+  try {
+    const mk = (window as unknown as { MusicKit?: { getInstance: () => { storefrontId?: string | null } } }).MusicKit;
+    const sf = mk?.getInstance().storefrontId?.toLowerCase();
+    return sf && sf.length >= 2 ? sf : null;
+  } catch {
+    return null;
+  }
+}
+
 function uniqueStorefronts(primary: string): string[] {
   return [...new Set([primary, "us", "gb", "it"])];
 }
@@ -186,17 +199,28 @@ export interface ResolveInput {
 
 /** Cerca il brano nel catalogo Apple Music lato client. Risolutore “best-effort”, risultato memorizzato in cache. */
 export async function resolveAppleMusicSong(input: ResolveInput): Promise<AppleMusicCatalogMatch | null> {
-  if (songIdCache.has(input.songId)) return songIdCache.get(input.songId) ?? null;
+  const userSf = storefrontFromMusicKit();
+  /** Se l'utente è autorizzato a uno storefront specifico (es. "it") e abbiamo in cache un match risolto
+   *  in un altro storefront, MusicKit darebbe CONTENT_UNAVAILABLE. Ri-risolviamo. */
+  const isStaleForUserStorefront = (m: AppleMusicCatalogMatch | null): boolean =>
+    !!(m && userSf && m.storefront && m.storefront.toLowerCase() !== userSf);
+
+  const cachedById = songIdCache.has(input.songId) ? (songIdCache.get(input.songId) ?? null) : undefined;
+  if (cachedById !== undefined && !isStaleForUserStorefront(cachedById)) return cachedById;
+
   const qKey = normalizeQueryKey(input.title, input.artist);
   if (queryCache.has(qKey)) {
     const cached = queryCache.get(qKey) ?? null;
-    songIdCache.set(input.songId, cached);
-    notify(input.songId);
-    return cached;
+    if (!isStaleForUserStorefront(cached)) {
+      songIdCache.set(input.songId, cached);
+      notify(input.songId);
+      return cached;
+    }
+    queryCache.delete(qKey);
   }
 
   const fromSession = readSessionMatch(qKey);
-  if (fromSession) {
+  if (fromSession && !isStaleForUserStorefront(fromSession)) {
     queryCache.set(qKey, fromSession);
     songIdCache.set(input.songId, fromSession);
     notify(input.songId);
@@ -213,13 +237,14 @@ export async function resolveAppleMusicSong(input: ResolveInput): Promise<AppleM
 
   const pending = (async (): Promise<InflightResult> => {
     const fromDb = await fetchAppleMatchFromStreamingCache(input.title, input.artist);
-    if (fromDb) return { match: fromDb };
+    if (fromDb && !isStaleForUserStorefront(fromDb)) return { match: fromDb };
 
     const token = await getAppleMusicDeveloperToken();
     if (!token) return { match: null };
     const query = `${input.artist} ${input.title}`.trim();
     if (!query) return { match: null };
-    const primary = storefrontFromHint(input.languageHint);
+    // Lo storefront di MusicKit (se autorizzato) è autoritativo per la riproduzione: cerchiamo prima lì.
+    const primary = storefrontFromMusicKit() ?? storefrontFromHint(input.languageHint);
     const m = await searchFirstAcrossStorefronts(query, uniqueStorefronts(primary), token);
     if (m) {
       void mergeStreamingIdsToCache({

@@ -94,6 +94,11 @@ const Profile = () => {
     unauthorize: unauthorizeApple,
   } = useAppleMusic();
 
+  const handleSignOut = useCallback(async () => {
+    await signOut();
+    navigate("/", { replace: true });
+  }, [navigate, signOut]);
+
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
@@ -222,7 +227,7 @@ const Profile = () => {
                     )}
                   </div>
                 </div>
-                <Button variant="ghost" size="sm" onClick={signOut} className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0">
+                <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0">
                   <LogOut className="w-4 h-4" />
                   <span className="hidden md:inline">{t("profile.logoutShort")}</span>
                 </Button>
@@ -619,7 +624,7 @@ const Profile = () => {
           </div>
         </div>
 
-        <Button type="button" variant="ghost" className="gap-2 text-muted-foreground hover:text-destructive font-body mt-2" onClick={signOut}>
+        <Button type="button" variant="ghost" className="gap-2 text-muted-foreground hover:text-destructive font-body mt-2" onClick={handleSignOut}>
           <LogOut className="w-4 h-4" />
           {t("profile.signOut")}
         </Button>
