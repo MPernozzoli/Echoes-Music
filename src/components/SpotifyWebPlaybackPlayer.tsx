@@ -36,7 +36,7 @@ type SpotifySdkPlayer = {
 };
 
 export interface SpotifyWebPlaybackHandle {
-  togglePlay: (trackUri: string) => Promise<void>;
+  togglePlay: (trackUri: string, queueUris?: string[]) => Promise<void>;
   seek: (seconds: number) => Promise<void>;
   setVolume: (volume: number) => Promise<void>;
   reconnect: () => Promise<void>;
@@ -251,7 +251,7 @@ export const SpotifyWebPlaybackPlayer = forwardRef<SpotifyWebPlaybackHandle, Spo
     useImperativeHandle(
       ref,
       () => ({
-        async togglePlay(trackUri: string) {
+        async togglePlay(trackUri: string, queueUris?: string[]) {
           const token = tokenRef.current ?? await getAccessTokenRef.current?.();
           const player = playerRef.current;
           if (!deviceIdRef.current && player) {
@@ -263,6 +263,7 @@ export const SpotifyWebPlaybackPlayer = forwardRef<SpotifyWebPlaybackHandle, Spo
 
           const state = await player.getCurrentState();
           const currentUri = state?.track_window.current_track?.uri ?? activeUriRef.current;
+          const playbackQueue = queueUris?.length ? queueUris : [trackUri];
           if (state && currentUri === trackUri && !state.paused) {
             await player.pause();
             return;
@@ -279,7 +280,7 @@ export const SpotifyWebPlaybackPlayer = forwardRef<SpotifyWebPlaybackHandle, Spo
           }, getAccessTokenRef.current);
           await spotifyApi(token, `/me/player/play?device_id=${encodeURIComponent(deviceId)}`, {
             method: "PUT",
-            body: JSON.stringify({ uris: [trackUri] }),
+            body: JSON.stringify({ uris: playbackQueue }),
           }, getAccessTokenRef.current);
           activeUriRef.current = trackUri;
         },

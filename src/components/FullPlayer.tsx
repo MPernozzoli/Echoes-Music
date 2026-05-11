@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, type ReactNode } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { unstable_batchedUpdates } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { setPlaybackToggleHandler } from "@/lib/playbackToggleBridge";
@@ -99,6 +99,8 @@ const FullPlayer = ({
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(80);
   const [isMuted, setIsMuted] = useState(false);
+  const volumeRef = useRef(volume);
+  const isMutedRef = useRef(isMuted);
   const [audioReady, setAudioReady] = useState(false);
   const [useEmbed, setUseEmbed] = useState(false);
   const playbackMode = useStreamingPlaybackMode();
@@ -150,9 +152,29 @@ const FullPlayer = ({
   const [spotifyPlayerReady, setSpotifyPlayerReady] = useState(false);
   const [spotifyPlayerUnavailable, setSpotifyPlayerUnavailable] = useState(false);
   const [dockShuffle, setDockShuffle] = useState(false);
-  const [dockRepeat, setDockRepeat] = useState<DockRepeatMode>("all");
+  const [dockRepeat, setDockRepeat] = useState<DockRepeatMode>("off");
   const dockRepeatRef = useRef<DockRepeatMode>(dockRepeat);
   dockRepeatRef.current = dockRepeat;
+  volumeRef.current = volume;
+  isMutedRef.current = isMuted;
+  const appleQueueTrackIds = useMemo(() => {
+    if (!appleMusicId) return [];
+    const ids = [appleMusicId];
+    for (const queuedSong of songs.slice(currentIndex + 1)) {
+      if (!queuedSong.appleMusicId) break;
+      ids.push(queuedSong.appleMusicId);
+    }
+    return ids;
+  }, [appleMusicId, currentIndex, songs]);
+  const spotifyQueueUris = useMemo(() => {
+    if (!spotifyTrackId) return [];
+    const uris = [`spotify:track:${spotifyTrackId}`];
+    for (const queuedSong of songs.slice(currentIndex + 1)) {
+      if (!queuedSong.spotifyUri) break;
+      uris.push(queuedSong.spotifyUri);
+    }
+    return uris;
+  }, [currentIndex, songs, spotifyTrackId]);
 
   const emitPlaybackEvent = useCallback((event: PlaybackTelemetryEvent) => {
     playbackEventCbRef.current?.(event);
@@ -256,6 +278,19 @@ const FullPlayer = ({
     [emitPlaybackEvent, onPlaybackStateChange, spotifyTelemetry],
   );
 
+  const handleProviderTrackIdChange = useCallback(
+    (providerTrackId: string, provider: "apple_music" | "spotify") => {
+      const nextIndex = songs.findIndex((queuedSong) => {
+        if (provider === "apple_music") return queuedSong.appleMusicId === providerTrackId;
+        return queuedSong.spotifyUri === providerTrackId;
+      });
+      if (nextIndex >= 0 && nextIndex !== indexRef.current) {
+        onChangeIndexRef.current(nextIndex);
+      }
+    },
+    [songs],
+  );
+
   const onKitQueueAutoplayConsumed = useCallback(() => {
     setKitAutoplayNonce(0);
   }, []);
@@ -323,7 +358,7 @@ const FullPlayer = ({
     if (previewUrl) {
       const audio = new Audio(previewUrl);
       audioRef.current = audio;
-      audio.volume = isMuted ? 0 : volume / 100;
+      audio.volume = isMutedRef.current ? 0 : volumeRef.current / 100;
 
       const onPlay = () => {
         playbackCbRef.current?.(true);
@@ -563,7 +598,7 @@ const FullPlayer = ({
     if (queueContinueAfterLoad.current) {
       queueContinueAfterLoad.current = false;
       void spotifyPlayerRef.current
-        ?.togglePlay(`spotify:track:${spotifyTrackId}`)
+        ?.togglePlay(`spotify:track:${spotifyTrackId}`, spotifyQueueUris)
         .catch(handleSpotifyPlaybackError);
       return;
     }
@@ -571,7 +606,7 @@ const FullPlayer = ({
     if (!autoplay || spotifyAutoplayTriedRef.current === song.id) return;
     spotifyAutoplayTriedRef.current = song.id;
     void spotifyPlayerRef.current
-      ?.togglePlay(`spotify:track:${spotifyTrackId}`)
+      ?.togglePlay(`spotify:track:${spotifyTrackId}`, spotifyQueueUris)
       .then(() => onAutoplayConsumed?.())
       .catch((err) => {
         onAutoplayConsumed?.();
@@ -585,7 +620,13 @@ const FullPlayer = ({
     song?.id,
     spotifyPlayerReady,
     spotifyTrackId,
+    spotifyQueueUris,
   ]);
+
+  useEffect(() => {
+    if (!canUseSpotifyWebPlayback || !spotifyTelemetry.uri) return;
+    handleProviderTrackIdChange(spotifyTelemetry.uri, "spotify");
+  }, [canUseSpotifyWebPlayback, handleProviderTrackIdChange, spotifyTelemetry.uri]);
 
   const onDockPlayPause = useCallback(() => {
     const s = song ?? songs[currentIndex];
@@ -615,11 +656,11 @@ const FullPlayer = ({
     if (useAppleKitPlayer) void kitPlayerRef.current?.togglePlay();
     else if (canUseSpotifyWebPlayback && sp) {
       void spotifyPlayerRef.current
-        ?.togglePlay(`spotify:track:${sp}`)
+        ?.togglePlay(`spotify:track:${sp}`, spotifyQueueUris)
         .catch(async (err) => {
           await spotify.refreshAccessToken();
           await spotifyPlayerRef.current?.reconnect();
-          return spotifyPlayerRef.current?.togglePlay(`spotify:track:${sp}`);
+          return spotifyPlayerRef.current?.togglePlay(`spotify:track:${sp}`, spotifyQueueUris);
         })
         .catch(handleSpotifyPlaybackError);
     }
@@ -637,6 +678,7 @@ const FullPlayer = ({
     emitPlaybackEvent,
     handleSpotifyPlaybackError,
     spotify,
+    spotifyQueueUris,
   ]);
 
   const toggleGlobalPlayback = useCallback(() => {
@@ -720,8 +762,10 @@ const FullPlayer = ({
             ref={kitPlayerRef}
             chromeMode="none"
             trackId={appleMusicId!}
+            queueTrackIds={appleQueueTrackIds}
             trackKey={song.id}
             onTelemetry={setKitTelemetry}
+            onNowPlayingTrackId={(trackId) => handleProviderTrackIdChange(trackId, "apple_music")}
             onPlaybackStateChange={handleKitPlaybackStateChange}
             onTrackEnded={handleKitTrackEnded}
             queueAutoplayNonce={kitAutoplayNonce}
@@ -894,9 +938,11 @@ const FullPlayer = ({
         <AppleMusicKitPlayer
           chromeMode="default"
           trackId={appleMusicId!}
+          queueTrackIds={appleQueueTrackIds}
           trackKey={song.id}
           title={song.title}
           artist={song.artist}
+          onNowPlayingTrackId={(trackId) => handleProviderTrackIdChange(trackId, "apple_music")}
           onPlaybackStateChange={handleKitPlaybackStateChange}
           onTrackEnded={handleKitTrackEnded}
           queueAutoplayNonce={kitAutoplayNonce}

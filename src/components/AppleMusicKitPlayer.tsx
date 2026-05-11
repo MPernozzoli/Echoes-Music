@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, forwardRef, useImperativeHandle } from "react";
 import { useTranslation } from "react-i18next";
 import { Play, Pause } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
@@ -34,6 +34,7 @@ export interface AppleMusicKitPlayerHandle {
 
 interface AppleMusicKitPlayerProps {
   trackId: string;
+  queueTrackIds?: string[];
   trackKey?: string;
   title?: string;
   artist?: string;
@@ -46,6 +47,7 @@ interface AppleMusicKitPlayerProps {
   onQueueAutoplayConsumed?: () => void;
   /** Throttled (~120ms) per UI esterna (barra dock) */
   onTelemetry?: (t: AppleMusicKitTelemetry) => void;
+  onNowPlayingTrackId?: (trackId: string) => void;
   /** Emesso quando MusicKit rifiuta la riproduzione (es. niente abbonamento / geo-blocco / rete). */
   onPlaybackError?: (err: unknown) => void;
 }
@@ -61,6 +63,7 @@ export const AppleMusicKitPlayer = forwardRef<AppleMusicKitPlayerHandle, AppleMu
   function AppleMusicKitPlayer(
     {
       trackId,
+      queueTrackIds,
       trackKey,
       title,
       artist,
@@ -71,6 +74,7 @@ export const AppleMusicKitPlayer = forwardRef<AppleMusicKitPlayerHandle, AppleMu
       queueAutoplayNonce = 0,
       onQueueAutoplayConsumed,
       onTelemetry,
+      onNowPlayingTrackId,
       onPlaybackError,
     },
     ref
@@ -91,8 +95,14 @@ export const AppleMusicKitPlayer = forwardRef<AppleMusicKitPlayerHandle, AppleMu
     const lastTelemetry = useRef(0);
     const onTelemetryRef = useRef(onTelemetry);
     onTelemetryRef.current = onTelemetry;
+    const onNowPlayingTrackIdRef = useRef(onNowPlayingTrackId);
+    onNowPlayingTrackIdRef.current = onNowPlayingTrackId;
     /** Ultimo brano applicato a MusicKit (evita doppio play quando il parent azzera solo il nonce) */
     const lastSyncedItemKeyRef = useRef<string | null>(null);
+    const playbackQueue = useMemo(
+      () => (queueTrackIds?.length ? queueTrackIds : [trackId]),
+      [queueTrackIds, trackId],
+    );
 
     useImperativeHandle(
       ref,
@@ -105,7 +115,7 @@ export const AppleMusicKitPlayer = forwardRef<AppleMusicKitPlayerHandle, AppleMu
               await mk.pause();
               setIsPlaying(false);
             } else {
-              await mk.setQueue({ songs: [trackId] });
+              await mk.setQueue({ songs: playbackQueue });
               await mk.play();
               setIsPlaying(true);
               setDuration(mk.currentPlaybackDuration || 0);
@@ -128,7 +138,7 @@ export const AppleMusicKitPlayer = forwardRef<AppleMusicKitPlayerHandle, AppleMu
           }
         },
       }),
-      [trackId]
+      [playbackQueue]
     );
 
     useEffect(() => {
@@ -151,6 +161,11 @@ export const AppleMusicKitPlayer = forwardRef<AppleMusicKitPlayerHandle, AppleMu
         if (!m) return;
         const cur = m.currentPlaybackTime;
         const dur = m.currentPlaybackDuration || 0;
+        const nowPlayingItem = (m as unknown as {
+          nowPlayingItem?: { id?: string; playParams?: { id?: string } };
+        }).nowPlayingItem;
+        const nowPlayingId = nowPlayingItem?.id ?? nowPlayingItem?.playParams?.id;
+        if (nowPlayingId) onNowPlayingTrackIdRef.current?.(nowPlayingId);
         setCurrentTime(cur);
         setDuration(dur);
         const ps = (m as unknown as { playbackState?: number }).playbackState;
@@ -199,7 +214,7 @@ export const AppleMusicKitPlayer = forwardRef<AppleMusicKitPlayerHandle, AppleMu
         return;
       }
 
-      const itemKey = `${trackId}\0${trackKey ?? ""}`;
+      const itemKey = `${trackId}\0${trackKey ?? ""}\0${playbackQueue.join("\0")}`;
       const forcePlay = queueAutoplayNonce >= 1;
       const identityChanged = lastSyncedItemKeyRef.current !== itemKey;
       if (!identityChanged && !forcePlay) return;
@@ -210,7 +225,7 @@ export const AppleMusicKitPlayer = forwardRef<AppleMusicKitPlayerHandle, AppleMu
           if (identityChanged) {
             const ps = (mk as unknown as { playbackState?: number }).playbackState;
             const mkWasPlaying = ps === 2;
-            await mk.setQueue({ songs: [trackId] });
+            await mk.setQueue({ songs: playbackQueue });
             if (cancelled) return;
             lastSyncedItemKeyRef.current = itemKey;
             if (forcePlay || mkWasPlaying) {
@@ -222,7 +237,7 @@ export const AppleMusicKitPlayer = forwardRef<AppleMusicKitPlayerHandle, AppleMu
               }
             }
           } else if (forcePlay) {
-            await mk.setQueue({ songs: [trackId] });
+            await mk.setQueue({ songs: playbackQueue });
             if (cancelled) return;
             await mk.play();
             if (!cancelled) {
@@ -241,7 +256,7 @@ export const AppleMusicKitPlayer = forwardRef<AppleMusicKitPlayerHandle, AppleMu
       return () => {
         cancelled = true;
       };
-    }, [trackId, trackKey, queueAutoplayNonce, isAuthorized, isAvailable, onQueueAutoplayConsumed]);
+    }, [trackId, trackKey, playbackQueue, queueAutoplayNonce, isAuthorized, isAvailable, onQueueAutoplayConsumed]);
 
     const togglePlay = useCallback(async () => {
       const mk = getMK();
@@ -252,7 +267,7 @@ export const AppleMusicKitPlayer = forwardRef<AppleMusicKitPlayerHandle, AppleMu
           await mk.pause();
           setIsPlaying(false);
         } else {
-          await mk.setQueue({ songs: [trackId] });
+          await mk.setQueue({ songs: playbackQueue });
           await mk.play();
           setIsPlaying(true);
           setDuration(mk.currentPlaybackDuration || 0);
@@ -261,7 +276,7 @@ export const AppleMusicKitPlayer = forwardRef<AppleMusicKitPlayerHandle, AppleMu
         console.error("MusicKit play error:", err);
         onPlaybackErrorRef.current?.(err);
       }
-    }, [isPlaying, trackId]);
+    }, [isPlaying, playbackQueue]);
 
     const handleSeek = useCallback((val: number[]) => {
       const mk = getMK();
