@@ -12,7 +12,7 @@ import PromptInput, { type PromptSubmitPayload } from "@/components/PromptInput"
 import MusicSearchThinking from "@/components/MusicSearchThinking";
 import SearchFeedback from "@/components/SearchFeedback";
 import { pickDiscoverPromptSuggestions } from "@/lib/discoverPromptSuggestions";
-import type { SearchResult, Song } from "@/data/mockData";
+import type { SearchResult, Song, SongVersion } from "@/data/mockData";
 import { useApp } from "@/context/useApp";
 import { useAuth } from "@/context/useAuth";
 import { usePlaybackQueue } from "@/context/usePlaybackQueue";
@@ -121,15 +121,20 @@ async function extractArtworkColor(url: string): Promise<{h: number; s: number; 
   });
 }
 
-function genVersions(song: Song) {
-  const seed = song.id.charCodeAt(0) + song.title.length * 3;
-  const out: Array<{id: string; label: string; tag?: string; year: number; primary?: boolean}> = [
-    { id: song.id, label: "Album mix", primary: true, year: 2023 },
-  ];
-  if (seed % 2 === 0) out.push({ id: song.id+"_live", label: "Live · Auditorium "+(2019+seed%5), tag: "live", year: 2022 });
-  if (seed % 3 === 1) out.push({ id: song.id+"_rmstr", label: "Remastered 2024", tag: "remaster", year: 2024 });
-  if (seed % 5 < 2 && out.length < 4) out.push({ id: song.id+"_aco", label: "Acoustic session", tag: "acoustic", year: 2023 });
-  return out;
+function versionToSong(version: SongVersion, parent: Song): Song {
+  return {
+    ...parent,
+    id: version.id,
+    title: version.title,
+    artist: version.artist,
+    album: version.album,
+    releaseYear: version.releaseYear,
+    provider: version.provider ?? parent.provider,
+    spotifyUri: version.spotifyUri,
+    appleMusicId: version.appleMusicId,
+    previewUrl: version.previewUrl,
+    alternateVersions: undefined,
+  };
 }
 
 function readPendingSearch(): PendingMusicSearch | null {
@@ -785,24 +790,31 @@ interface PFTrackDetailProps {
   song: Song;
   narrative: string;
   emotionLine?: string;
-  isCurrentlyPlaying: boolean;
+  currentSongId: string | null;
+  isGloballyPlaying: boolean;
   onClose: () => void;
-  onPlayNow: () => void;
-  onQueueNext: () => void;
-  onQueueEnd: () => void;
+  onPlay: (song: Song) => void;
+  onQueue: (song: Song, mode: "next" | "end") => void;
 }
 
 function PFTrackDetail({
   song,
   narrative,
   emotionLine,
-  isCurrentlyPlaying,
+  currentSongId,
+  isGloballyPlaying,
   onClose,
-  onPlayNow,
-  onQueueNext,
-  onQueueEnd,
+  onPlay,
+  onQueue,
 }: PFTrackDetailProps) {
-  const versions = genVersions(song);
+  const versions: Array<{ song: Song; label: string; tag?: string; primary?: boolean }> = [
+    { song, label: song.album || song.title, primary: true },
+    ...(song.alternateVersions ?? []).map((v) => ({
+      song: versionToSong(v, song),
+      label: v.title,
+      tag: v.album !== song.album ? v.album : undefined,
+    })),
+  ];
   const glyph = song.title.charAt(0);
   return (
     <>
@@ -842,22 +854,30 @@ function PFTrackDetail({
           <p className="pf-td-section-title">Versioni disponibili</p>
           <div className="pf-versions-list">
             {versions.map((v) => {
-              const playing = isCurrentlyPlaying && !!v.primary;
+              const isPlaying = v.song.id === currentSongId && isGloballyPlaying;
+              const isCurrent = v.song.id === currentSongId;
               return (
-                <div key={v.id} className={cn("pf-version-row", playing ? "playing" : "")}>
-                  <button className="pf-v-play" onClick={onPlayNow} aria-label={playing ? "In riproduzione" : "Riproduci"}>
-                    {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                <div key={v.song.id} className={cn("pf-version-row", isCurrent ? "playing" : "")}>
+                  <button
+                    className="pf-v-play"
+                    onClick={() => onPlay(v.song)}
+                    aria-label={isPlaying ? "In riproduzione" : "Riproduci"}
+                  >
+                    {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                   </button>
                   <div className="pf-v-info">
                     <div className="pf-v-label">
                       {v.label}
-                      {v.primary && <span className="pf-v-pin">PRIMARIO</span>}
-                      {v.tag && <span className={`pf-v-tag pf-v-${v.tag}`}>{v.tag}</span>}
+                      {v.primary && <span className="pf-v-pin">ORIGINALE</span>}
+                      {v.tag && <span className="pf-v-tag">{v.tag}</span>}
                     </div>
-                    <div className="pf-v-meta">{v.year}</div>
+                    <div className="pf-v-meta">
+                      {v.song.artist}
+                      {v.song.releaseYear ? ` · ${v.song.releaseYear}` : ""}
+                    </div>
                   </div>
-                  <button className="pf-v-act" onClick={onQueueNext}>↓ Dopo</button>
-                  <button className="pf-v-act" onClick={onQueueEnd}>+ In coda</button>
+                  <button className="pf-v-act" onClick={() => onQueue(v.song, "next")}>↓ Dopo</button>
+                  <button className="pf-v-act" onClick={() => onQueue(v.song, "end")}>+ In coda</button>
                 </div>
               );
             })}
@@ -1341,33 +1361,37 @@ const ChatPlayerFirst = () => {
     []
   );
 
-  const handleDetailPlayNow = useCallback(() => {
-    if (!expandedSong || !latestAssistant) return;
+  const handleDetailPlay = useCallback((song: Song) => {
+    if (!latestAssistant) return;
     const songs = latestAssistant.searchResult.songs;
-    const idx = songs.findIndex((s) => s.id === expandedSong.id);
-    handleTrackPlay(songs, Math.max(0, idx), latestAssistant.searchResult);
+    const idx = songs.findIndex((s) => s.id === song.id);
+    if (idx >= 0) {
+      handleTrackPlay(songs, idx, latestAssistant.searchResult);
+    } else {
+      // version not in original result list — play it directly as a single-track queue
+      playNowReplace([song], 0, true, {
+        conversationId: activeConversationId ?? "",
+        searchResultId: currentResult?.id ?? "",
+        prompt: currentResult?.prompt ?? "",
+        selectionIntent: "play_now",
+      });
+    }
     setExpandedSong(null);
-  }, [expandedSong, latestAssistant, handleTrackPlay]);
+  }, [latestAssistant, handleTrackPlay, playNowReplace, activeConversationId, currentResult]);
 
-  const handleDetailQueueNext = useCallback(() => {
-    if (!expandedSong) return;
-    insertAfterCurrent(expandedSong, {
+  const handleDetailQueue = useCallback((song: Song, mode: "next" | "end") => {
+    const source = {
       conversationId: activeConversationId ?? "",
       searchResultId: currentResult?.id ?? "",
       prompt: currentResult?.prompt ?? "",
-    });
+    };
+    if (mode === "next") {
+      insertAfterCurrent([song], source);
+    } else {
+      appendToQueue([song], source);
+    }
     setExpandedSong(null);
-  }, [expandedSong, insertAfterCurrent, activeConversationId, currentResult]);
-
-  const handleDetailQueueEnd = useCallback(() => {
-    if (!expandedSong) return;
-    appendToQueue(expandedSong, {
-      conversationId: activeConversationId ?? "",
-      searchResultId: currentResult?.id ?? "",
-      prompt: currentResult?.prompt ?? "",
-    });
-    setExpandedSong(null);
-  }, [expandedSong, appendToQueue, activeConversationId, currentResult]);
+  }, [insertAfterCurrent, appendToQueue, activeConversationId, currentResult]);
 
   const handleNewChat = () => {
     const id = createConversation();
@@ -1768,11 +1792,11 @@ const ChatPlayerFirst = () => {
           song={expandedSong}
           narrative={expandedNarrative}
           emotionLine={expandedEmotion}
-          isCurrentlyPlaying={expandedSong.id === currentSong?.id && isGloballyPlaying}
+          currentSongId={currentSong?.id ?? null}
+          isGloballyPlaying={isGloballyPlaying}
           onClose={() => setExpandedSong(null)}
-          onPlayNow={handleDetailPlayNow}
-          onQueueNext={handleDetailQueueNext}
-          onQueueEnd={handleDetailQueueEnd}
+          onPlay={handleDetailPlay}
+          onQueue={handleDetailQueue}
         />
       )}
 
