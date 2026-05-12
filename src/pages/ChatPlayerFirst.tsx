@@ -36,6 +36,8 @@ import type { MusicSearchMode } from "@/services/musicSearchApi";
 import type { ChatMessage, Conversation } from "@/types/conversation";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { requestPlaybackToggle } from "@/lib/playbackToggleBridge";
+import { requestSkipPrev, requestSkipNext, requestShuffleToggle, requestRepeatCycle } from "@/lib/playbackControlBridge";
 import {
   Menu,
   Plus,
@@ -57,6 +59,7 @@ import {
   Lightbulb,
   RefreshCw,
   Heart,
+  Repeat1,
 } from "lucide-react";
 import { AppLogo } from "@/components/AppLogo";
 import TokenBadge from "@/components/TokenBadge";
@@ -269,6 +272,8 @@ function NowPlayingRail({
 }: NowPlayingRailProps) {
   const wave = useMemo(() => waveBars(seedFromSong(song)), [song?.id]);
   const [progress, setProgress] = useState(0);
+  const [shuffleOn, setShuffleOn] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<"off" | "all" | "one">("off");
 
   useEffect(() => { setProgress(0); }, [song?.id]);
 
@@ -284,6 +289,16 @@ function NowPlayingRail({
   const elapsed = Math.floor(progress * totalSecs);
   const remaining = totalSecs - elapsed;
   const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
+  const handleShuffleToggle = () => {
+    requestShuffleToggle();
+    setShuffleOn((v) => !v);
+  };
+
+  const handleRepeatCycle = () => {
+    requestRepeatCycle();
+    setRepeatMode((r) => (r === "off" ? "all" : r === "all" ? "one" : "off"));
+  };
 
   return (
     <aside className="pf-rail">
@@ -334,7 +349,7 @@ function NowPlayingRail({
         </button>
       </div>
 
-      {/* Waveform — decorative */}
+      {/* Waveform */}
       <div className="pf-scrubber">
         <div className="pf-wave">
           {wave.map((h, i) => (
@@ -353,22 +368,32 @@ function NowPlayingRail({
 
       {/* Transport */}
       <div className="pf-transport">
-        <button className="pf-t-btn" aria-label="Shuffle" title="Shuffle">
+        <button
+          className={cn("pf-t-btn", shuffleOn && "pf-t-btn--active")}
+          onClick={handleShuffleToggle}
+          aria-label="Shuffle"
+          title={shuffleOn ? "Shuffle attivo" : "Shuffle"}
+        >
           <Shuffle className="w-3.5 h-3.5" />
         </button>
         <div className="pf-transport-main">
-          <button className="pf-t-btn" onClick={onPrev} aria-label="Previous">
+          <button className="pf-t-btn" onClick={onPrev} aria-label="Precedente" disabled={!song}>
             <SkipBack className="w-4 h-4" />
           </button>
-          <button className="pf-t-play" onClick={onTogglePlay} aria-label={isPlaying ? "Pause" : "Play"}>
+          <button className="pf-t-play" onClick={onTogglePlay} aria-label={isPlaying ? "Pausa" : "Riproduci"} disabled={!song}>
             {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
           </button>
-          <button className="pf-t-btn" onClick={onNext} aria-label="Next">
+          <button className="pf-t-btn" onClick={onNext} aria-label="Successivo" disabled={!song}>
             <SkipForward className="w-4 h-4" />
           </button>
         </div>
-        <button className="pf-t-btn" aria-label="Repeat" title="Repeat">
-          <Repeat className="w-3.5 h-3.5" />
+        <button
+          className={cn("pf-t-btn", repeatMode !== "off" && "pf-t-btn--active")}
+          onClick={handleRepeatCycle}
+          aria-label="Repeat"
+          title={repeatMode === "off" ? "Ripeti" : repeatMode === "all" ? "Ripeti tutto" : "Ripeti uno"}
+        >
+          {repeatMode === "one" ? <Repeat1 className="w-3.5 h-3.5" /> : <Repeat className="w-3.5 h-3.5" />}
         </button>
       </div>
 
@@ -1462,12 +1487,12 @@ const ChatPlayerFirst = () => {
           <NowPlayingRail
             song={currentSong}
             isPlaying={isGloballyPlaying}
-            onTogglePlay={() => setGlobalPlaying(!isGloballyPlaying)}
-            onPrev={() => setCurrentIndex(Math.max(0, currentIndex - 1))}
-            onNext={() => setCurrentIndex(Math.min(queue.length - 1, currentIndex + 1))}
+            onTogglePlay={requestPlaybackToggle}
+            onPrev={requestSkipPrev}
+            onNext={requestSkipNext}
             queue={queue}
             currentIndex={currentIndex}
-            onPickFromQueue={(i) => setCurrentIndex(i)}
+            onPickFromQueue={(i) => { setCurrentIndex(i); }}
             onRemoveFromQueue={(i) => removeFromQueue(i)}
             moodTags={moodTags}
             onAddToLibrary={() => {

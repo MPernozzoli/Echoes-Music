@@ -698,6 +698,7 @@
   transition: color 150ms;
 }
 .pf-t-btn:hover { color: var(--pf-fg); }
+.pf-t-btn--active { color: var(--pf-accent) !important; }
 .pf-t-play {
   width: 52px; height: 52px; border-radius: 50%;
   background: var(--pf-fg);

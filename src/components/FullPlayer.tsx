@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo, type ReactNode } fro
 import { unstable_batchedUpdates } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { setPlaybackToggleHandler } from "@/lib/playbackToggleBridge";
+import { setSkipPrevHandler, setSkipNextHandler, setShuffleToggleHandler, setRepeatCycleHandler } from "@/lib/playbackControlBridge";
 import { toast } from "sonner";
 import { Play, Pause, SkipBack, SkipForward, Heart, Volume2, VolumeX, Info, Youtube, ExternalLink } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
@@ -698,6 +699,18 @@ const FullPlayer = ({
     setPlaybackToggleHandler(toggleGlobalPlayback);
     return () => setPlaybackToggleHandler(null);
   }, [songs, currentIndex, toggleGlobalPlayback]);
+
+  useEffect(() => {
+    setSkipPrevHandler(handlePrev);
+    setSkipNextHandler(handleNext);
+    return () => { setSkipPrevHandler(null); setSkipNextHandler(null); };
+  }, [handlePrev, handleNext]);
+
+  useEffect(() => {
+    setShuffleToggleHandler(() => setDockShuffle((s) => !s));
+    setRepeatCycleHandler(() => setDockRepeat((r) => (r === "off" ? "all" : r === "all" ? "one" : "off")));
+    return () => { setShuffleToggleHandler(null); setRepeatCycleHandler(null); };
+  }, []);
 
   const dockAirPlayUi = isAppleUserAgent() && canUseWebKitAirPlayPicker();
   const handleDockAirPlay = useCallback(() => {
