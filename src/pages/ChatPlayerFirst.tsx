@@ -30,6 +30,11 @@ import { buildThreadSummaryFromChatText, normalizeStandardAxes } from "@/lib/mem
 import { dedupeSongVersions, filterSongsByMinRelevance } from "@/lib/dedupeSongs";
 import { buildEmptySearchResult } from "@/lib/emptySearchResult";
 import { fallbackNarrativeForResult } from "@/lib/assistantNarrative";
+import { useAppleMusic } from "@/context/useAppleMusic";
+import { useSpotify } from "@/context/useSpotify";
+import { addAppleMusicSongToLibrary } from "@/services/appleMusicLibrary";
+import { getAppleMusicUserToken } from "@/services/appleMusicSession";
+import { spotifySaveTracks, spotifyListPlaylists, spotifyAddTrackToPlaylist } from "@/services/spotify";
 import { useStreamingPlaybackMode } from "@/hooks/useStreamingPlaybackMode";
 import { isLuckyPrompt } from "@/constants/luckyPrompt";
 import type { MusicSearchMode } from "@/services/musicSearchApi";
@@ -252,8 +257,6 @@ interface NowPlayingRailProps {
   onPickFromQueue: (i: number) => void;
   onRemoveFromQueue: (i: number) => void;
   moodTags: string[];
-  onAddToLibrary?: () => void;
-  onAddToPlaylist?: () => void;
 }
 
 function NowPlayingRail({
@@ -267,8 +270,6 @@ function NowPlayingRail({
   onPickFromQueue,
   onRemoveFromQueue,
   moodTags,
-  onAddToLibrary,
-  onAddToPlaylist,
 }: NowPlayingRailProps) {
   const wave = useMemo(() => waveBars(seedFromSong(song)), [song?.id]);
   const [progress, setProgress] = useState(0);
@@ -328,26 +329,7 @@ function NowPlayingRail({
         <p className="pf-track-album">{song?.album ?? ""}</p>
       </div>
 
-      <div className="pf-rail-actions">
-        <button
-          className="pf-rail-action-btn"
-          onClick={onAddToLibrary}
-          aria-label="Aggiungi a Libreria"
-          disabled={!song}
-        >
-          <Heart className="w-3.5 h-3.5" />
-          <span>Libreria</span>
-        </button>
-        <button
-          className="pf-rail-action-btn"
-          onClick={onAddToPlaylist}
-          aria-label="Aggiungi a playlist"
-          disabled={!song}
-        >
-          <ListMusic className="w-3.5 h-3.5" />
-          <span>+ Playlist</span>
-        </button>
-      </div>
+      <PFLibraryActions song={song} />
 
       {/* Waveform */}
       <div className="pf-scrubber">
@@ -596,6 +578,127 @@ function EmptyHero({ suggestions, onSelect }: { suggestions: string[]; onSelect:
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ─── Library & Playlist actions (wired to Spotify / Apple Music) ─────────────
+
+function PFLibraryActions({ song }: { song: Song | null }) {
+  const appleMusic = useAppleMusic();
+  const spotify = useSpotify();
+  const [appleBusy, setAppleBusy] = useState(false);
+  const [spotifyBusy, setSpotifyBusy] = useState(false);
+  const [playlistsOpen, setPlaylistsOpen] = useState(false);
+  const [playlists, setPlaylists] = useState<{ id: string; name: string }[]>([]);
+  const [playlistsLoading, setPlaylistsLoading] = useState(false);
+  const [addingToId, setAddingToId] = useState<string | null>(null);
+
+  const appleMusicId = song?.appleMusicId;
+  const spotifyTrackId = song?.spotifyUri?.replace("spotify:track:", "");
+  const canApple = Boolean(appleMusic.isAuthorized && appleMusicId);
+  const canSpotify = Boolean(spotify.isConnected && spotifyTrackId);
+
+  // Reset playlist picker when song changes
+  useEffect(() => {
+    setPlaylistsOpen(false);
+    setPlaylists([]);
+  }, [song?.id]);
+
+  const handleLibrary = useCallback(async () => {
+    if (!song) return;
+    if (canApple && appleMusicId) {
+      setAppleBusy(true);
+      const token = await getAppleMusicUserToken();
+      if (token) {
+        const r = await addAppleMusicSongToLibrary(appleMusicId, token);
+        if ("error" in r) toast.error("Apple Music: errore aggiunta libreria");
+        else toast.success("Aggiunto alla libreria Apple Music");
+      }
+      setAppleBusy(false);
+    }
+    if (canSpotify && spotifyTrackId) {
+      setSpotifyBusy(true);
+      const r = await spotifySaveTracks([spotifyTrackId]);
+      setSpotifyBusy(false);
+      if ("error" in r) toast.error("Spotify: brano non salvato");
+      else toast.success("Salvato nei brani di Spotify");
+    }
+    if (!canApple && !canSpotify) {
+      toast.info("Collega Spotify o Apple Music dal tuo profilo");
+    }
+  }, [song, canApple, canSpotify, appleMusicId, spotifyTrackId]);
+
+  const handleOpenPlaylists = useCallback(async () => {
+    if (!canSpotify) { toast.info("Collega Spotify dal profilo per usare le playlist"); return; }
+    if (playlistsOpen) { setPlaylistsOpen(false); return; }
+    setPlaylistsOpen(true);
+    if (playlists.length === 0) {
+      setPlaylistsLoading(true);
+      const r = await spotifyListPlaylists();
+      setPlaylistsLoading(false);
+      if ("error" in r) { toast.error("Impossibile caricare le playlist"); setPlaylistsOpen(false); }
+      else setPlaylists(r.playlists);
+    }
+  }, [canSpotify, playlistsOpen, playlists.length]);
+
+  const handleAddToPlaylist = useCallback(async (playlistId: string) => {
+    if (!spotifyTrackId) return;
+    setAddingToId(playlistId);
+    const r = await spotifyAddTrackToPlaylist(playlistId, spotifyTrackId);
+    setAddingToId(null);
+    if ("error" in r) toast.error("Non aggiunto alla playlist");
+    else { toast.success("Aggiunto alla playlist"); setPlaylistsOpen(false); }
+  }, [spotifyTrackId]);
+
+  const libraryBusy = appleBusy || spotifyBusy;
+
+  return (
+    <div className="pf-rail-actions-wrap">
+      <div className="pf-rail-actions">
+        <button
+          className="pf-rail-action-btn"
+          onClick={() => void handleLibrary()}
+          aria-label="Aggiungi a Libreria"
+          disabled={!song || libraryBusy}
+        >
+          {libraryBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Heart className="w-3.5 h-3.5" />}
+          <span>Libreria</span>
+        </button>
+        <button
+          className={cn("pf-rail-action-btn", playlistsOpen && "pf-rail-action-btn--active")}
+          onClick={() => void handleOpenPlaylists()}
+          aria-label="Aggiungi a playlist"
+          disabled={!song}
+        >
+          <ListMusic className="w-3.5 h-3.5" />
+          <span>+ Playlist</span>
+        </button>
+      </div>
+
+      {playlistsOpen && (
+        <div className="pf-playlist-picker">
+          {playlistsLoading ? (
+            <div className="pf-playlist-loading"><Loader2 className="w-4 h-4 animate-spin" /></div>
+          ) : playlists.length === 0 ? (
+            <p className="pf-playlist-empty">Nessuna playlist trovata</p>
+          ) : (
+            playlists.map((p) => (
+              <button
+                key={p.id}
+                className="pf-playlist-item"
+                onClick={() => void handleAddToPlaylist(p.id)}
+                disabled={addingToId === p.id}
+              >
+                {addingToId === p.id
+                  ? <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+                  : <ListMusic className="w-3 h-3 shrink-0" />}
+                <span>{p.name}</span>
+              </button>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1495,13 +1598,6 @@ const ChatPlayerFirst = () => {
             onPickFromQueue={(i) => { setCurrentIndex(i); }}
             onRemoveFromQueue={(i) => removeFromQueue(i)}
             moodTags={moodTags}
-            onAddToLibrary={() => {
-              if (!currentSong) return;
-              const wasFav = isFavorite(currentSong.id);
-              toggleFavorite(currentSong.id);
-              toast.success(wasFav ? "Rimosso dalla libreria" : "Aggiunto alla libreria");
-            }}
-            onAddToPlaylist={() => toast.info("Aggiungi a playlist — prossimamente")}
           />
         )}
 
