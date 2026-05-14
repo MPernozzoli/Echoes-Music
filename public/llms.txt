@@ -1,0 +1,24 @@
+# Echoes
+
+> AI music journal that turns feelings, memories, and thoughts into contextual song recommendations across Spotify and Apple Music.
+
+Echoes is an emotional music discovery experience. Describe a mood, a moment, or an intent in natural language and the AI engine (lyrics-aware) returns songs that say what you mean, with context on why each track fits. Save favorites, sync to your native Spotify or Apple Music library, and revisit your listening history as a journal.
+
+## Pages
+
+- [Home](/): Landing page introducing Echoes and the music journal experience.
+- [Discover](/discover): Prompt-based AI music search with curated suggestions.
+- [Chat](/chat): Conversational journal to explore feelings and get song recommendations.
+- [Favorites](/favorites): Saved tracks with one-tap sync to Spotify and Apple Music libraries.
+- [History](/history): Past searches and listening sessions as a personal journal.
+- [Insights](/insights): Emotional profile and listening patterns over time.
+- [Pricing](/pricing): Subscription plans and token packs.
+- [Buy Tokens](/buy-tokens): One-time token top-ups for AI search.
+- [Invite](/invite): Referral program to share Echoes with friends.
+- [Sign in](/auth): Email/password and Google sign-in.
+
+## Optional
+
+- [Privacy Policy](/privacy-policy): How we handle your data.
+- [Terms of Service](/terms-of-service): Service terms.
+- [Cookie Policy](/cookie-policy): Cookie usage.
