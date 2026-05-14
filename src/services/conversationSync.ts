@@ -21,8 +21,8 @@ export async function fetchUserConversations(userId: string): Promise<Conversati
     title: row.title || "Chat",
     updatedAt: row.updated_at,
     messages: Array.isArray(row.messages) ? (row.messages as unknown as Conversation["messages"]) : [],
-    conversationProfile: (row.conversation_profile as Conversation["conversationProfile"]) ?? null,
-    conversationMemory: (row.conversation_memory as Conversation["conversationMemory"]) ?? null,
+    conversationProfile: (row.conversation_profile as unknown as Conversation["conversationProfile"]) ?? null,
+    conversationMemory: (row.conversation_memory as unknown as Conversation["conversationMemory"]) ?? null,
   }));
 }
 

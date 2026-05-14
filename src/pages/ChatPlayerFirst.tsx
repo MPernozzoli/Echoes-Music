@@ -969,7 +969,7 @@ const ChatPlayerFirst = () => {
         descriptionLanguage,
         count: 6,
         sessionKey: activeConversationId ?? "",
-      }).map((s) => s.text),
+      }),
     [userTasteProfile, completedSearchCount, descriptionLanguage, activeConversationId]
   );
 
@@ -1346,7 +1346,7 @@ const ChatPlayerFirst = () => {
         conversationId: activeConversationId ?? "",
         searchResultId: searchResult?.id ?? currentResult?.id ?? "",
         prompt: searchResult?.prompt ?? currentResult?.prompt ?? "",
-        selectionIntent: "card-click",
+        selectionIntent: "play_now",
       });
     },
     [playNowReplace, activeConversationId, currentResult]

@@ -144,11 +144,16 @@ const FullPlayer = ({
   const spotifyPlayerRef = useRef<SpotifyWebPlaybackHandle>(null);
   const spotifyAutoplayTriedRef = useRef<string | null>(null);
   const [kitTelemetry, setKitTelemetry] = useState({ current: 0, duration: 0, isPlaying: false });
-  const [spotifyTelemetry, setSpotifyTelemetry] = useState({
+  const [spotifyTelemetry, setSpotifyTelemetry] = useState<{
+    current: number;
+    duration: number;
+    isPlaying: boolean;
+    uri?: string;
+  }>({
     current: 0,
     duration: 0,
     isPlaying: false,
-    uri: undefined as string | undefined,
+    uri: undefined,
   });
   const [spotifyPlayerReady, setSpotifyPlayerReady] = useState(false);
   const [spotifyPlayerUnavailable, setSpotifyPlayerUnavailable] = useState(false);
