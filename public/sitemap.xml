@@ -60,4 +60,18 @@
     <xhtml:link rel="alternate" hreflang="pt" href="https://echoesmusic.it/pt" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://echoesmusic.it/" />
   </url>
+  <url>
+    <loc>https://echoesmusic.it/auth</loc>
+  </url>
+  <url>
+    <loc>https://echoesmusic.it/pricing</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://echoesmusic.it/pricing/plan</loc>
+  </url>
+  <url>
+    <loc>https://echoesmusic.it/pricing/tokens</loc>
+  </url>
 </urlset>
