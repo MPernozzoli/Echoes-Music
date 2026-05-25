@@ -213,7 +213,7 @@ export function SeoHead() {
   useEffect(() => {
     const isLanding = LANDING_PATH.test(pathname);
     const lang = resolveSeoLanguage(pathname, i18n.language);
-    const copy = SEO_COPY[lang];
+    const copy = resolveCopy(pathname, lang);
     const canonical = isLanding ? landingUrl(lang) : `${SITE_ORIGIN}${pathname}`;
 
     document.title = copy.title;
