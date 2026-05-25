@@ -217,8 +217,8 @@ async function enforceAnonymousQuota(
     no_session: 'Sessione anonima mancante; aggiorna la pagina.',
     no_conversation: 'Chat non valida; aggiorna la pagina.',
     session_mismatch: 'Hai già usato Echoes da questo rete. Accedi per continuare.',
-    conversation_mismatch: 'È consentita una sola chat senza account. Accedi per continuare.',
-    search_limit: 'Hai già usato la ricerca gratuita. Accedi per continuare.',
+    conversation_mismatch: 'Sessione non valida; aggiorna la pagina.',
+    search_limit: 'Hai esaurito le 5 ricerche gratuite. Accedi per continuare.',
   };
   return new Response(
     JSON.stringify({
