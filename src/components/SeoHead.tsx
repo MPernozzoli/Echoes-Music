@@ -145,7 +145,30 @@ const ROUTE_COPY: Record<string, Record<SupportedUiLang, Copy>> = {
     es: { title: "Política de cookies - Echoes", description: "Uso de cookies en Echoes." },
     pt: { title: "Política de cookies - Echoes", description: "Uso de cookies no Echoes." },
   },
+  "/music-for-emotions": {
+    it: { title: "Music for emotions — find songs that match how you feel | Echoes", description: "Echoes is an AI music journal that turns a feeling, memory or thought into songs that fit the emotion. Free to try, no signup." },
+    en: { title: "Music for emotions — find songs that match how you feel | Echoes", description: "Echoes is an AI music journal that turns a feeling, memory or thought into songs that fit the emotion. Free to try, no signup." },
+    fr: { title: "Music for emotions — find songs that match how you feel | Echoes", description: "Echoes is an AI music journal that turns a feeling, memory or thought into songs that fit the emotion. Free to try, no signup." },
+    de: { title: "Music for emotions — find songs that match how you feel | Echoes", description: "Echoes is an AI music journal that turns a feeling, memory or thought into songs that fit the emotion. Free to try, no signup." },
+    es: { title: "Music for emotions — find songs that match how you feel | Echoes", description: "Echoes is an AI music journal that turns a feeling, memory or thought into songs that fit the emotion. Free to try, no signup." },
+    pt: { title: "Music for emotions — find songs that match how you feel | Echoes", description: "Echoes is an AI music journal that turns a feeling, memory or thought into songs that fit the emotion. Free to try, no signup." },
+  },
 };
+
+/**
+ * Regional hreflang map for the homepage landing. Sends Google strong
+ * geo-targeting signals for our priority English markets (UK, CA, AU)
+ * and the German market — all pointing to the same language landing.
+ */
+const REGIONAL_HREFLANGS: Array<{ hreflang: string; lang: SupportedUiLang }> = [
+  { hreflang: "en-GB", lang: "en" },
+  { hreflang: "en-CA", lang: "en" },
+  { hreflang: "en-AU", lang: "en" },
+  { hreflang: "en-US", lang: "en" },
+  { hreflang: "de-DE", lang: "de" },
+  { hreflang: "de-AT", lang: "de" },
+  { hreflang: "de-CH", lang: "de" },
+];
 
 function firstPathSegment(pathname: string): string | null {
   return pathname.split("/").filter(Boolean)[0] ?? null;
@@ -229,21 +252,22 @@ export function SeoHead() {
     upsertLink("link[rel='canonical']", { rel: "canonical", href: canonical });
 
     document.head.querySelectorAll("link[data-echoes-hreflang]").forEach((el) => el.remove());
+    const addAlt = (hreflang: string, href: string) => {
+      const link = document.createElement("link");
+      link.setAttribute("rel", "alternate");
+      link.setAttribute("hreflang", hreflang);
+      link.setAttribute("href", href);
+      link.setAttribute("data-echoes-hreflang", "1");
+      document.head.appendChild(link);
+    };
     if (isLanding) {
-      SUPPORTED_UI_LANGS.forEach((code) => {
-        const link = document.createElement("link");
-        link.setAttribute("rel", "alternate");
-        link.setAttribute("hreflang", code);
-        link.setAttribute("href", landingUrl(code));
-        link.setAttribute("data-echoes-hreflang", "1");
-        document.head.appendChild(link);
-      });
-      const fallback = document.createElement("link");
-      fallback.setAttribute("rel", "alternate");
-      fallback.setAttribute("hreflang", "x-default");
-      fallback.setAttribute("href", `${SITE_ORIGIN}/`);
-      fallback.setAttribute("data-echoes-hreflang", "1");
-      document.head.appendChild(fallback);
+      SUPPORTED_UI_LANGS.forEach((code) => addAlt(code, landingUrl(code)));
+      REGIONAL_HREFLANGS.forEach(({ hreflang, lang: l }) => addAlt(hreflang, landingUrl(l)));
+      addAlt("x-default", `${SITE_ORIGIN}/`);
+    } else if (stripLocalePrefix(pathname) === "/music-for-emotions") {
+      const url = `${SITE_ORIGIN}/music-for-emotions`;
+      ["en", "en-GB", "en-CA", "en-AU", "en-US"].forEach((hl) => addAlt(hl, url));
+      addAlt("x-default", url);
     }
   }, [i18n.language, pathname]);
 
