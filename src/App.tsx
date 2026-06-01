@@ -59,6 +59,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import CookiePolicy from "./pages/CookiePolicy";
 import TermsOfService from "./pages/TermsOfService";
 import MusicForEmotions from "./pages/MusicForEmotions";
+import MusikFuerEmotionen from "./pages/MusikFuerEmotionen";
 
 const queryClient = new QueryClient();
 
@@ -105,6 +106,8 @@ const App = () => (
                 <Route path="/cookies" element={<CookiePolicy />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/music-for-emotions" element={<MusicForEmotions />} />
+                <Route path="/musik-fuer-emotionen" element={<MusikFuerEmotionen />} />
+                <Route path="/musik-f%C3%BCr-emotionen" element={<MusikFuerEmotionen />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <GlobalPlaybackDock />

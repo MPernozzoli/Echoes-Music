@@ -12,6 +12,7 @@ import { pickDiscoverPromptSuggestions } from "@/lib/discoverPromptSuggestions";
 import { useApp } from "@/context/useApp";
 import { useAuth } from "@/context/useAuth";
 import { useConversations } from "@/context/useConversations";
+import { useLocaleAutoRedirect } from "@/hooks/useLocaleAutoRedirect";
 import { callMusicSearch } from "@/services/musicSearchApi";
 import { Button } from "@/components/ui/button";
 import AppLayout from "@/components/AppLayout";
@@ -22,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { artworkTintFromId } from "@/lib/artworkTint";
 
 const Landing = () => {
+  useLocaleAutoRedirect();
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { descriptionLanguage } = useApp();
