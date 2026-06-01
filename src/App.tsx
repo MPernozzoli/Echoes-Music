@@ -58,6 +58,7 @@ import Admin from "./pages/Admin";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import CookiePolicy from "./pages/CookiePolicy";
 import TermsOfService from "./pages/TermsOfService";
+import MusicForEmotions from "./pages/MusicForEmotions";
 
 const queryClient = new QueryClient();
 
@@ -103,6 +104,7 @@ const App = () => (
                 <Route path="/privacy" element={<PrivacyPolicy />} />
                 <Route path="/cookies" element={<CookiePolicy />} />
                 <Route path="/admin" element={<Admin />} />
+                <Route path="/music-for-emotions" element={<MusicForEmotions />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               <GlobalPlaybackDock />
