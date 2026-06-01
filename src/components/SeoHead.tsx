@@ -153,6 +153,14 @@ const ROUTE_COPY: Record<string, Record<SupportedUiLang, Copy>> = {
     es: { title: "Music for emotions — find songs that match how you feel | Echoes", description: "Echoes is an AI music journal that turns a feeling, memory or thought into songs that fit the emotion. Free to try, no signup." },
     pt: { title: "Music for emotions — find songs that match how you feel | Echoes", description: "Echoes is an AI music journal that turns a feeling, memory or thought into songs that fit the emotion. Free to try, no signup." },
   },
+  "/musik-fuer-emotionen": {
+    it: { title: "Musik für Emotionen — finde Songs, die zu deinem Gefühl passen | Echoes", description: "Echoes ist ein KI-Musiktagebuch, das ein Gefühl, eine Erinnerung oder einen Gedanken in passende Songs verwandelt. Kostenlos testen." },
+    en: { title: "Musik für Emotionen — finde Songs, die zu deinem Gefühl passen | Echoes", description: "Echoes ist ein KI-Musiktagebuch, das ein Gefühl, eine Erinnerung oder einen Gedanken in passende Songs verwandelt. Kostenlos testen." },
+    fr: { title: "Musik für Emotionen — finde Songs, die zu deinem Gefühl passen | Echoes", description: "Echoes ist ein KI-Musiktagebuch, das ein Gefühl, eine Erinnerung oder einen Gedanken in passende Songs verwandelt. Kostenlos testen." },
+    de: { title: "Musik für Emotionen — finde Songs, die zu deinem Gefühl passen | Echoes", description: "Echoes ist ein KI-Musiktagebuch, das ein Gefühl, eine Erinnerung oder einen Gedanken in passende Songs verwandelt. Kostenlos testen." },
+    es: { title: "Musik für Emotionen — finde Songs, die zu deinem Gefühl passen | Echoes", description: "Echoes ist ein KI-Musiktagebuch, das ein Gefühl, eine Erinnerung oder einen Gedanken in passende Songs verwandelt. Kostenlos testen." },
+    pt: { title: "Musik für Emotionen — finde Songs, die zu deinem Gefühl passen | Echoes", description: "Echoes ist ein KI-Musiktagebuch, das ein Gefühl, eine Erinnerung oder einen Gedanken in passende Songs verwandelt. Kostenlos testen." },
+  },
 };
 
 /**
@@ -267,6 +275,10 @@ export function SeoHead() {
     } else if (stripLocalePrefix(pathname) === "/music-for-emotions") {
       const url = `${SITE_ORIGIN}/music-for-emotions`;
       ["en", "en-GB", "en-CA", "en-AU", "en-US"].forEach((hl) => addAlt(hl, url));
+      addAlt("x-default", url);
+    } else if (stripLocalePrefix(pathname) === "/musik-fuer-emotionen") {
+      const url = `${SITE_ORIGIN}/musik-fuer-emotionen`;
+      ["de", "de-DE", "de-AT", "de-CH"].forEach((hl) => addAlt(hl, url));
       addAlt("x-default", url);
     }
   }, [i18n.language, pathname]);
